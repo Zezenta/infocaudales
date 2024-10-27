@@ -30,7 +30,7 @@ function getInfo(id){
         }
     })
     .then(response => {
-        console.log(response.data);
+        console.log(response.data.items);
         return response.data;
 
     })
@@ -44,33 +44,73 @@ const urlHandles = {
 
 }
 
-//map names with ids
-const hidroID = {
-    mazarEnergia: null, //MWh
-    mazarTurbinas: 30503, //int
-    molinoEnergia: null,
-    molinoTurbinas: 44822,
-    sopladoraEnergia: null,
-    sopladoraTurbinas: 90503,
-    msfranciscoEnergia: null,
-    msfranciscoTurbinas: 650503,
-    celecSurEnergia: null, //MWh
-    mazarCaudal: 30538, //ms3
-    mazarCota: 30031, //msnm
-    amaluzaCaudal: 24811,
-    amaluzaCota: 24019,
-    sopladoraCaudal: 90537,
-    sopladoraCota: 90919,
-    msfranciscoCaudal: 650538,
-    msfranciscoCota: 650919,
-    pauteCaudal: 24812 //msnm
+var mazar = {
+    nombre: "Mazar-Paute",
+    cotaMin: 2115,
+    cotaMax: 2153,
+    energiaMax: 170,
+    prefix: "maz",
+    turbinas_id: 30503,
+    caudal_id: 30538,
+    cota_id: 30031
 };
+
+var molino = {
+    nombre: "Molino",
+    cotaMin: 2115,
+    cotaMax: 2153,
+    energiaMax: 1100,
+    prefix: "mol",
+    turbinas_id: 44822,
+    caudal_id: 24811,
+    cota_id: 24019
+};
+
+var sopladora = {
+    nombre: "Sopladora",
+    cotaMin: 1312,
+    cotaMax: 1318,
+    energiaMax: 487,
+    prefix: "sop",
+    turbinas_id: 90503,
+    caudal_id: 90537,
+    cota_id: 90919
+};
+
+var minas_san_francisco = {
+    nombre: "Minas San Francisco",
+    cotaMin: 783,
+    cotaMax: 792,
+    energiaMax: 270,
+    prefix: "msf",
+    turbinas_id: 650503,
+    caudal_id: 650538,
+    cota_id: 650919
+};
+
+var hidroelectricas = [mazar, sopladora, molino, minas_san_francisco];
+
+var celec_sur = {
+    nombre: "CELEC EP SUR",
+    prefix: "csr",
+    caudal_id: 24812 
+}
+
+getInfo(mazar.caudal_id);
 
 //get those values
 console.log(hidroID.mazarEnergia);
 console.log(hidroID["mazarEnergia"]);
 var fecha = new Date();
 console.log(new Date(fecha.getTime() - 5 * 60 * 60 * 1000)); //works to do GMT-5
+
+for(var central of hidroelectricas){
+    console.log("Hidroeléctrica "+ central.nombre);
+    for(var dato in central){
+        console.log(dato,":", central[dato]);
+    }
+    console.log("\n");
+}
 /*
 note that
 mazEnerDia
@@ -93,4 +133,12 @@ literally anything else:
 ID: the ones declared before
 FECHA: DD/MM/AA
 https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid={ID}&fechaInicio={FECHA}T06:00:00.000Z&fechaFin={FECHA DD+1}T05:00:00.000Z&fecha=26/10/2024%2001:00:00
+
+
+this was taken around 23h34
+
+https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid=24812&fechaInicio=2024-10-26T06:00:00.000Z&fechaFin=2024-10-27T05:00:00.000Z&fecha=26/10/2024%2001:00:00
+
+
+when requesting information, oldest timestamps are last, that means that 00h00 is items[items.length], and 24h00 is items[0]
 */
