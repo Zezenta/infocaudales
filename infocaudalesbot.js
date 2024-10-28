@@ -9,10 +9,10 @@ const client = new TwitterApi({
     accessSecret: process.env.ACCESS_SECRET,
 });
 
-//twitter auth
-async function postTweet() {
+//twitter auth and posting
+async function postTweet(message) {
     try {
-        const tweet = await client.v2.tweet('test\nhi');
+        const tweet = await client.v2.tweet(message);
         console.log('Tweet posted:', tweet);
     } catch (error) {
         console.error('Error posting tweet:', error, error.data);
@@ -29,12 +29,11 @@ async function getInfoById(id, type){ //type could be "cota", "caudal", "turbina
     var dia = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
     
     var hora = fecha.getUTCHours(); //this for knowing which item from the response get, works in localtime
-    
+
     //params
     var p_fechaInicio = anio + "-" + mes + "-" + dia + "T06:00:00.000Z";
     var p_fechaFin = new Date(p_fechaInicio);
     p_fechaFin.setHours(p_fechaFin.getUTCHours() + 23);
-    console.log(p_fechaFin);
     var p_fecha = dia + "/" + mes + "/" + anio + " 01:00:00";
 
     var output = [];
@@ -50,7 +49,7 @@ async function getInfoById(id, type){ //type could be "cota", "caudal", "turbina
         });
         output.push(actual.data.items[24 - hora].valueedit);
 
-        if(type == "cota"){ //return output[actual, lunes]
+        if(type == "cota"){ //return output[actual, lunes, lunesDate]
             var fechaLunes = new Date(fecha);
             fechaLunes.setUTCDate(fecha.getUTCDate() - (fecha.getUTCDay() || 7) + 1);
             fechaLunes.setUTCHours(6, 0, 0, 0); // 6 am UTC, so fechaInicio
@@ -71,27 +70,165 @@ async function getInfoById(id, type){ //type could be "cota", "caudal", "turbina
                 }
             });
             output.push(lunes.data.items[23].valueedit);
+            output.push(fechaLunes.getUTCDate());
         }
         else if(type == "caudal"){ //return output[actual, -3h]
+            if(hora >= 4){
+                output.push(actual.data.items[24-hora+3].valueedit);
+            }else if(hora <= 3){
+                var fechaAyer = new Date(fecha); //clone fecha
+                fechaAyer.setUTCDate(fechaAyer.getUTCDate() - 1); //yesterday
+                fechaAyer.setUTCHours(6, 0, 0, 0); //6 am UTC, so fechaInicio
 
+                //obtain year, month and day
+                var anioAyer = fechaAyer.getUTCFullYear().toString();
+                var mesAyer = (fechaAyer.getUTCMonth()+1).toString().padStart(2, '0');
+                var diaAyer = fechaAyer.getUTCDate().toString().padStart(2, '0');
+                var h_fechaFin = new Date(fechaAyer);
+                h_fechaFin.setHours(h_fechaFin.getUTCHours() + 23);
+                var h_fecha = diaAyer + "/" + mesAyer + "/" + anioAyer + " 01:00:00";
+
+                const _3h = await axios.get("https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues", {
+                    params: {
+                        mrid: id,
+                        fechaInicio: fechaAyer,
+                        fechaFin: h_fechaFin,
+                        fecha: h_fecha
+                    }
+                });
+                //console.log("got it from yesterday");
+                output.push(_3h.data.items[2].valueedit);
+            }
         }
         return output;
-        //console.log(24 - hora, response.data.items[24 - hora].valueedit);
-        //return response.data.items[24 - hora].valueedit; // Devolvemos el valor deseado
 
     } catch (error) {
         console.error('Error fetching data:', error);
         return error; // Puedes retornar el error o manejarlo de otra forma
     }
-
-
 }
+
+async function getEnergy(prefix){ //return actual, _3h, lunes
+    var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+    fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+    var anio = fecha.getUTCFullYear().toString(); //gets year
+    var mes = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+    var dia = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+    var p_fecha = dia + "/" + mes + "/" + anio + " 00:00:00";
+    var hora = fecha.getUTCHours();
+
+    var output = [];
+
+    try {
+        const actual = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardom' + prefix + '/' + prefix + 'EnerDia', {
+            params: {
+                fecha: p_fecha
+            }
+        });
+        output.push(actual.data.items[24-hora].valueedit);
+
+        if(hora >= 4){
+            output.push(actual.data.items[24-hora+3].valueedit);
+        }else if(hora <= 3){
+            var fechaAyer = new Date(fecha); //clone fecha
+            fechaAyer.setUTCDate(fechaAyer.getUTCDate() - 1); //yesterday
+            var anioAyer = fechaAyer.getUTCFullYear().toString();
+            var mesAyer = (fechaAyer.getUTCMonth()+1).toString().padStart(2, '0');
+            var diaAyer = fechaAyer.getUTCDate().toString().padStart(2, '0');
+            var ayer = diaAyer + "/" + mesAyer + "/" + anioAyer + " 00:00:00";
+            const valorAyer = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardom' + prefix + '/' + prefix + 'EnerDia', {
+                params: {
+                    fecha: ayer
+                }
+            });
+            output.push(valorAyer.data.items[2].valueedit);
+        }
+
+        var fechaLunes = new Date(fecha);
+        fechaLunes.setUTCDate(fecha.getUTCDate() - (fecha.getUTCDay() || 7) + 1);
+        fechaLunes.setUTCHours(0, 0, 0, 0);
+        var anioLunes = fechaLunes.getUTCFullYear().toString();
+        var mesLunes = (fechaLunes.getUTCMonth()+1).toString().padStart(2, '0');
+        var diaLunes = fechaLunes.getUTCDate().toString().padStart(2, '0');
+        var lunes = diaLunes + "/" + mesLunes + "/" + anioLunes + " 00:00:00";
+
+        const valorLunes = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardom' + prefix + '/' + prefix + 'EnerDia', {
+            params: {
+                fecha: lunes
+            }
+        });
+        output.push(valorLunes.data.items[23].valueedit);
+        output.push(fechaLunes.getUTCDate());
+
+        return output;
+
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        return error; // Puedes retornar el error o manejarlo de otra forma
+    }
+}
+
+async function celecSur(){ //still work to do, MW left but wont do it for now
+    var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+    fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+    var anio = fecha.getUTCFullYear().toString(); //gets year
+    var mes = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+    var dia = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+
+    var p_fechaInicio = anio + "-" + mes + "-" + dia + "T06:00:00.000Z";
+    var p_fechaFin = new Date(p_fechaInicio);
+    p_fechaFin.setHours(p_fechaFin.getUTCHours() + 23);
+    var p_fecha = dia + "/" + mes + "/" + anio + " 01:00:00";
+    var hora = fecha.getUTCHours();
+
+    var output = [];
+
+
+    const caudal_actual = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardom' + prefix + '/' + prefix + 'EnerDia', {
+        params: {
+            mrid: id,
+            fechaInicio: p_fechaInicio,
+            fechaFin: p_fechaFin,
+            fecha: p_fecha
+        }
+    });
+    output.push(caudal_actual.data.items[24 - hora].valueedit);
+
+    if(hora >= 4){
+        output.push(caudal_actual.data.items[24-hora+3].valueedit);
+    }else if(hora <= 3){
+        var fechaAyer = new Date(fecha); //clone fecha
+        fechaAyer.setUTCDate(fechaAyer.getUTCDate() - 1); //yesterday
+        fechaAyer.setUTCHours(6, 0, 0, 0); //6 am UTC, so fechaInicio
+
+        //obtain year, month and day
+        var anioAyer = fechaAyer.getUTCFullYear().toString();
+        var mesAyer = (fechaAyer.getUTCMonth()+1).toString().padStart(2, '0');
+        var diaAyer = fechaAyer.getUTCDate().toString().padStart(2, '0');
+        var h_fechaFin = new Date(fechaAyer);
+        h_fechaFin.setHours(h_fechaFin.getUTCHours() + 23);
+        var h_fecha = diaAyer + "/" + mesAyer + "/" + anioAyer + " 01:00:00";
+
+        const _3h = await axios.get("https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues", {
+            params: {
+                mrid: id,
+                fechaInicio: fechaAyer,
+                fechaFin: h_fechaFin,
+                fecha: h_fecha
+            }
+        });
+        //console.log("got it from yesterday");
+        output.push(_3h.data.items[2].valueedit);
+    }
+}
+
 
 var mazar = {
     nombre: "Mazar",
-    cotaMin: 2115,
+    cotaMin: 2098,
     cotaMax: 2153,
     energiaMax: 170,
+    turbinasMax: 2,
     prefix: "maz",
     turbinas_id: 30503,
     caudal_id: 30538,
@@ -101,9 +238,10 @@ var mazar = {
 
 var molino = {
     nombre: "Molino",
-    cotaMin: 2115,
-    cotaMax: 2153,
+    cotaMin: 1975,
+    cotaMax: 1991,
     energiaMax: 1100,
+    turbinasMax: 10,
     prefix: "mol",
     turbinas_id: 44822,
     caudal_id: 24811,
@@ -116,6 +254,7 @@ var sopladora = {
     cotaMin: 1312,
     cotaMax: 1318,
     energiaMax: 487,
+    turbinasMax: 3,
     prefix: "sop",
     turbinas_id: 90503,
     caudal_id: 90537,
@@ -128,6 +267,7 @@ var minas_san_francisco = {
     cotaMin: 783,
     cotaMax: 792,
     energiaMax: 270,
+    turbinasMax: 3,
     prefix: "msf",
     turbinas_id: 650503,
     caudal_id: 650538,
@@ -143,24 +283,52 @@ var celec_sur = {
 
 var hidroelectricas = [mazar, sopladora, molino, minas_san_francisco];
 
-(async() => {
-    var nalga = await getInfoById(mazar.caudal_id);
-    console.log( nalga[0]);
-})();
 
-for(var central of hidroelectricas){
-    console.log("Hidroeléctrica "+ central.nombre);
-    for(var dato in central){
-        console.log(dato+":", central[dato]);
+async function postearInfo(hidroelectrica){
+
+    var cotas = await getInfoById(hidroelectrica.cota_id, "cota"); //[actual, lunes, lunesdate]
+    var caudales = await getInfoById(hidroelectrica.caudal_id, "caudal"); //[actual, -3h]
+    var turbinasActivas = await getInfoById(hidroelectrica.turbinas_id); //turbinasactivas
+    var produccion = await getEnergy(hidroelectrica.prefix); //[actual, -3h, lunes, lunesdate]
+
+    var indicadorPaute = (hidroelectrica.paute) ? " #Paute" : "";
+    //cotas and caudales
+    var signo_cota = (cotas[0] >= cotas[1]) ? "+" : "-";
+    var delta_caudal = caudales[1] === 0 ? (caudales[0] > 0 ? 100 : 0) : ((caudales[0] - caudales[1]) / caudales[1]) * 100;
+    var signo_caudal = (caudales[0] >= caudales[1]) ? "+" : "-";
+
+    //energy
+    var signo_ener_3h = (produccion[0] >= produccion[1]) ? "+" : "-";
+    var delta_ener_3h = produccion[1] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[1]) / produccion[1]) * 100;
+    var signo_ener_lunes = (produccion[0] >= produccion[2]) ? "+" : "-";
+    var delta_ener_lunes = produccion[2] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[2]) / produccion[2]) * 100;
+    var trabajoEnergia = (produccion[0] / hidroelectrica.energiaMax) * 100;
+
+    var message = "Hidroeléctrica #" + hidroelectrica.nombre + indicadorPaute + "\n\n" + 
+    "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
+    signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + "m desde el lunes " + cotas[2] + "\n" +
+    "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
+    "🌊Caudal: " + caudales[0].toFixed(2) + " m3/s\n" +
+    signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
+    "🔋Generación: " + produccion[0].toFixed(2) + " MW\n" +
+    signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
+    signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
+    "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
+    "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
+    
+    console.log(message + "\n\n\n")
+    //post the tweet
+}
+
+async function trigger(){
+    for(var hidroelectrica of hidroelectricas){
+        postearInfo(hidroelectrica);
     }
-    console.log("\n");
 }
 
-async function postearInfo(){
+//postTweet("Test\nHellowrold\n\n\nHi");
 
-
-
-}
+trigger();
 
 
 
