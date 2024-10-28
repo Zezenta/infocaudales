@@ -20,50 +20,68 @@ async function postTweet() {
 }
 
 //get information
-function getInfoById(id, type){ //type could be "cota", "caudal", "turbinas"
+async function getInfoById(id, type){ //type could be "cota", "caudal", "turbinas"
 
     var fecha = new Date(); //UTC date, 5 hours ahead from localtime
-    var anio = fecha.getFullYear().toString(); //gets year
-    var intmes = (fecha.getMonth()+1).toString(); //gets month
-    var mes = (intmes.length == 1) ? "0" + intmes : intmes; //adds a 0 in front of the month in case it is a 1 digit number
-    var intdia = (fecha.getDate()).toString(); //gets day of the month
-    var dia = (intdia.length == 1) ? "0" + intdia : intdia; //same thing
+    fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+    var anio = fecha.getUTCFullYear().toString(); //gets year
+    var mes = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+    var dia = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
     
-
-
-
-    var hora = fecha.getHours(); //this for knowing which item from the response get
+    var hora = fecha.getUTCHours(); //this for knowing which item from the response get, works in localtime
     
     //params
     var p_fechaInicio = anio + "-" + mes + "-" + dia + "T06:00:00.000Z";
     var p_fechaFin = new Date(p_fechaInicio);
-    p_fechaFin.setHours(p_fechaFin.getHours() + 23);
+    p_fechaFin.setHours(p_fechaFin.getUTCHours() + 23);
+    console.log(p_fechaFin);
     var p_fecha = dia + "/" + mes + "/" + anio + " 01:00:00";
 
     var output = [];
 
-    axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues', {
-        params: {
-            mrid: id,
-            fechaInicio: p_fechaInicio,
-            fechaFin: p_fechaFin,
-            fecha: p_fecha
+    try {
+        const actual = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues', {
+            params: {
+                mrid: id,
+                fechaInicio: p_fechaInicio,
+                fechaFin: p_fechaFin,
+                fecha: p_fecha
+            }
+        });
+        output.push(actual.data.items[24 - hora].valueedit);
+
+        if(type == "cota"){ //return output[actual, lunes]
+            var fechaLunes = new Date(fecha);
+            fechaLunes.setUTCDate(fecha.getUTCDate() - (fecha.getUTCDay() || 7) + 1);
+            fechaLunes.setUTCHours(6, 0, 0, 0); // 6 am UTC, so fechaInicio
+            var c_fechaFin = new Date(fechaLunes);
+            c_fechaFin.setUTCHours(c_fechaFin.getUTCHours() + 23);
+
+            var c_anio = fechaLunes.getUTCFullYear().toString(); //gets year
+            var c_mes = (fechaLunes.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+            var c_dia = (fechaLunes.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+            var c_fecha = c_dia + "/" + c_mes + "/" + c_anio + " 01:00:00";
+
+            const lunes = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues', {
+                params: {
+                    mrid: id,
+                    fechaInicio: fechaLunes,
+                    fechaFin: c_fechaFin,
+                    fecha: c_fecha
+                }
+            });
+            output.push(lunes.data.items[23].valueedit);
         }
-    })
-    .then(response => {
-        console.log(24-hora, response.data.items[24-hora].valueedit);
-        output.push(response.data.items[24-hora].valueedit);
+        else if(type == "caudal"){ //return output[actual, -3h]
 
-    })
-    .catch(error => {
-        console.error(error);
-        return error;
-    });
+        }
+        return output;
+        //console.log(24 - hora, response.data.items[24 - hora].valueedit);
+        //return response.data.items[24 - hora].valueedit; // Devolvemos el valor deseado
 
-    if(type == "cota"){
-        var fechaLunes = new Date(fecha);
-        fechaLunes.setDate(fecha.getDate() - (fecha.getDay() || 7) + 1);
-        fechaLunes.setHours(1, 0, 0, 0); // 1:00 AM
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        return error; // Puedes retornar el error o manejarlo de otra forma
     }
 
 
@@ -92,9 +110,6 @@ var molino = {
     cota_id: 24019,
     paute: true
 };
-
-getInfoById(mazar.caudal_id);
-
 
 var sopladora = {
     nombre: "Sopladora",
@@ -128,6 +143,11 @@ var celec_sur = {
 
 var hidroelectricas = [mazar, sopladora, molino, minas_san_francisco];
 
+(async() => {
+    var nalga = await getInfoById(mazar.caudal_id);
+    console.log( nalga[0]);
+})();
+
 for(var central of hidroelectricas){
     console.log("Hidroeléctrica "+ central.nombre);
     for(var dato in central){
@@ -136,7 +156,7 @@ for(var central of hidroelectricas){
     console.log("\n");
 }
 
-function postearInfo(){
+async function postearInfo(){
 
 
 
