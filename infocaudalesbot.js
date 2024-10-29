@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { TwitterApi } = require('twitter-api-v2');
+const CronJob = require('cron').CronJob;
 require('dotenv').config();
 
 const client = new TwitterApi({
@@ -14,6 +15,9 @@ async function postTweet(message) {
     try {
         const tweet = await client.v2.tweet(message);
         console.log('Tweet posted:', tweet);
+        var fechatweet = new Date();
+        fechatweet.setHours(fechatweet.getHours()-5);
+        console.log(fechatweet);
     } catch (error) {
         console.error('Error posting tweet:', error, error.data);
     }
@@ -306,18 +310,20 @@ async function postearInfo(hidroelectrica){
 
     var message = "Hidroeléctrica #" + hidroelectrica.nombre + indicadorPaute + "\n\n" + 
     "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
-    signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + "m desde el lunes " + cotas[2] + "\n" +
+    signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
     "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
     "🌊Caudal: " + caudales[0].toFixed(2) + " m3/s\n" +
     signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
-    "🔋Generación: " + produccion[0].toFixed(2) + " MW\n" +
+    "🔋Generación: " + produccion[0].toFixed(2) + " MW/h\n" +
+    "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
     signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
     signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
-    "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
     "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
     
     console.log(message + "\n\n\n")
+
     //post the tweet
+    postTweet(message);
 }
 
 async function trigger(){
@@ -326,12 +332,15 @@ async function trigger(){
     }
 }
 
+const job = new CronJob('15 1-22/3 * * *', () => {
+    trigger();
+    console.log('Tik');
+}, null, true, 'America/Guayaquil');
+job.start();
+
+
+
 //postTweet("Test\nHellowrold\n\n\nHi");
-
-trigger();
-
-
-
 /*
 note that
 mazEnerDia

@@ -18,6 +18,7 @@
   "homepage": "https://github.com/Zezenta/infocaudales#readme",
   "dependencies": {
     "axios": "^1.7.7",
+    "cron": "^3.1.7",
     "dotenv": "^16.4.5",
     "twitter-api-v2": "^1.18.1"
   }
