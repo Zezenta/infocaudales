@@ -295,35 +295,44 @@ async function postearInfo(hidroelectrica){
     var turbinasActivas = await getInfoById(hidroelectrica.turbinas_id); //turbinasactivas
     var produccion = await getEnergy(hidroelectrica.prefix); //[actual, -3h, lunes, lunesdate]
 
-    var indicadorPaute = (hidroelectrica.paute) ? " #Paute" : "";
-    //cotas and caudales
-    var signo_cota = (cotas[0] >= cotas[1]) ? "+" : "-";
-    var delta_caudal = caudales[1] === 0 ? (caudales[0] > 0 ? 100 : 0) : ((caudales[0] - caudales[1]) / caudales[1]) * 100;
-    var signo_caudal = (caudales[0] >= caudales[1]) ? "+" : "-";
+    if(cotas[0] === null || caudales[0] === null || turbinasActivas === null || produccion === null){ //if one of the values is not yet added (if one of the values is null)
+        //try again 10 minutes later
+        setTimeout(() => {
+            postearInfo(hidroelectrica);
+        }, 10 * 60 * 1000); //10 minutes in miliseconds
 
-    //energy
-    var signo_ener_3h = (produccion[0] >= produccion[1]) ? "+" : "-";
-    var delta_ener_3h = produccion[1] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[1]) / produccion[1]) * 100;
-    var signo_ener_lunes = (produccion[0] >= produccion[2]) ? "+" : "-";
-    var delta_ener_lunes = produccion[2] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[2]) / produccion[2]) * 100;
-    var trabajoEnergia = (produccion[0] / hidroelectrica.energiaMax) * 100;
+        return; //out
+    }else{
+        var indicadorPaute = (hidroelectrica.paute) ? " #Paute" : "";
+        //cotas and caudales
+        var signo_cota = (cotas[0] >= cotas[1]) ? "+" : "-";
+        var delta_caudal = caudales[1] === 0 ? (caudales[0] > 0 ? 100 : 0) : ((caudales[0] - caudales[1]) / caudales[1]) * 100;
+        var signo_caudal = (caudales[0] >= caudales[1]) ? "+" : "-";
 
-    var message = "Hidroeléctrica #" + hidroelectrica.nombre + indicadorPaute + "\n\n" + 
-    "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
-    signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
-    "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
-    "🌊Caudal: " + caudales[0].toFixed(2) + " m3/s\n" +
-    signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
-    "🔋Generación: " + produccion[0].toFixed(2) + " MW/h\n" +
-    "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
-    signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
-    signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
-    "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
-    
-    console.log(message + "\n\n\n")
+        //energy
+        var signo_ener_3h = (produccion[0] >= produccion[1]) ? "+" : "-";
+        var delta_ener_3h = produccion[1] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[1]) / produccion[1]) * 100;
+        var signo_ener_lunes = (produccion[0] >= produccion[2]) ? "+" : "-";
+        var delta_ener_lunes = produccion[2] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[2]) / produccion[2]) * 100;
+        var trabajoEnergia = (produccion[0] / hidroelectrica.energiaMax) * 100;
 
-    //post the tweet
-    postTweet(message);
+        var message = "Hidroeléctrica #" + hidroelectrica.nombre + indicadorPaute + "\n\n" + 
+        "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
+        signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
+        "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
+        "🌊Caudal: " + caudales[0].toFixed(2) + " m3/s\n" +
+        signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
+        "🔋Generación: " + produccion[0].toFixed(2) + " MW/h\n" +
+        "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
+        signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
+        signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
+        "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
+        
+        console.log(message + "\n\n\n")
+
+        //post the tweet
+        postTweet(message);
+    }
 }
 
 async function trigger(){
@@ -337,8 +346,6 @@ const job = new CronJob('15 1-22/3 * * *', () => {
     console.log('Tik');
 }, null, true, 'America/Guayaquil');
 job.start();
-
-
 
 //postTweet("Test\nHellowrold\n\n\nHi");
 /*
