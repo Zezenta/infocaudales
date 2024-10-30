@@ -21,6 +21,7 @@
     "cron": "^3.1.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "http": "^0.0.1-security",
     "twitter-api-v2": "^1.18.1"
   }
 }
