@@ -9,29 +9,12 @@ var server = http.createServer(function(req, res) {
 server.listen();
 
 const axios = require('axios');
-const { TwitterApi } = require('twitter-api-v2');
+const TwitterService = require('./src/services/twitter.service');
 const CronJob = require('cron').CronJob;
 require('dotenv').config();
 
-const client = new TwitterApi({
-    appKey: process.env.API_KEY,
-    appSecret: process.env.API_KEY_SECRET,
-    accessToken: process.env.ACCESS_TOKEN,
-    accessSecret: process.env.ACCESS_SECRET,
-});
+const twitterService = new TwitterService();
 
-//twitter auth and posting
-async function postTweet(message) {
-    try {
-        const tweet = await client.v2.tweet(message);
-        console.log('Tweet posted:', tweet);
-        var fechatweet = new Date();
-        fechatweet.setHours(fechatweet.getHours()-5);
-        console.log(fechatweet);
-    } catch (error) {
-        console.error('Error posting tweet:', error, error.data);
-    }
-}
 
 //get information
 async function getInfoById(id, type){ //type could be "cota", "caudal", "turbinas"
@@ -341,7 +324,7 @@ async function postearInfo(hidroelectrica){
         console.log(message + "\n\n\n")
 
         //post the tweet
-        postTweet(message);
+        await twitterService.postTweet(message);
     }
 }
 
@@ -352,7 +335,7 @@ async function trigger(){
 }
 
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
-postTweet("Status on " + testito);
+twitterService.postTweet("Status on " + testito);
 
 const job = new CronJob('15 1-22/3 * * *', () => {
     trigger();
