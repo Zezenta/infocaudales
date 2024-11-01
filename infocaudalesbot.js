@@ -354,7 +354,7 @@ async function trigger(){
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
 postTweet("Status on " + testito);
 
-const job = new CronJob('15 1-22/3 * * *', () => {
+const job = new CronJob('15 1-22/6 * * *', () => {
     trigger();
     console.log('Tik');
 }, null, true, 'America/Guayaquil');
