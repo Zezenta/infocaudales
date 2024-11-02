@@ -228,7 +228,7 @@ async function postearInfo(hidroelectrica){
     var turbinasActivas = await getInfoById(hidroelectrica.turbinas_id); //turbinasactivas
     var produccion = await getEnergy(hidroelectrica.prefix); //[actual, -3h, lunes, lunesdate]
 
-    if(cotas[0] === null || caudales[0] === null || turbinasActivas === null || produccion === null){ //if one of the values is not yet added (if one of the values is null)
+    if(cotas[0] === null || caudales[0] === null || turbinasActivas[0] === null || produccion[0] === null){ //if one of the values is not yet added (if one of the values is null)
         //try again 10 minutes later
         setTimeout(() => {
             postearInfo(hidroelectrica);
