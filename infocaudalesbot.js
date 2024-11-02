@@ -1,7 +1,7 @@
-var http = require('http');
-var server = http.createServer(function(req, res) {
+const http = require('http');
+const server = http.createServer(function(req, res) {
     res.writeHead(200, {'Content-Type': 'text/plain'});
-    var message = 'It works!\n',
+    const message = 'It works!\n',
         version = 'NodeJS ' + process.versions.node + '\n',
         response = [message, version].join('\n');
     res.end(response);
@@ -9,29 +9,14 @@ var server = http.createServer(function(req, res) {
 server.listen();
 
 const axios = require('axios');
-const { TwitterApi } = require('twitter-api-v2');
+const TwitterService = require('./src/services/twitter.service');
 const CronJob = require('cron').CronJob;
 require('dotenv').config();
 
-const client = new TwitterApi({
-    appKey: process.env.API_KEY,
-    appSecret: process.env.API_KEY_SECRET,
-    accessToken: process.env.ACCESS_TOKEN,
-    accessSecret: process.env.ACCESS_SECRET,
-});
+const { mazar, molino, sopladora, minasSanFrancisco } = require("./src/data/hidroelectricas.json");
+const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco];
+const twitterService = new TwitterService();
 
-//twitter auth and posting
-async function postTweet(message) {
-    try {
-        const tweet = await client.v2.tweet(message);
-        console.log('Tweet posted:', tweet);
-        var fechatweet = new Date();
-        fechatweet.setHours(fechatweet.getHours()-5);
-        console.log(fechatweet);
-    } catch (error) {
-        console.error('Error posting tweet:', error, error.data);
-    }
-}
 
 //get information
 async function getInfoById(id, type){ //type could be "cota", "caudal", "turbinas"
@@ -236,68 +221,6 @@ async function celecSur(){ //still work to do, MW left but wont do it for now
     }
 }
 
-
-var mazar = {
-    nombre: "Mazar",
-    cotaMin: 2098,
-    cotaMax: 2153,
-    energiaMax: 170,
-    turbinasMax: 2,
-    prefix: "maz",
-    turbinas_id: 30503,
-    caudal_id: 30538,
-    cota_id: 30031,
-    paute: true
-};
-
-var molino = {
-    nombre: "Molino",
-    cotaMin: 1975,
-    cotaMax: 1991,
-    energiaMax: 1100,
-    turbinasMax: 10,
-    prefix: "mol",
-    turbinas_id: 44822,
-    caudal_id: 24811,
-    cota_id: 24019,
-    paute: true
-};
-
-var sopladora = {
-    nombre: "Sopladora",
-    cotaMin: 1312,
-    cotaMax: 1318,
-    energiaMax: 487,
-    turbinasMax: 3,
-    prefix: "sop",
-    turbinas_id: 90503,
-    caudal_id: 90537,
-    cota_id: 90919,
-    paute: true
-};
-
-var minas_san_francisco = {
-    nombre: "MinasSanFrancisco",
-    cotaMin: 783,
-    cotaMax: 792,
-    energiaMax: 270,
-    turbinasMax: 3,
-    prefix: "msf",
-    turbinas_id: 650503,
-    caudal_id: 650538,
-    cota_id: 650919,
-    paute: false
-};
-
-var celec_sur = {
-    nombre: "CELEC EP SUR",
-    prefix: "csr",
-    caudal_id: 24812 
-}
-
-var hidroelectricas = [mazar, sopladora, molino, minas_san_francisco];
-
-
 async function postearInfo(hidroelectrica){
 
     var cotas = await getInfoById(hidroelectrica.cota_id, "cota"); //[actual, lunes, lunesdate]
@@ -341,18 +264,18 @@ async function postearInfo(hidroelectrica){
         console.log(message + "\n\n\n")
 
         //post the tweet
-        postTweet(message);
+        await twitterService.postTweet(message);
     }
 }
 
-async function trigger(){
-    for(var hidroelectrica of hidroelectricas){
+async function trigger() {
+    for (const hidroelectrica of hidroelectricas) {
         postearInfo(hidroelectrica);
     }
 }
 
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
-postTweet("Status on " + testito);
+twitterService.postTweet("Status on " + testito);
 
 const job = new CronJob('15 1-22/6 * * *', () => {
     trigger();
