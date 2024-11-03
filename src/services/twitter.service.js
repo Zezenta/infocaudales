@@ -30,7 +30,7 @@ class TwitterService {
             const tweet = await this._client.v2.tweet(message);
             console.log('[TwitterService] Posted tweet:', tweet.data);
         } catch (error) {
-            console.log('[TwitterService] Error posting tweet', error);
+            console.error('[TwitterService] Error posting tweet', error);
             throw error;
         }
     }

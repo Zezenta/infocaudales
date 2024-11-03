@@ -264,7 +264,12 @@ async function postearInfo(hidroelectrica){
         console.log(message + "\n\n\n")
 
         //post the tweet
-        await twitterService.postTweet(message);
+        try{
+            await twitterService.postTweet(message);
+        }catch(error){
+            console.error("Error with TwitterService");
+        }
+        
     }
 }
 
