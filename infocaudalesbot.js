@@ -12,6 +12,8 @@ const axios = require('axios');
 const TwitterService = require('./src/services/twitter.service');
 const CronJob = require('cron').CronJob;
 require('dotenv').config();
+const { createCanvas } = require('canvas');
+const fs = require('fs');
 
 const { mazar, molino, sopladora, minasSanFrancisco } = require("./src/data/hidroelectricas.json");
 const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco];
@@ -249,27 +251,217 @@ async function postearInfo(hidroelectrica){
         var delta_ener_lunes = produccion[2] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[2]) / produccion[2]) * 100;
         var trabajoEnergia = (produccion[0] / hidroelectrica.energiaMax) * 100;
 
-        var message = "Hidroeléctrica #" + hidroelectrica.nombre + indicadorPaute + "\n\n" + 
+        var message = "Hidroeléctrica #" + hidroelectrica.nombre.split(' ').join('') + indicadorPaute + "\n\n" + 
         "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
-        signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
+        //signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
         "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
         "🌊Caudal: " + caudales[0].toFixed(2) + " m3/s\n" +
         signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
         "🔋Generación: " + produccion[0].toFixed(2) + " MW/h\n" +
         "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
-        signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
-        signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
+        //signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
+        //signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
         "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
         
+        
+        //IMAGE GENERATION
+        const canvas = createCanvas(1000, 1000);
+        const ctx = canvas.getContext('2d');
+
+        function formatDateTime() {
+            var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+            fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+            var year = fecha.getUTCFullYear().toString(); //gets year
+            var month = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+            var day = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+            
+            var hours = fecha.getUTCHours().toString().padStart(2, '0'); //this for knowing which item from the response get, works in localtime
+            var minutes = fecha.getUTCMinutes().toString().padStart(2, '0');;
+        
+            const formattedDate = `${day}/${month}/${year}`;
+            const formattedTime = `${hours}:${minutes}`;
+        
+            return { date: formattedDate, time: formattedTime };
+        }
+        ctx.fillStyle = "#f0d9c2";
+        ctx.fillRect(0, 0, 1000, 1000);
+        
+        //right offset
+        const offsetX = 100;
+        
+        //draw hydroelectric
+        ctx.beginPath();
+        ctx.moveTo(0, 925);
+        ctx.lineTo(offsetX + 50, 890);
+        ctx.quadraticCurveTo(offsetX + 100, 870, offsetX + 120, 800);
+        ctx.lineTo(offsetX + 200, 400);
+        ctx.quadraticCurveTo(offsetX + 210, 350, offsetX + 275, 350);
+        ctx.lineTo(offsetX + 275, 300);
+        ctx.lineTo(offsetX + 300, 300);
+        ctx.lineTo(offsetX + 300, 230);
+        ctx.lineTo(offsetX + 360, 230);
+        ctx.lineTo(offsetX + 360, 275);
+        ctx.lineTo(offsetX + 400, 275);
+        ctx.lineTo(offsetX + 400, 1000);
+        ctx.lineTo( 0, 1000);
+        ctx.closePath();
+        
+        ctx.fillStyle = "#5f5c63"; //hydroelectric fill
+        ctx.fill();
+        
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        //lateral lines
+        ctx.beginPath();
+        ctx.moveTo(offsetX + 275, 350);
+        ctx.lineTo(offsetX + 175, 1000);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(offsetX + 360, 275);
+        ctx.lineTo(offsetX + 360, 1000);
+        ctx.stroke();
+        
+        function waterInterpolation(value, minimumCota, maximumCota) {
+            //linear interpolation
+            var minimumPixel = 760;
+            var maximumPixel = 300;
+            return Math.round(((value - minimumCota) * (maximumPixel - minimumPixel)) / (maximumCota - minimumCota) + minimumPixel);
+        }
+        var nivel_agua = waterInterpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax);
+        
+        
+        //draw water level
+        ctx.beginPath();
+        ctx.moveTo(offsetX + 400, 1000);
+        ctx.lineTo(1000, 1000);
+        ctx.lineTo(1000, nivel_agua);
+        ctx.lineTo(offsetX + 400, nivel_agua);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = "#0793de"; //water tone
+        ctx.fill();
+        
+        const { date: formattedDate, time: formattedTime } = formatDateTime();
+        
+        ctx.font = 'bold 32px consolas';
+        ctx.fillStyle = 'black';
+        ctx.fillText("@Hidro_Info_Bot", 730, 30);
+
+        ctx.font = 'bold 60px consolas';
+        ctx.fillStyle = 'black';
+        ctx.fillText(hidroelectrica.nombre, 20, 70);
+        ctx.font = 'bold 50px consolas';
+        ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
+        
+        
+        //minimum cota
+        ctx.font = 'bold 30px consolas';
+        ctx.fillStyle = "red";
+        ctx.fillText("Cota mínima: " + hidroelectrica.cotaMin + " msnm", 510, 790);
+        ctx.beginPath();
+        ctx.moveTo(500, 760);
+        ctx.lineTo(1000, 760);
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        
+        //current cota
+        ctx.font = 'bold 30px consolas';
+        ctx.fillStyle = "#0793de";
+        ctx.fillText("Cota actual: " + cotas[0].toFixed(2) + " msnm", 510, nivel_agua - 10);
+        
+        //caudal
+        ctx.font = 'bold 40px consolas';
+        ctx.fillStyle = "black";
+        ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 600, 200);
+        
+        function getCaudalCategory(value, maxCaudal) {
+            if (value == 0) return ["Nulo", "#373b34"];
+          
+            const segment = maxCaudal / 5;//divide max in 5 equal segments
+          
+            if (value > 0 && value <= segment) return ["Muy Bajo", "Red"];
+            if (value > segment && value <= segment * 2) return ["Bajo", "#bf6626"];
+            if (value > segment * 2 && value <= segment * 3) return ["Medio", "Orange"];
+            if (value > segment * 3 && value <= segment * 4) return ["Alto", "#519928"];
+            if (value > segment * 4 && value <= maxCaudal) return ["Muy Alto", "Green"];
+          
+            return ["Muy Alto", "Green"]; //for values higher than maximum
+        }
+        
+        var caudaloutput = getCaudalCategory(caudales[0].toFixed(2), hidroelectrica.maxCaudal);
+        ctx.fillStyle = caudaloutput[1];
+        ctx.fillText(caudaloutput[0], 775, 235);
+        
+        //battery
+        ctx.beginPath();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "black";
+        ctx.moveTo(11, 310);
+        ctx.lineTo(11, 345);
+        ctx.lineTo(170, 345);
+        ctx.lineTo(170, 335);
+        ctx.lineTo(175, 335);
+        ctx.lineTo(175, 320);
+        ctx.lineTo(170, 320);
+        ctx.lineTo(170, 310);
+        ctx.closePath();
+        ctx.stroke();
+        
+        function energyInterpolation(value, genMax){
+            var minimumPixel = 0;
+            var maximumPixel = 150;
+            return Math.round(((value) * (maximumPixel - minimumPixel)) / (genMax) + minimumPixel);
+        }
+        
+        var energia = energyInterpolation(produccion[0].toFixed(2), hidroelectrica.energiaMax);
+        
+        function getEnergyCategory(value) {
+            if(value <= 0) {
+                return ["Nula", "#2b2727"];
+            }else if (value > 0 && value < 50) {
+                return ["Baja", "Red"];
+            }else if (value >= 50 && value < 100) {
+                return ["Media", "Orange"];
+            }else if (value >= 100 && value <= 150) {
+                return ["Alta", "Green"];
+            }else{
+                console.error("Out of range getCategory function");
+            }
+        }
+        
+        var energiaoutput = getEnergyCategory(energia);
+        
+        //battery content
+        ctx.fillStyle = energiaoutput[1];
+        ctx.fillRect(16, 315, energia, 25);
+        
+        //generation
+        ctx.font = 'bold 40px consolas';
+        ctx.fillStyle = "black";
+        ctx.fillText("Generación:", 10, 250);
+        ctx.fillText(produccion[0].toFixed(2) + " MW/h", 10, 300);
+        
+        ctx.fillStyle = energiaoutput[1];
+        ctx.fillText(energiaoutput[0], 185, 340);
+        
+        ctx.closePath();
+        ctx.stroke();
+        //save the image
+        const imageBuffer = canvas.toBuffer('image/png');
+
+
         console.log(message + "\n\n\n")
 
         //post the tweet
         try{
-            await twitterService.postTweet(message);
+            await twitterService.postTweet(message, imageBuffer);
         }catch(error){
             console.error("Error with TwitterService");
         }
-        
     }
 }
 
@@ -280,7 +472,7 @@ async function trigger() {
 }
 
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
-twitterService.postTweet("Status on " + testito);
+twitterService.postText("Status on " + testito);
 
 const job = new CronJob('15 1-22/6 * * *', () => {
     trigger();
@@ -288,7 +480,6 @@ const job = new CronJob('15 1-22/6 * * *', () => {
 }, null, true, 'America/Guayaquil');
 job.start();
 
-//postTweet("Test\nHellowrold\n\n\nHi");
 /*
 note that
 mazEnerDia

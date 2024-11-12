@@ -8,6 +8,7 @@
         "prefix": "maz",
         "turbinas_id": 30503,
         "caudal_id": 30538,
+        "maxCaudal": 150,
         "cota_id": 30031,
         "paute": true
     },
@@ -21,6 +22,7 @@
         "turbinas_id": 44822,
         "caudal_id": 24811,
         "cota_id": 24019,
+        "maxCaudal": 150,
         "paute": true
     },
     "sopladora": {
@@ -33,10 +35,11 @@
         "turbinas_id": 90503,
         "caudal_id": 90537,
         "cota_id": 90919,
+        "maxCaudal": 100,
         "paute": true
     },
     "minasSanFrancisco": {
-        "nombre": "MinasSanFrancisco",
+        "nombre": "Minas San Francisco",
         "cotaMin": 783,
         "cotaMax": 792,
         "energiaMax": 270,
@@ -45,6 +48,7 @@
         "turbinas_id": 650503,
         "caudal_id": 650538,
         "cota_id": 650919,
+        "maxCaudal": 80,
         "paute": false
     },
     "celecSur": {
