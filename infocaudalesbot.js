@@ -332,7 +332,8 @@ async function postearInfo(hidroelectrica){
         }
         var nivel_agua = waterInterpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax);
         
-        
+        var textFont = "DejaVu Sans Mono";
+
         //draw water level
         ctx.beginPath();
         ctx.moveTo(offsetX + 400, 1000);
@@ -346,19 +347,19 @@ async function postearInfo(hidroelectrica){
         
         const { date: formattedDate, time: formattedTime } = formatDateTime();
         
-        ctx.font = 'bold 32px consolas';
+        ctx.font = 'bold 32px ' + textFont;
         ctx.fillStyle = 'black';
-        ctx.fillText("@Hidro_Info_Bot", 730, 30);
+        ctx.fillText("@Hidro_Info_Bot", 705, 30);
 
-        ctx.font = 'bold 60px consolas';
+        ctx.font = 'bold 60px ' + textFont;
         ctx.fillStyle = 'black';
         ctx.fillText(hidroelectrica.nombre, 20, 70);
-        ctx.font = 'bold 50px consolas';
+        ctx.font = 'bold 50px ' + font;
         ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
         
         
         //minimum cota
-        ctx.font = 'bold 30px consolas';
+        ctx.font = 'bold 30px ' + textFont;
         ctx.fillStyle = "red";
         ctx.fillText("Cota mínima: " + hidroelectrica.cotaMin + " msnm", 510, 790);
         ctx.beginPath();
@@ -369,14 +370,14 @@ async function postearInfo(hidroelectrica){
         ctx.stroke();
         
         //current cota
-        ctx.font = 'bold 30px consolas';
+        ctx.font = 'bold 30px ' + textFont;
         ctx.fillStyle = "#0793de";
         ctx.fillText("Cota actual: " + cotas[0].toFixed(2) + " msnm", 510, nivel_agua - 10);
         
         //caudal
-        ctx.font = 'bold 40px consolas';
+        ctx.font = 'bold 40px ' + textFont;
         ctx.fillStyle = "black";
-        ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 600, 200);
+        ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 575, 200);
         
         function getCaudalCategory(value, maxCaudal) {
             if (value == 0) return ["Nulo", "#373b34"];
@@ -440,7 +441,7 @@ async function postearInfo(hidroelectrica){
         ctx.fillRect(16, 315, energia, 25);
         
         //generation
-        ctx.font = 'bold 40px consolas';
+        ctx.font = 'bold 40px ' + textFont;
         ctx.fillStyle = "black";
         ctx.fillText("Generación:", 10, 250);
         ctx.fillText(produccion[0].toFixed(2) + " MW/h", 10, 300);
