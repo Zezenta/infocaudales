@@ -354,7 +354,7 @@ async function postearInfo(hidroelectrica){
         ctx.font = 'bold 60px ' + textFont;
         ctx.fillStyle = 'black';
         ctx.fillText(hidroelectrica.nombre, 20, 70);
-        ctx.font = 'bold 50px ' + font;
+        ctx.font = 'bold 50px ' + textfont;
         ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
         
         
