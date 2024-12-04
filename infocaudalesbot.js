@@ -866,7 +866,7 @@ async function dailyReport(){
     //"Su cota pasó de " + masterInfo[1][2][0].toFixed(2) + " msnm, a " + masterInfo[1][2][23].toFixed(2) + deltaMolino + Math.abs(masterInfo[1][2][0] - masterInfo[1][2][23]).toFixed(2) + " metros\n" +
     "\n" +
     "#Sopladora\n" +
-    "Generó " + individualEnergy[2].toFixed(2) + " MWh, un " + interpolation(individualEnergy[2], 0, (sopladora.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
+    "Generó " + individualEnergy[2].toFixed(2) + " MWh, un " + interpolation(individualEnergy[2], 0, (sopladora.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n";// +
     //"Su cota pasó de " + masterInfo[2][2][0].toFixed(2) + " msnm, a " + masterInfo[2][2][23].toFixed(2) + deltaSopladora + Math.abs(masterInfo[2][2][0] - masterInfo[2][2][23]).toFixed(2) + " metros\n";
     console.log(dailyMessage);
 
