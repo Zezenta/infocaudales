@@ -462,6 +462,7 @@ async function postearInfo(hidroelectrica){
             await twitterService.postTweet(message, imageBuffer);
         }catch(error){
             console.error("Error with TwitterService");
+            return error;
         }
     }
 }
@@ -475,7 +476,7 @@ async function trigger() {
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
 twitterService.postText("Status on " + testito);
 
-const job = new CronJob('15 1-22/6 * * *', () => {
+const job = new CronJob('15 7-22/6 * * *', () => {
     trigger();
     console.log('Tik');
 }, null, true, 'America/Guayaquil');
@@ -561,7 +562,7 @@ async function dailyReport(){
     function formatDateTime() {
         var fecha = new Date(); // UTC date, 5 hours ahead from localtime
         fecha.setHours(fecha.getHours() - 5); // Modify UTC date to be the same as GMT-5
-
+        fecha.setDate(fecha.getDate() - 1);
         // Obtener día de la semana
         const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const diaSemana = diasSemana[fecha.getUTCDay()];
@@ -618,18 +619,12 @@ async function dailyReport(){
     var infoBlock_width = width - infoBlock_margin * 2;
     var graphSpacing = 10;
 
-    //names for testing, wont be necessary on production
-    var nombres = ["Mazar", "Molino", "Sopladora"];
-    var testData = [2100, 2140, 2115, 2110, 2101, 2109, 2100, 2140, 2115, 2110, 2101, 2109, 2100, 2140, 2115, 2110, 2101, 2109, 2100, 2140, 2115, 2110, 2101, 2109]; //cleared
-    var testMaximum = 2150; //simulated maximum for charts
-    var testMinimum = 2090;
-
-    var turTestData = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1];
-    var turMaximum = 3;
-
     var labels = ["Generación", "Turbinas", "Cota"];
     var dailyGeneration = 0;
     var totalMaxDailyGeneration = hidroelectricas[0].energiaMax * 24 + hidroelectricas[1].energiaMax * 24 + hidroelectricas[2].energiaMax * 24;
+
+    var individualEnergy = [];
+
 
     //generate infoBlocks
     for(i = 0; i < 3; i++){
@@ -685,9 +680,12 @@ async function dailyReport(){
         var maxDailyEnergy = hidroelectricas[i].energiaMax * 24;
         
         for (let h = 0; h < masterInfo[i][0].length; h++) {
-            energySum += masterInfo[i][0][h];
+            energySum += masterInfo[i][0][h]; //for individual battery drawing
         }
-        dailyGeneration += energySum;
+
+        individualEnergy[i] = energySum; //for later tweet message
+
+        dailyGeneration += energySum; //for big battery drawing
         
 
         testRect(estTextWidth + bigSpace - 105, initialYcoords + contentHeight + 20, 90, interpolation(energySum, 0, maxDailyEnergy, 0, -412.5), cGreen, 5, cGreen); //battery fill (0, -412.5)
@@ -844,7 +842,33 @@ async function dailyReport(){
     test(anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batteryHeight - (batteryHeight * 0.3),  "black", batteryLineWidth)
 
 
+    //INFO MESSAGE    
+    function deltaValue(start, finish){  //not used but useful anyways
+        return ((finish - start) / start);
+    }
 
+    //not elegant but will refactor later
+    var deltaMazar = (masterInfo[0][2][0] < masterInfo[0][2][23]) ? ", un aumento de " : ", una reducción de ";
+    var deltaMolino = (masterInfo[1][2][0] < masterInfo[1][2][23]) ? ", un aumento de " : ", una reducción de ";
+    var deltaSopladora = (masterInfo[2][2][0] < masterInfo[2][2][23]) ? ", un aumento de " : ", una reducción de ";
+
+
+    var dailyMessage = "Reporte Diario del Complejo #Paute\n" +
+    //"Durante las 24 horas del " + dateInfo[0] + ", " + dateInfo[1] + " de " + dateInfo[2] + ":\n" +
+    "Durante 24 horas:\n" +
+    "\n" +
+    "#Mazar\n" +
+    "Generó " + individualEnergy[0].toFixed(2) + " MWh, un " + interpolation(individualEnergy[0], 0, (mazar.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
+    //"Su cota pasó de " + masterInfo[0][2][0].toFixed(2) + " msnm, a " + masterInfo[0][2][23].toFixed(2) + deltaMazar + Math.abs(masterInfo[0][2][0] - masterInfo[0][2][23]).toFixed(2)  + " metros\n" +
+    "\n" +
+    "#Molino\n" +
+    "Generó " + individualEnergy[1].toFixed(2) + " MWh, un " + interpolation(individualEnergy[1], 0, (molino.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
+    //"Su cota pasó de " + masterInfo[1][2][0].toFixed(2) + " msnm, a " + masterInfo[1][2][23].toFixed(2) + deltaMolino + Math.abs(masterInfo[1][2][0] - masterInfo[1][2][23]).toFixed(2) + " metros\n" +
+    "\n" +
+    "#Sopladora\n" +
+    "Generó " + individualEnergy[2].toFixed(2) + " MWh, un " + interpolation(individualEnergy[2], 0, (sopladora.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
+    //"Su cota pasó de " + masterInfo[2][2][0].toFixed(2) + " msnm, a " + masterInfo[2][2][23].toFixed(2) + deltaSopladora + Math.abs(masterInfo[2][2][0] - masterInfo[2][2][23]).toFixed(2) + " metros\n";
+    console.log(dailyMessage);
 
     //FUNCTIONS
     function text(X, Y, text, textValue, alignment, optionalColor){
@@ -899,8 +923,21 @@ async function dailyReport(){
     }
 
     const imageBuffer = canvas.toBuffer('image/png');
-    fs.writeFileSync('./output.png', imageBuffer);
+    try{
+        await twitterService.postTweet(dailyMessage, imageBuffer);
+    }catch(error){
+        console.error("Error with TwitterService in Daily Reporting");
+        return error;
+    }
 }
+
+
+const dailyJob = new CronJob('0 8 * * *', () => {
+    console.log('Tik');
+    dailyReport();
+}, null, true, 'America/Guayaquil');
+dailyJob.start();
+
 
 /*
 note that
