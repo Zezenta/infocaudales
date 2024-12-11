@@ -15,8 +15,8 @@ require('dotenv').config();
 const { createCanvas } = require('canvas');
 const fs = require('fs');
 
-const { mazar, molino, sopladora, minasSanFrancisco } = require("./src/data/hidroelectricas.json");
-const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco];
+const { mazar, molino, sopladora, minasSanFrancisco, cocaCodoSinclair } = require("./src/data/hidroelectricas.json");
+const hidroelectricas = [mazar, sopladora, molino];
 const twitterService = new TwitterService();
 
 
@@ -332,8 +332,6 @@ async function postearInfo(hidroelectrica){
         }
         var nivel_agua = waterInterpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax);
         
-        var textFont = "DejaVu Sans Mono";
-
         //draw water level
         ctx.beginPath();
         ctx.moveTo(offsetX + 400, 1000);
@@ -346,7 +344,9 @@ async function postearInfo(hidroelectrica){
         ctx.fill();
         
         const { date: formattedDate, time: formattedTime } = formatDateTime();
-        
+
+        var textFont = "DejaVu Sans Mono";
+
         ctx.font = 'bold 32px ' + textFont;
         ctx.fillStyle = 'black';
         ctx.fillText("@Hidro_Info_Bot", 705, 30);
@@ -379,20 +379,6 @@ async function postearInfo(hidroelectrica){
         ctx.fillStyle = "black";
         ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 575, 200);
         
-        function getCaudalCategory(value, maxCaudal) {
-            if (value == 0) return ["Nulo", "#373b34"];
-          
-            const segment = maxCaudal / 5;//divide max in 5 equal segments
-          
-            if (value > 0 && value <= segment) return ["Muy Bajo", "Red"];
-            if (value > segment && value <= segment * 2) return ["Bajo", "#bf6626"];
-            if (value > segment * 2 && value <= segment * 3) return ["Medio", "Orange"];
-            if (value > segment * 3 && value <= segment * 4) return ["Alto", "#519928"];
-            if (value > segment * 4 && value <= maxCaudal) return ["Muy Alto", "Green"];
-          
-            return ["Muy Alto", "Green"]; //for values higher than maximum
-        }
-        
         var caudaloutput = getCaudalCategory(caudales[0].toFixed(2), hidroelectrica.maxCaudal);
         ctx.fillStyle = caudaloutput[1];
         ctx.fillText(caudaloutput[0], 775, 235);
@@ -419,22 +405,7 @@ async function postearInfo(hidroelectrica){
         }
         
         var energia = energyInterpolation(produccion[0].toFixed(2), hidroelectrica.energiaMax);
-        
-        function getEnergyCategory(value) {
-            if(value <= 0) {
-                return ["Nula", "#2b2727"];
-            }else if (value > 0 && value < 50) {
-                return ["Baja", "Red"];
-            }else if (value >= 50 && value < 100) {
-                return ["Media", "Orange"];
-            }else if (value >= 100 && value <= 150) {
-                return ["Alta", "Green"];
-            }else{
-                console.error("Out of range getCategory function");
-            }
-        }
-        
-        var energiaoutput = getEnergyCategory(energia);
+        var energiaoutput = getEnergyCategory(energia); //color
         
         //battery content
         ctx.fillStyle = energiaoutput[1];
@@ -472,16 +443,6 @@ async function trigger() {
         postearInfo(hidroelectrica);
     }
 }
-
-const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
-twitterService.postText("Status on " + testito);
-
-const job = new CronJob('15 7-22/6 * * *', () => {
-    trigger();
-    console.log('Tik');
-}, null, true, 'America/Guayaquil');
-job.start();
-
 
 //DAILY REPORTS
 async function getDailyInfo(){
@@ -786,21 +747,27 @@ async function dailyReport(){
             }else if(k == 2){ //if its a water graph
                 ctx.moveTo(xvalues[k], interpolation(masterInfo[i][2][0], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
                 for(j = 1; j <= 24; j++){
-                    ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][2][j-1], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
 
+                    if(j < 24){
+                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][2][j], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                    }
                     if(j % 6 == 0){
                         rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
                     }
+
                 } 
             }else{ //for generation
                 ctx.moveTo(xvalues[k], interpolation(masterInfo[i][0][0], 0, hidroelectricas[i].energiaMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
                 for(j = 1; j <= 24; j++){
-                    ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, hidroelectricas[i].energiaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
-
+                    
+                    if(j < 24){
+                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, hidroelectricas[i].energiaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                    }
                     if(j % 6 == 0){
                         rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
                     }
-                } 
+                    
+                }
             }
 
             ctx.stroke();
@@ -894,11 +861,6 @@ async function dailyReport(){
         ctx.restore(); //restore text to not mess it up in any other text writing
     }
 
-    //very important function to draw graphs
-    function interpolation(value, minimumvalue, maximumValue, minimumPixel, maximumPixel) {
-        return ((value - minimumvalue) * (maximumPixel - minimumPixel)) / (maximumValue - minimumvalue) + minimumPixel;
-    }
-
 
     function test(X, Y, X1, Y1, color, optionalLineWidth){
         ctx.beginPath();
@@ -931,13 +893,242 @@ async function dailyReport(){
     }
 }
 
+//very important function to draw graphs
+function interpolation(value, minimumvalue, maximumValue, minimumPixel, maximumPixel) {
+    return ((value - minimumvalue) * (maximumPixel - minimumPixel)) / (maximumValue - minimumvalue) + minimumPixel;
+}
 
-const dailyJob = new CronJob('0 8 * * *', () => {
+function getCaudalCategory(value, maxCaudal) {
+    if (value == 0) return ["Nulo", "#373b34"];
+  
+    const segment = maxCaudal / 5;//divide max in 5 equal segments
+  
+    if (value > 0 && value <= segment) return ["Muy Bajo", "Red"];
+    if (value > segment && value <= segment * 2) return ["Bajo", "#bf6626"];
+    if (value > segment * 2 && value <= segment * 3) return ["Medio", "Orange"];
+    if (value > segment * 3 && value <= segment * 4) return ["Alto", "#519928"];
+    if (value > segment * 4 && value <= maxCaudal) return ["Muy Alto", "Green"];
+  
+    return ["Muy Alto", "Green"]; //for values higher than maximum
+}
+
+function getEnergyCategory(value) {
+    if(value <= 0) {
+        return ["Nula", "#2b2727"];
+    }else if (value > 0 && value < 50) {
+        return ["Baja", "Red"];
+    }else if (value >= 50 && value < 100) {
+        return ["Media", "Orange"];
+    }else if (value >= 100 && value <= 150) {
+        return ["Alta", "Green"];
+    }else{
+        console.error("Out of range getCategory function");
+    }
+}
+
+
+async function updateCocaCodoSinclair(){ //normal 3hour report
+    var width = 1000;
+    var height = 1000;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = "#f0d9c2";
+    ctx.fillRect(0, 0, 1000, 1000);
+
+    
+    //pretty obvious
+    function formatDateTime() {
+        var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+        fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+        var year = fecha.getUTCFullYear().toString(); //gets year
+        var month = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+        var day = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+        
+        var hours = fecha.getUTCHours().toString().padStart(2, '0'); //this for knowing which item from the response get, works in localtime
+        var minutes = fecha.getUTCMinutes().toString().padStart(2, '0');;
+    
+        const formattedDate = `${day}/${month}/${year}`;
+        const formattedTime = `${hours}:${minutes}`;
+    
+        return { date: formattedDate, time: formattedTime };
+    }
+
+    const { date: formattedDate, time: formattedTime } = formatDateTime();
+
+    //get hydroelectric info upfront
+    var caudales = await getInfoById(cocaCodoSinclair.caudal_id, "caudal");
+    var currentCaudal = (caudales[0] != null) ? caudales[0] : 0; 
+    var turbines = await getInfoById(cocaCodoSinclair.turbinas_id, "turbinas");
+    var currentTurbines = (turbines[0] != null) ? turbines[0].toFixed(2) : 0; 
+    var energyInfo = await getEnergy(cocaCodoSinclair.prefix);
+    var currentEnergy = (energyInfo[0] != null) ? energyInfo[0] : 0;
+
+
+
+    var textFont = "DejaVu Sans Mono";
+    ctx.font = 'bold 32px ' + textFont;
+    ctx.fillStyle = 'black';
+    ctx.fillText("@Hidro_Info_Bot", 705, 30);
+
+    ctx.font = 'bold 60px ' + textFont;
+    ctx.fillStyle = 'black';
+    ctx.fillText("Coca Codo Sinclair", 20, 70);
+    ctx.font = 'bold 50px ' + textFont;
+    ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
+
+
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 5;
+
+    //hydroelectric
+    ctx.moveTo(600, 1000);
+    ctx.lineTo(600, 600);
+    ctx.lineTo(625, 600);
+    ctx.lineTo(625, 575);
+    ctx.lineTo(400, 575);
+    ctx.lineTo(400, 600);
+    ctx.lineTo(425, 600);
+    ctx.arcTo(425, 640, 180, 800, 20);
+    ctx.arcTo(180, 800, 0, 800, 30);
+    ctx.lineTo(0, 800);
+    ctx.lineTo(0, 1000);
+    ctx.closePath();
+    
+    ctx.fillStyle = "#5f5c63"; //hydroelectric fill
+    ctx.fill();
+
+    ctx.moveTo(400, 600);
+    ctx.lineTo(625, 600);
+
+    ctx.stroke();
+
+    //water
+    ctx.lineWidth = 2;
+    var caudalLevel = interpolation(currentCaudal, 0, cocaCodoSinclair.maxCaudal, 980, 605); // 605 max - 980 min
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+
+    ctx.moveTo(602.5, 1000);
+    ctx.lineTo(1000, 1000);
+    
+
+    var wavePronuntiation = 20;
+    var waveRadius = 30;
+    ctx.lineTo(1000, caudalLevel + wavePronuntiation / 3);
+    
+    for(i = 1; i < 8; i++){
+        var waveY = (i % 2 == 0) ? caudalLevel + wavePronuntiation : caudalLevel - wavePronuntiation;
+        var nextWaveY = (i % 2 == 0) ? caudalLevel - wavePronuntiation : caudalLevel + wavePronuntiation;
+        
+        ctx.arcTo(1000 - i * 50, waveY, 1000 - (i + 1) * 50, nextWaveY, waveRadius);
+    }
+    ctx.arcTo(602.5, caudalLevel + wavePronuntiation, 600, caudalLevel - wavePronuntiation, 13)
+    
+    ctx.lineTo(602.5, caudalLevel);
+    ctx.closePath();
+    ctx.fillStyle = "#0793de"; //water tone
+    ctx.fill();
+    ctx.stroke();
+
+    //battery
+    const anchorX = 50; // Coordenada X inicial
+    const anchorY = 400; // Coordenada Y inicial
+    const batteryWidth = 300; // Ancho de la batería
+    const batteryHeight = 80; // Altura de la batería
+    const terminalWidth = 15; // Ancho del terminal superior
+    const terminalHeight = 20; // Altura del terminal superior
+
+    ctx.beginPath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "black";
+
+    ctx.moveTo(anchorX, anchorY); //upper left corner
+    ctx.lineTo(anchorX, anchorY + batteryHeight); //bottom left corner
+    ctx.lineTo(anchorX + batteryWidth, anchorY + batteryHeight); //bottom right corner
+    ctx.lineTo(anchorX + batteryWidth, anchorY + batteryHeight - terminalHeight); //up to the terminal
+    ctx.lineTo(anchorX + batteryWidth + terminalWidth, anchorY + batteryHeight - terminalHeight); //right terminal
+    ctx.lineTo(anchorX + batteryWidth + terminalWidth, anchorY + terminalHeight); //left terminal
+    ctx.lineTo(anchorX + batteryWidth, anchorY + terminalHeight); //down to the upper border of the battery
+    ctx.lineTo(anchorX + batteryWidth, anchorY); //back to initial point
+    ctx.closePath();
+
+    ctx.stroke();
+
+    var energyTextInfo = getEnergyCategory(currentEnergy);
+    var caudalTextInfo = getCaudalCategory(currentCaudal, cocaCodoSinclair.maxCaudal);
+
+    //battery fill
+    ctx.fillStyle = energyTextInfo[1];
+    ctx.fillRect(anchorX + 2.5, anchorY + 2.5, interpolation(currentEnergy, 0, cocaCodoSinclair.energiaMax, 0, 295), batteryHeight - 5) //third can be between 0 - 295
+
+    ctx.font = textFont;
+    ctx.fillStyle = "black";
+    ctx.fillText("Generación: ", anchorX, anchorY - 140);
+    ctx.fillText(currentEnergy.toFixed(2) + " MW", anchorX, anchorY - 80);
+    ctx.fillStyle = energyTextInfo[1];
+    ctx.fillText(energyTextInfo[0], anchorX, anchorY - 20);
+
+    ctx.font = "bold 28px " + textFont;
+    ctx.fillStyle = "black";
+    ctx.fillText("(" + interpolation(currentEnergy, 0, 1500, 0, 100).toFixed(2) + "% de su capacidad máxima)", anchorX, anchorY + 120);
+    ctx.font = 'bold 50px ' + textFont;
+    ctx.fillText("Caudal: ", 650, caudalLevel - 20 - 140);
+    ctx.fillText(currentCaudal + " m³/s", 650, caudalLevel - 20 - 80);
+
+    ctx.fillStyle = energyTextInfo[1];
+    ctx.fillText(caudalTextInfo[0], 650, caudalLevel - 20 - 20);
+    
+    ctx.fillStyle = "black";
+    ctx.font = "bold 44px " + textFont;
+    ctx.fillText("Turbinas activas: " + currentTurbines, 40, 900);
+    ctx.stroke();
+
+    var delta_caudal = caudales[1] === 0 ? (currentCaudal > 0 ? 100 : 0) : ((currentCaudal - caudales[1]) / caudales[1]) * 100;
+    var signo_caudal = (currentCaudal >= caudales[1]) ? "+" : "-";
+    var trabajoEnergia = (currentEnergy / cocaCodoSinclair.energiaMax) * 100;
+
+    var message = "Hidroeléctrica Coca Codo Sinclair\n" + 
+    "#" + cocaCodoSinclair.nombre.split(' ').join('') + " #CCS\n" +
+    "\n" +
+    "🌊Caudal: " + currentCaudal.toFixed(2) + " m3/s\n" +
+    signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n" +
+    "\n" +
+    "🔋Generación: " + currentEnergy.toFixed(2) + " MWh\n" +
+    "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
+    "Turbinas Activas: " + currentTurbines + "/" + cocaCodoSinclair.turbinasMax;
+
+
+    //save the image
+    const imageBuffer = canvas.toBuffer('image/png'); 
+    console.log(message + "\n\n\n")
+
+    //post the tweet
+    try{
+        await twitterService.postTweet(message, imageBuffer);
+    }catch(error){
+        console.error("Error with TwitterService when posting Coca Codo Sinclair");
+        return error;
+    }
+}
+
+
+//CLOCK JOBS
+const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
+twitterService.postText("Status on " + testito);
+
+const job = new CronJob('15 7-22/6 * * *', () => { //hour to hour updates
+    trigger();
+    updateCocaCodoSinclair();
+    console.log('Tik');
+}, null, true, 'America/Guayaquil');
+job.start();
+
+const dailyJob = new CronJob('0 8 * * *', () => { //daily report with complex charts
     console.log('Tik');
     dailyReport();
 }, null, true, 'America/Guayaquil');
 dailyJob.start();
-
 
 /*
 note that
@@ -951,30 +1142,14 @@ dont use ids, instead, they use their own url handles and dont use the pointValu
 i guess i'll have to alter Date and Time so it is synced with GMT-5 (ecuadorian time), because Verpex's servers are in london (or in this case US east)
 
 
-all this was taken around 15h37
+COCA CODO SINCLAIR:
+ENERGY OUTPUT:
+https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomccs/ccsEnerDia?fecha=08/12/2024%2000:00:00
+TURBINES:
+https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid=100503&fechaInicio=2024-12-08T06:00:00.000Z&fechaFin=2024-12-09T05:00:00.000Z&fecha=08/12/2024%2001:00:00
+CAUDAL:
+https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid=100037&fechaInicio=2024-12-08T06:00:00.000Z&fechaFin=2024-12-09T05:00:00.000Z&fecha=08/12/2024%2001:00:00
+COTA:
 
-DAILY Energy handles:
-PREFIX: first three letters of the hydroelectric name
-https://generacioncsr.celec.gob.ec:8443/ords/csr/sardom{PREFIX}/{PREFIX}EnerDia?fecha={DD/MM/AA}%2000:00:00
-
-literally anything else:
-ID: the ones declared before
-FECHA: DD/MM/AA
-https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid={ID}&fechaInicio={FECHA}T06:00:00.000Z&fechaFin={FECHA DD+1}T05:00:00.000Z&fecha=26/10/2024%2001:00:00
-
-
-this was taken around 23h34
-
-https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid=24812&fechaInicio=2024-10-26T06:00:00.000Z&fechaFin=2024-10-27T05:00:00.000Z&fecha=26/10/2024%2001:00:00
-
-
-when requesting information, oldest timestamps are last, that means that 00h00 is items[items.length], and 24h00 is items[0]
-
-every single request has:
-fechaInicio: year-month-dayT06:00:00.000Z
-fechaFin year-month-{day+1}-T05:00:00.000Z
-fecha: day/month/year%2001:00:00
-but this starts from 01h00 to 24h00, i dont want that but they only support that
-
-the response value according to actual time
+https://generacioncsr.celec.gob.ec:8443/ords/csr/sardomcsr/pointValues?mrid=100540&fechaInicio=2024-12-08T06:00:00.000Z&fechaFin=2024-12-09T05:00:00.000Z&fecha=08/12/2024%2001:00:00
 */

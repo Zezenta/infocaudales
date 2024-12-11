@@ -51,6 +51,17 @@
         "maxCaudal": 80,
         "paute": false
     },
+    "cocaCodoSinclair": {
+        "nombre": "Coca Codo Sinclair",
+        "energiaMax": 1500,
+        "turbinasMax": 8,
+        "prefix": "ccs",
+        "turbinas_id": 100503,
+        "caudal_id": 100037,
+        "cota_id": 100540,
+        "maxCaudal": 1000,
+        "paute": false
+    },
     "celecSur": {
         "nombre": "CELEC EP SUR",
         "prefix": "csr",
