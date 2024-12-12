@@ -2,7 +2,7 @@
 const http = require('http');
 const server = http.createServer(function(req, res) {
     res.writeHead(200, {'Content-Type': 'text/plain'});
-    const message = 'It works!\n',
+    const message = 'It works! Test: 🌊🌊🔋🔋💧💧 á é í ó ú\n',
         version = 'NodeJS ' + process.versions.node + '\n',
         response = [message, version].join('\n');
     res.end(response);
@@ -1119,7 +1119,7 @@ const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaqui
 try{
     twitterService.postText("Status on " + testito + " test: 💧íóú");
 }catch(error){
-    console.error("Error with TwitterService when posting Coca Codo Sinclair");
+    console.error("Error with TwitterService when posting status on");
     return error;
 }
 
