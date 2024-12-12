@@ -1115,7 +1115,7 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
 
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
-twitterService.postText("Status on " + testito);
+twitterService.postText("Status on " + testito + " test: 💧íóú");
 
 const job = new CronJob('15 7-22/6 * * *', () => { //hour to hour updates
     trigger();
