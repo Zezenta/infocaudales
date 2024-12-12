@@ -1117,7 +1117,7 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
 try{
-    await twitterService.postText("Status on " + testito + " test: 💧íóú");
+    twitterService.postText("Status on " + testito + " test: 💧íóú");
 }catch(error){
     console.error("Error with TwitterService when posting Coca Codo Sinclair");
     return error;
