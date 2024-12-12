@@ -1,3 +1,4 @@
+//test 🌊🌊🔋🔋💧💧 á é í ó ú
 const http = require('http');
 const server = http.createServer(function(req, res) {
     res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -1115,7 +1116,12 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
 
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
-twitterService.postText("Status on " + testito + " test: 💧íóú");
+try{
+    await twitterService.postText("Status on " + testito + " test: 💧íóú");
+}catch(error){
+    console.error("Error with TwitterService when posting Coca Codo Sinclair");
+    return error;
+}
 
 const job = new CronJob('15 7-22/6 * * *', () => { //hour to hour updates
     trigger();
