@@ -332,13 +332,7 @@ async function postearInfo(hidroelectrica){
         ctx.lineTo(offsetX + 360, 1000);
         ctx.stroke();
         
-        function waterInterpolation(value, minimumCota, maximumCota) {
-            //linear interpolation
-            var minimumPixel = 760;
-            var maximumPixel = 300;
-            return Math.round(((value - minimumCota) * (maximumPixel - minimumPixel)) / (maximumCota - minimumCota) + minimumPixel);
-        }
-        var nivel_agua = waterInterpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax);
+        var nivel_agua = interpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax, 760, 300);
         
         //draw water level
         ctx.beginPath();
@@ -403,13 +397,7 @@ async function postearInfo(hidroelectrica){
         ctx.closePath();
         ctx.stroke();
         
-        function energyInterpolation(value, genMax){
-            var minimumPixel = 0;
-            var maximumPixel = 150;
-            return Math.round(((value) * (maximumPixel - minimumPixel)) / (genMax) + minimumPixel);
-        }
-        
-        var energiaPixelsFill = energyInterpolation(produccion[0].toFixed(2), hidroelectrica.energiaMax);
+        var energiaPixelsFill = interpolation(produccion[0].toFixed(2), 0, hidroelectrica.energiaMax, 0, 150);
         var energiaoutput = getEnergyCategory(energiaPixelsFill); //color
         
         //battery content
@@ -429,19 +417,22 @@ async function postearInfo(hidroelectrica){
         ctx.stroke();
         //save the image
         const imageBuffer = canvas.toBuffer('image/png');
+        fs.writeFileSync("./postear.png", imageBuffer);
 
         //post the tweet
+        /*
         try{
             await twitterService.postTweet(message, imageBuffer);
         }catch(error){
             console.error("Error with TwitterService");
             return error;
         }
+            */
     }
 }
 
 async function trigger() {
-    for(i = 0; i < 4; i++){
+    for(i = 0; i < 3; i++){
         postearInfo(hidroelectricas[i]);
     }
 }
@@ -623,7 +614,7 @@ async function dailyReport(){
             genPointer++; //increase pointer to label in next iteration
         }
 
-        text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MW", "bold 30px " + textFont); //MWh indicator atop of Y axis
+        text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MWh", "bold 30px " + textFont); //MWh indicator atop of Y axis
 
         //individual BATTERY DRAWING
         test(estTextWidth + bigSpace - 110, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin + 2.5);
@@ -689,7 +680,6 @@ async function dailyReport(){
 
 
             //for each bit of information, draw another line
-            //if we talking about turbines
             if(k == 1){ //for turbines
                 ctx.moveTo(xvalues[k], interpolation(masterInfo[i][1][0], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
 
@@ -764,7 +754,6 @@ async function dailyReport(){
     text(anchor[0], batteryAnchor - 15, "Producción: " + totalDailyGeneration.toFixed(2) + " MWh (" + interpolation(totalDailyGeneration + 34, 0, totalMaxDailyGeneration, 0, 100).toFixed(2) + "% del máximo)", "bold 80px " + textFont, "start")
 
     anchor[0] += 10;
-
     testRect(anchor[0] + 5, batteryAnchor + batterySpacing + 5, interpolation(totalDailyGeneration, 0, totalMaxDailyGeneration, 0, 2065), batteryHeight - 22.5, cGreen, 5, cGreen); //BATTERY FILL
     test(anchor[0], batteryAnchor + batterySpacing, anchor[0], batteryAnchor + batteryHeight, "black", batteryLineWidth);
     test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batterySpacing, anchor[0] - lineCorrectionFactor, batteryAnchor + batterySpacing,  "black", batteryLineWidth);
@@ -1017,9 +1006,7 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
     const imageBuffer = canvas.toBuffer('image/png');
     //fs.writeFileSync("./ccs.png", imageBuffer);
     
-
     //post the tweet
-    
     try{
         await twitterService.postTweet(message, imageBuffer);
     }catch(error){
@@ -1128,7 +1115,7 @@ async function CCSdailyReport(){
     var graphSpacing = 10;
 
     var dailyGeneration = 0;
-    var totalMaxDailyGeneration = 30000;
+    var totalMaxDailyGeneration = cocaCodoSinclair.energiaMax;
 
     //each infoblock (only one in this case)
     ctx.beginPath();
@@ -1160,7 +1147,6 @@ async function CCSdailyReport(){
 
     //for the line ticks in the Y axis
     var genPointer = 0;
-
     for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){ //add a bunch of pixels (that correspond to a fifth of the total graph height)
         test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //adds line ticks
 
@@ -1168,12 +1154,9 @@ async function CCSdailyReport(){
 
         genPointer++; //increase pointer to label in next iteration
     }
-
     text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MWh", "bold 30px " + textFont); //MWh indicator atop of Y axis
 
     dailyGeneration += energySum; //for big battery drawing
-    
-
     //testRect(estTextWidth + bigSpace - 105, initialYcoords + contentHeight + 20, 90, interpolation(energySum, 0, maxDailyEnergy, 0, -412.5), cGreen, 5, cGreen); //battery fill (0, -412.5)
     //END GENERATION GRAPH
 
@@ -1222,7 +1205,6 @@ async function CCSdailyReport(){
 
 
         //for each bit of information, draw another line
-        //if we talking about turbines
         if(k == 1){ //for turbines
             ctx.moveTo(xvalues[k], interpolation(dayInfo[1][0], 0, cocaCodoSinclair.turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
 
@@ -1307,7 +1289,8 @@ async function CCSdailyReport(){
     test(anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batteryHeight - (batteryHeight * 0.3),  "black", batteryLineWidth)
 
 
-    //COQUITA CODITO SINCLAIRSITO
+
+    //COQUITA CODITO SINCLAIRSITO DRAWING
     ctx.beginPath();
     ctx.strokeStyle = "black";
     ctx.lineWidth = 10;
@@ -1425,7 +1408,7 @@ async function CCSdailyReport(){
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
 try{
-    //twitterService.postText("Status on " + testito + " test: 💧íóú");
+    twitterService.postText("Status on " + testito + " test: 💧íóú");
 }catch(error){
     console.error("Error with TwitterService when posting status on");
     return error;
@@ -1446,7 +1429,7 @@ const dailyJob = new CronJob('0 8 * * *', async () => { //daily report with comp
 dailyJob.start();
 
 (async () => {
-    //for manual tests
+    //for testing manually
 })();
 
 /*
