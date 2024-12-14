@@ -1126,7 +1126,7 @@ async function CCSdailyReport(){
     var graphSpacing = 10;
 
     var dailyGeneration = 0;
-    var totalMaxDailyGeneration = cocaCodoSinclair.energiaMax;
+    var totalMaxDailyGeneration = cocaCodoSinclair.energiaMax * 24;
 
     //each infoblock (only one in this case)
     ctx.beginPath();
@@ -1426,7 +1426,6 @@ try{
     return error;
 }
 */
-
 
 /*
 note that
