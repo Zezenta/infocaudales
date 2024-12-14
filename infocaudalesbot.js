@@ -259,7 +259,7 @@ async function postearInfo(hidroelectrica){
         "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
         //signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
         "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
-        "🌊Caudal: " + caudales[0].toFixed(2) + " m3/s\n" +
+        "🌊Caudal: " + caudales[0].toFixed(2) + " m³/s\n" +
         signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
         "🔋Generación: " + produccion[0].toFixed(2) + " MWh\n" +
         "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
@@ -994,7 +994,7 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
     var message = "Hidroeléctrica Coca Codo Sinclair\n" + 
     "#" + cocaCodoSinclair.nombre.split(' ').join('') + " #CCS\n" +
     "\n" +
-    "🌊Caudal: " + currentCaudal.toFixed(2) + " m3/s\n" +
+    "🌊Caudal: " + currentCaudal.toFixed(2) + " m³/s\n" +
     signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n" +
     "\n"; /* +
     "🔋Generación: " + currentEnergy.toFixed(2) + " MWh\n" +
@@ -1076,9 +1076,9 @@ async function CCSdailyReport(){
     "#CocaCodoSinclair #CCS\n" +
     "\n" +
     "Durante 24 horas:\n" +
-    "Generó " + energySum.toFixed(2) + "MWh, un " + interpolation(energySum, 0, (cocaCodoSinclair.energiaMax * 24), 0, 100).toFixed(2) + " de su capacidad máxima\n" +
+    "Generó " + energySum.toFixed(2) + "MWh, un " + interpolation(energySum, 0, (cocaCodoSinclair.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
     "\n" +
-    "Mantuvo un caudal promedio de " + caudalPromedio.toFixed(2) + " m3/s, con " + minCaudal.toFixed(2) + " m3/s en su punto más bajo y " + maxCaudal.toFixed(2) + " m3/s en su punto más alto";
+    "Mantuvo un caudal promedio de " + caudalPromedio.toFixed(2) + " m³/s, con " + minCaudal.toFixed(2) + " m³/s en su punto más bajo y " + maxCaudal.toFixed(2) + " m³/s en su punto más alto";
 
 
     ctx.fillStyle = "#f0d9c2"; //background color
