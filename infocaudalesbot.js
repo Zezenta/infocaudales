@@ -31,10 +31,10 @@ const job = new CronJob('15 7-22/6 * * *', () => { //hour to hour updates
 }, null, true, 'America/Guayaquil');
 job.start();
 
-const dailyJob = new CronJob('0 8 * * *', () => { //daily report with complex charts
+const dailyJob = new CronJob('0 8 * * *', async () => { //daily report with complex charts
     console.log('Tik');
-    dailyReport();
-    CCSdailyReport();
+    await dailyReport();
+    await CCSdailyReport();
 }, null, true, 'America/Guayaquil');
 dailyJob.start();
 
