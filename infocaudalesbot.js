@@ -24,6 +24,19 @@ const twitterService = new TwitterService();
 var colors = ["Green", "Red", "Blue"]; //for generation, turbines, and water level
 var cGreen = "#0ba408";
 
+const job = new CronJob('15 7-22/6 * * *', () => { //hour to hour updates
+    console.log('Tik');
+    trigger();
+    updateCocaCodoSinclair();
+}, null, true, 'America/Guayaquil');
+job.start();
+
+const dailyJob = new CronJob('0 8 * * *', () => { //daily report with complex charts
+    console.log('Tik');
+    dailyReport();
+    CCSdailyReport();
+}, null, true, 'America/Guayaquil');
+dailyJob.start();
 
 
 //get information
@@ -417,17 +430,15 @@ async function postearInfo(hidroelectrica){
         ctx.stroke();
         //save the image
         const imageBuffer = canvas.toBuffer('image/png');
-        fs.writeFileSync("./postear.png", imageBuffer);
+        //fs.writeFileSync("./postear.png", imageBuffer);
 
         //post the tweet
-        /*
         try{
             await twitterService.postTweet(message, imageBuffer);
         }catch(error){
             console.error("Error with TwitterService");
             return error;
         }
-            */
     }
 }
 
@@ -1407,30 +1418,15 @@ async function CCSdailyReport(){
 
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
+/*
 try{
     twitterService.postText("Status on " + testito + " test: 💧íóú");
 }catch(error){
     console.error("Error with TwitterService when posting status on");
     return error;
 }
+*/
 
-const job = new CronJob('15 7-22/6 * * *', async () => { //hour to hour updates
-    console.log('Tik');
-    await trigger();
-    await updateCocaCodoSinclair();
-}, null, true, 'America/Guayaquil');
-job.start();
-
-const dailyJob = new CronJob('0 8 * * *', async () => { //daily report with complex charts
-    console.log('Tik');
-    await dailyReport();
-    await CCSdailyReport();
-}, null, true, 'America/Guayaquil');
-dailyJob.start();
-
-(async () => {
-    //for testing manually
-})();
 
 /*
 note that
