@@ -21,6 +21,11 @@ const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco, cocaCodoSi
 const twitterService = new TwitterService();
 
 
+var colors = ["Green", "Red", "Blue"]; //for generation, turbines, and water level
+var cGreen = "#0ba408";
+
+
+
 //get information
 async function getInfoById(id, type){ //type could be "cota", "caudal", "turbinas"
 
@@ -98,7 +103,6 @@ async function getInfoById(id, type){ //type could be "cota", "caudal", "turbina
                         fecha: h_fecha
                     }
                 });
-                //console.log("got it from yesterday");
                 output.push(_3h.data.items[2].valueedit);
             }
         }
@@ -219,7 +223,6 @@ async function celecSur(){ //still work to do, MW left but wont do it for now
                 fecha: h_fecha
             }
         });
-        //console.log("got it from yesterday");
         output.push(_3h.data.items[2].valueedit);
     }
 }
@@ -268,6 +271,7 @@ async function postearInfo(hidroelectrica){
         //IMAGE GENERATION
         const canvas = createCanvas(1000, 1000);
         const ctx = canvas.getContext('2d');
+        var textFont = "DejaVu Sans Mono";
 
         function formatDateTime() {
             var fecha = new Date(); //UTC date, 5 hours ahead from localtime
@@ -284,6 +288,9 @@ async function postearInfo(hidroelectrica){
         
             return { date: formattedDate, time: formattedTime };
         }
+        const { date: formattedDate, time: formattedTime } = formatDateTime();
+
+
         ctx.fillStyle = "#f0d9c2";
         ctx.fillRect(0, 0, 1000, 1000);
         
@@ -310,7 +317,7 @@ async function postearInfo(hidroelectrica){
         ctx.fillStyle = "#5f5c63"; //hydroelectric fill
         ctx.fill();
         
-        ctx.strokeStyle = "black";
+        ctx.strokeStyle = "black"; //line style
         ctx.lineWidth = 2;
         ctx.stroke();
         
@@ -344,14 +351,12 @@ async function postearInfo(hidroelectrica){
         ctx.fillStyle = "#0793de"; //water tone
         ctx.fill();
         
-        const { date: formattedDate, time: formattedTime } = formatDateTime();
 
-        var textFont = "DejaVu Sans Mono";
-
+        //watermark
         ctx.font = 'bold 32px ' + textFont;
         ctx.fillStyle = 'black';
         ctx.fillText("@Hidro_Info_Bot", 705, 30);
-
+        //title and date
         ctx.font = 'bold 60px ' + textFont;
         ctx.fillStyle = 'black';
         ctx.fillText(hidroelectrica.nombre, 20, 70);
@@ -359,7 +364,7 @@ async function postearInfo(hidroelectrica){
         ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
         
         
-        //minimum cota
+        //minimum cota RED line and text
         ctx.font = 'bold 30px ' + textFont;
         ctx.fillStyle = "red";
         ctx.fillText("Cota mínima: " + hidroelectrica.cotaMin + " msnm", 510, 790);
@@ -370,16 +375,15 @@ async function postearInfo(hidroelectrica){
         ctx.lineWidth = 5;
         ctx.stroke();
         
-        //current cota
+        //current cota text
         ctx.font = 'bold 30px ' + textFont;
         ctx.fillStyle = "#0793de";
         ctx.fillText("Cota actual: " + cotas[0].toFixed(2) + " msnm", 510, nivel_agua - 10);
         
-        //caudal
+        //caudal text
         ctx.font = 'bold 40px ' + textFont;
         ctx.fillStyle = "black";
         ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 575, 200);
-        
         var caudaloutput = getCaudalCategory(caudales[0].toFixed(2), hidroelectrica.maxCaudal);
         ctx.fillStyle = caudaloutput[1];
         ctx.fillText(caudaloutput[0], 775, 235);
@@ -405,12 +409,12 @@ async function postearInfo(hidroelectrica){
             return Math.round(((value) * (maximumPixel - minimumPixel)) / (genMax) + minimumPixel);
         }
         
-        var energia = energyInterpolation(produccion[0].toFixed(2), hidroelectrica.energiaMax);
-        var energiaoutput = getEnergyCategory(energia); //color
+        var energiaPixelsFill = energyInterpolation(produccion[0].toFixed(2), hidroelectrica.energiaMax);
+        var energiaoutput = getEnergyCategory(energiaPixelsFill); //color
         
         //battery content
         ctx.fillStyle = energiaoutput[1];
-        ctx.fillRect(16, 315, energia, 25);
+        ctx.fillRect(16, 315, energiaPixelsFill, 25);
         
         //generation
         ctx.font = 'bold 40px ' + textFont;
@@ -525,6 +529,8 @@ async function dailyReport(){
     var height = 2500;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
+    var textFont = "DejaVu Sans Mono"; //cross compatible font
+
 
     //pretty obvious
     function formatDateTime() {
@@ -541,52 +547,53 @@ async function dailyReport(){
 
         return [diaSemana, diaMes, mes, year];
     }
+    const dateInfo = formatDateTime();
 
     ctx.fillStyle = "#f0d9c2"; //background color
     ctx.fillRect(0, 0, 2200, 2500); //background filler
-    
-    //getting time     
-    const dateInfo = formatDateTime();
-    var textFont = "DejaVu Sans Mono"; //cross compatible font
-
+    //watermark text
     ctx.font = 'bold 46px ' + textFont;
     ctx.fillStyle = 'black';
     ctx.textAlign = "end";
-    ctx.fillText("@Hidro_Info_Bot", 2190, 40); //watermark
-
+    ctx.fillText("@Hidro_Info_Bot", 2190, 40);
+    //title text
     ctx.font = 'bold 102px ' + textFont;
     ctx.fillStyle = 'black';
     ctx.textAlign = "start";
     ctx.fillText("Reporte Diario Complejo Paute", 20, 120); //title
     ctx.font = 'bold 96px ' + textFont;
-    ctx.fillText(`${dateInfo[0]}, ${dateInfo[1]} de ${dateInfo[2]} del ${dateInfo[3]}`, 20, 235); //date and stuff, further changing required
+    ctx.fillText(`${dateInfo[0]}, ${dateInfo[1]} de ${dateInfo[2]} del ${dateInfo[3]}`, 20, 235); //date and stuff
 
-
-    //IMPORTANT PARAMETERS
-    //canvas
-    var width = 2200;
-    var height = 2500;
-
+    //PARAMETERS
     //main box
     var anchor = [25, 350];
-    var infoBlockAnchor;
-
     //infoblocks
     var initialYcoords = anchor[1];
     var infoBlock_height = 500;
     var infoBlockSpacing = 70;
-
     //infoblocks content
     var contentHeight = 450;
     var infoBlock_margin = (infoBlock_height - contentHeight) / 2;
     var infoBlock_width = width - infoBlock_margin * 2;
     var graphSpacing = 10;
-
     var labels = ["Generación", "Turbinas", "Cota"];
-    var dailyGeneration = 0;
-    var totalMaxDailyGeneration = hidroelectricas[0].energiaMax * 24 + hidroelectricas[1].energiaMax * 24 + hidroelectricas[2].energiaMax * 24;
+    var totalDailyGeneration = 0;
+    //infoblocks PARAMETERS
+    var graphLineWidth = 5; //Y axis ticks line width
+    var graphLineLength = 20; //Y axis ticks line length
+    var estTextWidth = 180; //hydroelectric name title width
+    var bigSpace = 710; //space allocated to generation chart + battery
+    var normalSpace = 565; //space that the other 2 graph take
+    var lastSpacing = 100; //space between water level graph and turbines graph
 
-    var individualEnergy = [];
+    var individualEnergy = []; //for later tweet message
+
+    //GRAY LABELS FOR GENERACIÓN, TURBINAS, AND COTA
+    //x axis values (TIME) (in array because they are not that ordered, they are actually kind of chaotic)
+    var xvalues = [anchor[0] + estTextWidth, anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing];
+    text(xvalues[0] + bigSpace / 2 - 50, anchor[1] - 20, labels[0], " 70px " + textFont, "center", "gray");
+    text(xvalues[1] + normalSpace / 2, anchor[1] - 20, labels[1], " 70px " + textFont, "center", "gray");
+    text(xvalues[2] + normalSpace / 2, anchor[1] - 20, labels[2], " 70px " + textFont, "center", "gray");
 
 
     //generate infoBlocks
@@ -596,29 +603,18 @@ async function dailyReport(){
         ctx.beginPath();
         ctx.strokeStyle = "black";
         ctx.lineWidth = 5;
-        ctx.rect(anchor[0], initialYcoords, infoBlock_width, infoBlock_height + infoBlockSpacing); //add +infoBlockSpacing to the end to you know what
+        ctx.rect(anchor[0], initialYcoords, infoBlock_width, infoBlock_height + infoBlockSpacing); //add +infoBlockSpacing to the end
         ctx.stroke();
         rotatedText(anchor[0] + infoBlock_margin + 55, initialYcoords + infoBlock_height / 2, hidroelectricas[i].nombre, "bold 80px " + textFont); //hydroelectric title
-
-        //parameters for further changing
-        var graphLineWidth = 5; //Y axis ticks line width
-        var graphLineLength = 20; //Y axis ticks line length
-        var estTextWidth = 180; //hydroelectric name title width
-        var bigSpace = 710; //space allocated to generation chart + battery
-        var normalSpace = 565; //space that the other 2 graph take
-        var lastSpacing = 100; //space between water level graph and turbines graph
         
-        //small boxes for graphs
+        //SMALL BOXES FOR GRAPH LABELING, ALSO INCLUDES INDIVIDUAL BATTERY
         //GENERATION GRAPH
         testRect(anchor[0] + estTextWidth, initialYcoords + infoBlock_margin, 565, contentHeight, "Black", graphLineWidth); //graph box
-        
-        var cGreen = "#0ba408";
 
         var startingPoint = [anchor[0] + estTextWidth, initialYcoords + infoBlock_margin + contentHeight]; //will adjust the X position to where the left line is (to place the ticks in the Y axis)
 
         //for the line ticks in the Y axis
         var genPointer = 0;
-
         for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){ //add a bunch of pixels (that correspond to a fifth of the total graph height)
             test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //adds line ticks
 
@@ -627,9 +623,9 @@ async function dailyReport(){
             genPointer++; //increase pointer to label in next iteration
         }
 
-        text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MWh", "bold 30px " + textFont); //MWh indicator atop of Y axis
+        text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MW", "bold 30px " + textFont); //MWh indicator atop of Y axis
 
-        //battery drawing
+        //individual BATTERY DRAWING
         test(estTextWidth + bigSpace - 110, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin + 2.5);
         test(estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin, estTextWidth + bigSpace - 10, initialYcoords + contentHeight + infoBlock_margin);
         test(estTextWidth + bigSpace - 10, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 10, initialYcoords + contentHeight + infoBlock_margin + 2.5);
@@ -639,28 +635,25 @@ async function dailyReport(){
         test(estTextWidth + bigSpace - 85, initialYcoords + 25 + 30, estTextWidth + bigSpace - 85, initialYcoords + 30);
         test(estTextWidth + bigSpace - 87.5, initialYcoords + 30, estTextWidth + bigSpace - 32.5, initialYcoords + 30);
 
-        var energySum = 0;
-        var maxDailyEnergy = hidroelectricas[i].energiaMax * 24;
+
+        var energySum = 0; //individual energy sum
+        var maxDailyEnergy = hidroelectricas[i].energiaMax * 24; //individual max daily energy
         
         for (let h = 0; h < masterInfo[i][0].length; h++) {
             energySum += masterInfo[i][0][h]; //for individual battery drawing
         }
-
         individualEnergy[i] = energySum; //for later tweet message
-
-        dailyGeneration += energySum; //for big battery drawing
-        
-
+        totalDailyGeneration += energySum; //for big battery drawing
+        //individual battery fill
         testRect(estTextWidth + bigSpace - 105, initialYcoords + contentHeight + 20, 90, interpolation(energySum, 0, maxDailyEnergy, 0, -412.5), cGreen, 5, cGreen); //battery fill (0, -412.5)
         //END GENERATION GRAPH
 
 
+
         //TURBINE GARPH
         testRect(anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), initialYcoords + infoBlock_margin, normalSpace, contentHeight, "Black", graphLineWidth); //graph box
-
-        startingPoint[0] += bigSpace + (graphSpacing / 2); //upgrade the line ticks to the new position
+        startingPoint[0] += bigSpace + (graphSpacing / 2); //upgrade the line ticks to the new X position
         var turbinePointer = 0; //tick labeling pointer
-
         //same thing than with other graphs, but adds 1 more unit to the turbine maximum for aesthetics
         for(y = 0; y < contentHeight - infoBlock_margin; y = y + (contentHeight / (hidroelectricas[i].turbinasMax + 1))){
             test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //ticks
@@ -672,14 +665,12 @@ async function dailyReport(){
         //END TURBINE GRAPH
 
 
+
         //WATER LEVEL GRAPH
         testRect(anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing, initialYcoords + infoBlock_margin, normalSpace, contentHeight, "Black", graphLineWidth); //graph box
-
-        startingPoint[0] = startingPoint[0] - (graphSpacing / 2) + (graphSpacing / 2 * 3) + normalSpace + lastSpacing; //adjust X pos for ticks
-
+        startingPoint[0] = startingPoint[0] - (graphSpacing / 2) + (graphSpacing / 2 * 3) + normalSpace + lastSpacing; //upgrade the line ticks to the new X position
         var wlPointer = 0;
-
-        //ticks
+        //ticks as with other graphs
         for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){
             test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //draws ticks lines
             rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round((hidroelectricas[i].cotaMax - hidroelectricas[i].cotaMin) / 5 * wlPointer + hidroelectricas[i].cotaMin), "bold 30px " + textFont, true); //writes ticks labels, changed to stay in the interval between minimum and maximum water leels
@@ -689,25 +680,6 @@ async function dailyReport(){
         //END WATER LEVEL GRAPH
         
 
-
-
-
-        //x axis values (TIME) (in array because they are not that ordered, they are actually kind of chaotic)
-        var xvalues = [anchor[0] + estTextWidth, anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing];
-
-        //LABELING
-        switch(i){
-            case 0:
-                text(xvalues[i] + bigSpace / 2 - 50, anchor[1] - 20, labels[i], " 70px " +textFont, "center", "gray");
-            break;
-            default:
-                text(xvalues[i] + normalSpace / 2, anchor[1] - 20, labels[i], " 70px " +textFont, "center", "gray");
-            break;
-
-        }
-        
-
-        var colors = ["Green", "Red", "Blue"]; //for generation, turbines, and water level
 
         //loop each graph inside an infoBlock
         for(k = 0; k < 3; k++){
@@ -744,8 +716,6 @@ async function dailyReport(){
                     }
                 }
 
-
-
             }else if(k == 2){ //if its a water graph
                 ctx.moveTo(xvalues[k], interpolation(masterInfo[i][2][0], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
                 for(j = 1; j <= 24; j++){
@@ -780,7 +750,8 @@ async function dailyReport(){
         
     }
 
-    //BIG BATTER DRAWING
+    //BIG BATTERY DRAWING
+    var totalMaxDailyGeneration = hidroelectricas[0].energiaMax * 24 + hidroelectricas[1].energiaMax * 24 + hidroelectricas[2].energiaMax * 24;
     var batterySpacing = 12.5;
     var batteryAnchor = infoBlock_height * 3 + infoBlockSpacing * 3 + batterySpacing + anchor[1] + 115;
     ctx.strokeStyle = "black";
@@ -790,31 +761,19 @@ async function dailyReport(){
     var lineCorrectionFactor = 5;
 
     //BATTERY TEXT
-    text(anchor[0], batteryAnchor - 15, "Producción: " + dailyGeneration.toFixed(2) + " MWh (" + interpolation(dailyGeneration + 34, 0, totalMaxDailyGeneration, 0, 100).toFixed(2) + "% del máximo)", "bold 80px " + textFont, "start")
+    text(anchor[0], batteryAnchor - 15, "Producción: " + totalDailyGeneration.toFixed(2) + " MWh (" + interpolation(totalDailyGeneration + 34, 0, totalMaxDailyGeneration, 0, 100).toFixed(2) + "% del máximo)", "bold 80px " + textFont, "start")
 
     anchor[0] += 10;
 
-    testRect(anchor[0] + 5, batteryAnchor + batterySpacing + 5, interpolation(dailyGeneration, 0, totalMaxDailyGeneration, 0, 2065), batteryHeight - 22.5, cGreen, 5, cGreen);
-
+    testRect(anchor[0] + 5, batteryAnchor + batterySpacing + 5, interpolation(totalDailyGeneration, 0, totalMaxDailyGeneration, 0, 2065), batteryHeight - 22.5, cGreen, 5, cGreen); //BATTERY FILL
     test(anchor[0], batteryAnchor + batterySpacing, anchor[0], batteryAnchor + batteryHeight, "black", batteryLineWidth);
     test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batterySpacing, anchor[0] - lineCorrectionFactor, batteryAnchor + batterySpacing,  "black", batteryLineWidth);
     test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batteryHeight, anchor[0] - lineCorrectionFactor, batteryAnchor + batteryHeight,  "black", batteryLineWidth);
-
-    
     test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing, anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3) + lineCorrectionFactor, "black", batteryLineWidth);
-
     test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight, anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight - (batteryHeight * 0.3) - lineCorrectionFactor,  "black", batteryLineWidth);
-
     test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight - (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batteryHeight - (batteryHeight * 0.3), "black", batteryLineWidth);
     test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batterySpacing + (batteryHeight * 0.3),  "black", batteryLineWidth);
-
     test(anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batteryHeight - (batteryHeight * 0.3),  "black", batteryLineWidth)
-
-
-    //INFO MESSAGE    
-    function deltaValue(start, finish){  //not used but useful anyways
-        return ((finish - start) / start);
-    }
 
     //not elegant but will refactor later
     var deltaMazar = (masterInfo[0][2][0] < masterInfo[0][2][23]) ? ", un aumento de " : ", una reducción de ";
@@ -838,29 +797,18 @@ async function dailyReport(){
     "Generó " + individualEnergy[2].toFixed(2) + " MWh, un " + interpolation(individualEnergy[2], 0, (sopladora.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n";// +
     //"Su cota pasó de " + masterInfo[2][2][0].toFixed(2) + " msnm, a " + masterInfo[2][2][23].toFixed(2) + deltaSopladora + Math.abs(masterInfo[2][2][0] - masterInfo[2][2][23]).toFixed(2) + " metros\n";
 
+    const imageBuffer = canvas.toBuffer('image/png');
+    //fs.writeFileSync("./test.png", imageBuffer);
+    
+    try{
+        await twitterService.postTweet(dailyMessage, imageBuffer);
+    }catch(error){
+        console.error("Error with TwitterService in Daily Reporting");
+        return error;
+    }
+    
+
     //FUNCTIONS
-    function text(X, Y, text, textValue, alignment, optionalColor){
-        ctx.font = textValue;
-        ctx.fillStyle = (optionalColor) ? optionalColor : "black";
-        ctx.textAlign = (alignment) ? alignment : "center";
-
-        ctx.fillText(text, X, Y);
-    }
-
-    function rotatedText(X, Y, text, textValue, inclination){ //inclination is optional
-        ctx.font = textValue;
-        ctx.fillStyle = 'black';
-        ctx.textAlign = "center";
-
-        
-        ctx.save(); //save initial state
-        ctx.translate(X, Y); //move coord system to input params
-        ctx.rotate(inclination ? -Math.PI / 4 : -Math.PI / 2); //rotate context to the left(equivalent to -90 degrees o -Math.PI/2 radians)
-        ctx.fillText(text, 0, 0); //write text in new orientation
-        ctx.restore(); //restore text to not mess it up in any other text writing
-    }
-
-
     function test(X, Y, X1, Y1, color, optionalLineWidth){
         ctx.beginPath();
         ctx.lineWidth = (optionalLineWidth) ? optionalLineWidth : 5;
@@ -869,7 +817,7 @@ async function dailyReport(){
         ctx.lineTo(X1, Y1);
         ctx.stroke();
     }
-
+    
     function testRect(X, Y, X1, Y1, color, optionalLineWidth, fillColor){
         ctx.beginPath();
         ctx.strokeStyle = color;
@@ -882,14 +830,26 @@ async function dailyReport(){
         ctx.rect(X, Y, X1, Y1);
         ctx.stroke();
     }
-
-    const imageBuffer = canvas.toBuffer('image/png');
-    //fs.writeFileSync("./test.png", imageBuffer);
-    try{
-        await twitterService.postTweet(dailyMessage, imageBuffer);
-    }catch(error){
-        console.error("Error with TwitterService in Daily Reporting");
-        return error;
+    
+    function text(X, Y, text, textValue, alignment, optionalColor){
+        ctx.font = textValue;
+        ctx.fillStyle = (optionalColor) ? optionalColor : "black";
+        ctx.textAlign = (alignment) ? alignment : "center";
+    
+        ctx.fillText(text, X, Y);
+    }
+    
+    
+    function rotatedText(X, Y, text, textValue, inclination){ //inclination is optional
+        ctx.font = textValue;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = "center";
+    
+        ctx.save(); //save initial state
+        ctx.translate(X, Y); //move coord system to input params
+        ctx.rotate(inclination ? -Math.PI / 4 : -Math.PI / 2); //rotate context to the left(equivalent to -90 degrees o -Math.PI/2 radians)
+        ctx.fillText(text, 0, 0); //write text in new orientation
+        ctx.restore(); //restore text to not mess it up in any other text writing
     }
 }
 
@@ -1196,8 +1156,6 @@ async function CCSdailyReport(){
     //GENERATION GRAPH
     testRect(anchor[0] + estTextWidth, initialYcoords + infoBlock_margin, 565, contentHeight, "Black", graphLineWidth); //graph box
     
-    var cGreen = "#0ba408";
-
     var startingPoint = [anchor[0] + estTextWidth, initialYcoords + infoBlock_margin + contentHeight]; //will adjust the X position to where the left line is (to place the ticks in the Y axis)
 
     //for the line ticks in the Y axis
@@ -1254,7 +1212,6 @@ async function CCSdailyReport(){
     text(startingPoint[0] - graphLineLength / 2 - 35, initialYcoords + 40, "m3/s", "bold 30px " + textFont);
     //CAUDAL LEVEL END GRAPH
 
-    var colors = ["Green", "Red", "Blue"]; //for generation, turbines, and water level
 
     //ACTUAL CHARTS
     //loop each graph inside an infoBlock AND GENERATE ACTUAL CHARTS
@@ -1349,50 +1306,6 @@ async function CCSdailyReport(){
     test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batterySpacing + (batteryHeight * 0.3),  "black", batteryLineWidth);
     test(anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batteryHeight - (batteryHeight * 0.3),  "black", batteryLineWidth)
 
-    //FUNCTIONS
-    function text(X, Y, text, textValue, alignment, optionalColor){
-        ctx.font = textValue;
-        ctx.fillStyle = (optionalColor) ? optionalColor : "black";
-        ctx.textAlign = (alignment) ? alignment : "center";
-
-        ctx.fillText(text, X, Y);
-    }
-
-    function rotatedText(X, Y, text, textValue, inclination){ //inclination is optional
-        ctx.font = textValue;
-        ctx.fillStyle = 'black';
-        ctx.textAlign = "center";
-
-        ctx.save(); //save initial state
-        ctx.translate(X, Y); //move coord system to input params
-        ctx.rotate(inclination ? -Math.PI / 4 : -Math.PI / 2); //rotate context to the left(equivalent to -90 degrees o -Math.PI/2 radians)
-        ctx.fillText(text, 0, 0); //write text in new orientation
-        ctx.restore(); //restore text to not mess it up in any other text writing
-    }
-
-
-    function test(X, Y, X1, Y1, color, optionalLineWidth){
-        ctx.beginPath();
-        ctx.lineWidth = (optionalLineWidth) ? optionalLineWidth : 5;
-        ctx.strokeStyle = color;
-        ctx.moveTo(X, Y);
-        ctx.lineTo(X1, Y1);
-        ctx.stroke();
-    }
-
-    function testRect(X, Y, X1, Y1, color, optionalLineWidth, fillColor){
-        ctx.beginPath();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = optionalLineWidth;
-        if (fillColor) {
-            ctx.fillStyle = fillColor;
-            ctx.fillRect(X, Y, X1, Y1);
-            return;
-        }
-        ctx.rect(X, Y, X1, Y1);
-        ctx.stroke();
-    }
-
 
     //COQUITA CODITO SINCLAIRSITO
     ctx.beginPath();
@@ -1461,6 +1374,51 @@ async function CCSdailyReport(){
         console.error("Error with TwitterService when posting Coca Codo Sinclair");
         return error;
     }
+
+
+    //FUNCTIONS
+    function test(X, Y, X1, Y1, color, optionalLineWidth){
+        ctx.beginPath();
+        ctx.lineWidth = (optionalLineWidth) ? optionalLineWidth : 5;
+        ctx.strokeStyle = color;
+        ctx.moveTo(X, Y);
+        ctx.lineTo(X1, Y1);
+        ctx.stroke();
+    }
+    
+    function testRect(X, Y, X1, Y1, color, optionalLineWidth, fillColor){
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = optionalLineWidth;
+        if (fillColor) {
+            ctx.fillStyle = fillColor;
+            ctx.fillRect(X, Y, X1, Y1);
+            return;
+        }
+        ctx.rect(X, Y, X1, Y1);
+        ctx.stroke();
+    }
+    
+    function text(X, Y, text, textValue, alignment, optionalColor){
+        ctx.font = textValue;
+        ctx.fillStyle = (optionalColor) ? optionalColor : "black";
+        ctx.textAlign = (alignment) ? alignment : "center";
+    
+        ctx.fillText(text, X, Y);
+    }
+    
+    
+    function rotatedText(X, Y, text, textValue, inclination){ //inclination is optional
+        ctx.font = textValue;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = "center";
+    
+        ctx.save(); //save initial state
+        ctx.translate(X, Y); //move coord system to input params
+        ctx.rotate(inclination ? -Math.PI / 4 : -Math.PI / 2); //rotate context to the left(equivalent to -90 degrees o -Math.PI/2 radians)
+        ctx.fillText(text, 0, 0); //write text in new orientation
+        ctx.restore(); //restore text to not mess it up in any other text writing
+    }
 }
 
 
@@ -1488,10 +1446,7 @@ const dailyJob = new CronJob('0 8 * * *', async () => { //daily report with comp
 dailyJob.start();
 
 (async () => {
-    await trigger();
-    await updateCocaCodoSinclair();
-    await dailyReport();
-    await CCSdailyReport();
+    //for manual tests
 })();
 
 /*
