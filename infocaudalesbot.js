@@ -867,9 +867,9 @@ function getCaudalCategory(value, maxCaudal) {
     if (value > segment && value <= segment * 2) return ["Bajo", "#bf6626"];
     if (value > segment * 2 && value <= segment * 3) return ["Medio", "Orange"];
     if (value > segment * 3 && value <= segment * 4) return ["Alto", "#519928"];
-    if (value > segment * 4 && value <= maxCaudal) return ["Muy Alto", "Green"];
+    if (value > segment * 4) return ["Muy Alto", "Green"];
   
-    return ["Muy Alto", "Green"]; //for values higher than maximum
+    return ["Muy Alto", "Green"]; //just in case
 }
 
 function getEnergyCategory(value) {
@@ -958,7 +958,12 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
 
     //water
     ctx.lineWidth = 2;
-    var caudalLevel = interpolation(currentCaudal, 0, cocaCodoSinclair.maxCaudal, 585, 250); // 250 max - 585 min
+    var caudalLevel;
+    if(currentCaudal < 400){ //500 because of CCS specifics
+        caudalLevel = interpolation(currentCaudal, 0, 400, 585, 250); // 250 max - 585 min
+    }else{
+        caudalLevel = interpolation(currentCaudal, 0, cocaCodoSinclair.maxCaudal, 585, 250); // 250 max - 585 min
+    }
     ctx.fillStyle = "black";
     ctx.beginPath();
     ctx.moveTo(602.5, 600);
@@ -983,7 +988,7 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
     ctx.stroke();
 
 
-    var caudalTextInfo = getCaudalCategory(currentCaudal, cocaCodoSinclair.maxCaudal); //caudal value and color
+    var caudalTextInfo = getCaudalCategory(currentCaudal, 300); //caudal value and color //300 because of CCS specifics
     var textXanchor = 700; //image text pos
     ctx.fillStyle = "black";
     ctx.font = 'bold 50px ' + textFont;
@@ -1195,12 +1200,12 @@ async function CCSdailyReport(){
     startingPoint[0] = startingPoint[0] - (graphSpacing / 2) + (graphSpacing / 2 * 3) + normalSpace + lastSpacing; //adjust X pos for ticks
 
     var wlPointer = 0;
-
+    var chartCaudalMax = (maxCaudal < 500) ? 500 : 1000; //500 is the limit for visualization, if it goes above, then it is 1000
     //ticks
     for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){
         test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //draws ticks lines
 
-        rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round((cocaCodoSinclair.maxCaudal) / 5 * wlPointer), "bold 30px " + textFont, true); //writes ticks labels, changed to stay in the interval between minimum and maximum water levels
+        rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round((chartCaudalMax) / 5 * wlPointer), "bold 30px " + textFont, true); //writes ticks labels, changed to stay in the interval between minimum and maximum water levels
         wlPointer++;
     }
     text(startingPoint[0] - graphLineLength / 2 - 35, initialYcoords + 40, "m3/s", "bold 30px " + textFont);
@@ -1245,11 +1250,11 @@ async function CCSdailyReport(){
 
 
         }else if(k == 2){ //if its a water graph (caudal in this case)
-            ctx.moveTo(xvalues[k], interpolation(dayInfo[3][0], 0, cocaCodoSinclair.maxCaudal, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
+            ctx.moveTo(xvalues[k], interpolation(dayInfo[3][0], 0, chartCaudalMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
             for(j = 1; j <= 24; j++){
 
                 if(j < 24){
-                    ctx.lineTo(xvalues[k] + j * 24.5, interpolation(dayInfo[3][j], 0, cocaCodoSinclair.maxCaudal, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                    ctx.lineTo(xvalues[k] + j * 24.5, interpolation(dayInfo[3][j], 0, chartCaudalMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
                 }
                 if(j % 6 == 0){
                     rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
@@ -1330,7 +1335,7 @@ async function CCSdailyReport(){
 
     //water
     ctx.lineWidth = 6;
-    var caudalLevel = interpolation(caudalPromedio, 0, cocaCodoSinclair.maxCaudal, 2450, 1512.5); // 1512.5 max - 2450 min
+    var caudalLevel = interpolation(caudalPromedio, 0, chartCaudalMax, 2450, 1512.5); // 1512.5 max - 2450 min
     ctx.fillStyle = "black";
     ctx.font = 'bold 70px ' + textFont;
     ctx.fillText("Caudal promedio: ", 1300, caudalLevel - 20 - 160);
@@ -1418,14 +1423,14 @@ async function CCSdailyReport(){
 
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
-/*
+
 try{
     twitterService.postText("Status on " + testito + " test: 💧íóú");
 }catch(error){
     console.error("Error with TwitterService when posting status on");
     return error;
 }
-*/
+
 
 /*
 note that
