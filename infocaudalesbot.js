@@ -15,6 +15,7 @@ const CronJob = require('cron').CronJob;
 require('dotenv').config();
 const { createCanvas } = require('canvas');
 const fs = require('fs');
+registerFont('./src/fonts/DejaVuSansMono.ttf', { family: 'DejaVu Sans Mono' });
 
 const { mazar, molino, sopladora, minasSanFrancisco, cocaCodoSinclair } = require("./src/data/hidroelectricas.json");
 const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco, cocaCodoSinclair];
