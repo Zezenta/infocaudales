@@ -13,10 +13,10 @@ const axios = require('axios');
 const TwitterService = require('./src/services/twitter.service');
 const CronJob = require('cron').CronJob;
 require('dotenv').config();
-const { createCanvas } = require('canvas');
+const { registerFont, createCanvas } = require('canvas');
 const fs = require('fs');
 registerFont('./src/fonts/DejaVuSansMono.ttf', { family: 'DejaVu Sans Mono' });
-
+registerFont('./src/fonts/DejaVuSansMono-Bold.ttf', { family: 'DejaVu Sans Mono', weight: 'bold' });
 const { mazar, molino, sopladora, minasSanFrancisco, cocaCodoSinclair } = require("./src/data/hidroelectricas.json");
 const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco, cocaCodoSinclair];
 const twitterService = new TwitterService();
