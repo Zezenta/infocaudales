@@ -1437,11 +1437,6 @@ try{
     return error;
 }
 
-(async () => {
-    await dailyReport();
-    await CCSdailyReport();
-})();
-
 /*
 note that
 mazEnerDia
