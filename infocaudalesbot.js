@@ -18,7 +18,7 @@ const fs = require('fs');
 registerFont('./src/fonts/DejaVuSansMono.ttf', { family: 'DejaVu Sans Mono' });
 registerFont('./src/fonts/DejaVuSansMono-Bold.ttf', { family: 'DejaVu Sans Mono', weight: 'bold' });
 const { mazar, molino, sopladora, minasSanFrancisco, cocaCodoSinclair } = require("./src/data/hidroelectricas.json");
-const hidroelectricas = [mazar, sopladora, molino, cocaCodoSinclair];
+const hidroelectricas = [mazar, molino, sopladora, cocaCodoSinclair];
 const twitterService = new TwitterService();
 
 
@@ -736,11 +736,11 @@ async function dailyReport(){
 
                 } 
             }else{ //for generation
-                ctx.moveTo(xvalues[k], interpolation(masterInfo[i][0][0], 0, hidroelectricas[i].energiaMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
+                ctx.moveTo(xvalues[k], interpolation(masterInfo[i][0][0], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
                 for(j = 1; j <= 24; j++){
                     
                     if(j < 24){
-                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, hidroelectricas[i].energiaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04)(hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
                     }
                     if(j % 6 == 0){
                         rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
