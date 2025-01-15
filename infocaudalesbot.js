@@ -478,7 +478,7 @@ async function getDailyInfo(){
 
     //get data en masse
     try {
-        for(i = 0; i < 5; i++){ //for each hydroelectric
+        for(i = 0; i < 4; i++){ //for each hydroelectric
             var cPrefix = hidroelectricas[i].prefix;
             var generationInfo = await axios.get('https://generacioncsr.celec.gob.ec:8443/ords/csr/sardom' + cPrefix + '/' + cPrefix + 'EnerDia', { //generation is unique so gets its own block of code
                 params: {
@@ -1067,7 +1067,7 @@ async function CCSdailyReport(){
 
     //get CCS info upfront
     var masterInfo = await getDailyInfo();
-    var dayInfo = masterInfo[4];
+    var dayInfo = masterInfo[3];
 
     var energySum = 0;
     var minProd = 100000;
@@ -1437,6 +1437,10 @@ try{
     return error;
 }
 
+(async () => {
+    await dailyReport();
+    await CCSdailyReport();
+})();
 
 /*
 note that
