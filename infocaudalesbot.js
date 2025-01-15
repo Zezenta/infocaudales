@@ -18,7 +18,7 @@ const fs = require('fs');
 registerFont('./src/fonts/DejaVuSansMono.ttf', { family: 'DejaVu Sans Mono' });
 registerFont('./src/fonts/DejaVuSansMono-Bold.ttf', { family: 'DejaVu Sans Mono', weight: 'bold' });
 const { mazar, molino, sopladora, minasSanFrancisco, cocaCodoSinclair } = require("./src/data/hidroelectricas.json");
-const hidroelectricas = [mazar, sopladora, molino, minasSanFrancisco, cocaCodoSinclair];
+const hidroelectricas = [mazar, sopladora, molino, cocaCodoSinclair];
 const twitterService = new TwitterService();
 
 
