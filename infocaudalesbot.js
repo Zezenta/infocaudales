@@ -387,6 +387,11 @@ async function postearInfo(hidroelectrica){
         ctx.font = 'bold 30px ' + textFont;
         ctx.fillStyle = "#0793de";
         ctx.fillText("Cota actual: " + cotas[0].toFixed(2) + " msnm", 510, nivel_agua - 10);
+
+        //maximum cota
+        ctx.font = 'bold 30px ' + textFont;
+        ctx.fillStyle = 'gray';
+        ctx.fillText("-Cota máxima: " + hidroelectrica.cotaMax + " msnm", 500, 305);
         
         //caudal text
         ctx.font = 'bold 40px ' + textFont;
@@ -880,7 +885,7 @@ function getEnergyCategory(value) {
         return ["Baja", "Red"];
     }else if (value >= 50 && value < 100) {
         return ["Media", "Orange"];
-    }else if (value >= 100 && value <= 150) {
+    }else if (value >= 100) {
         return ["Alta", "Green"];
     }else{
         console.error("Out of range getCategory function");
