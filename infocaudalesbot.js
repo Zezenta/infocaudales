@@ -740,7 +740,7 @@ async function dailyReport(){
                 for(j = 1; j <= 24; j++){
                     
                     if(j < 24){
-                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04)(hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
                     }
                     if(j % 6 == 0){
                         rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
@@ -1436,6 +1436,8 @@ try{
     console.error("Error with TwitterService when posting status on");
     return error;
 }
+
+dailyReport();
 
 /*
 note that
