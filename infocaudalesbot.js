@@ -1437,8 +1437,6 @@ try{
     return error;
 }
 
-dailyReport();
-
 /*
 note that
 mazEnerDia
