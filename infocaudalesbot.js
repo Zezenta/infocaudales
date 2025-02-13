@@ -1,14 +1,4 @@
 //test 🌊🌊🔋🔋💧💧 á é í ó ú
-const http = require('http');
-const server = http.createServer(function(req, res) {
-    res.writeHead(200, {'Content-Type': 'text/plain'});
-    const message = 'It works! Test: 🌊🌊🔋🔋💧💧 á é í ó ú\n',
-        version = 'NodeJS ' + process.versions.node + '\n',
-        response = [message, version].join('\n');
-    res.end(response);
-});
-server.listen();
-
 const axios = require('axios');
 const TwitterService = require('./src/services/twitter.service');
 const CronJob = require('cron').CronJob;
