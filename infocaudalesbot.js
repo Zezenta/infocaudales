@@ -25,7 +25,6 @@ job.start();
 const dailyJob = new CronJob('0 8 * * *', async () => { //daily report with complex charts
     console.log('Tik');
     await dailyReport();
-    await CCSdailyReport();
 }, null, true, 'America/Guayaquil');
 dailyJob.start();
 
