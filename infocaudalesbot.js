@@ -113,7 +113,7 @@ async function getInfoById(id, type){ //type could be "cota", "caudal", "turbina
 
     } catch (error) {
         console.error('Error fetching data:', error);
-        return error;
+        throw error;
     }
 }
 
@@ -173,7 +173,7 @@ async function getEnergy(prefix){ //return actual, _3h, lunes
 
     } catch (error) {
         console.error('Error fetching data:', error);
-        return error;
+        throw error;
     }
 }
 
@@ -231,209 +231,217 @@ async function celecSur(){ //still work to do, MW left but wont do it for now
 }
 
 async function postearInfo(hidroelectrica){
+    try {
+        var cotas = await getInfoById(hidroelectrica.cota_id, "cota"); //[actual, lunes, lunesdate]
+        var caudales = await getInfoById(hidroelectrica.caudal_id, "caudal"); //[actual, -3h]
+        var turbinasActivas = await getInfoById(hidroelectrica.turbinas_id); //turbinasactivas
+        var produccion = await getEnergy(hidroelectrica.prefix); //[actual, -3h, lunes, lunesdate]
 
-    var cotas = await getInfoById(hidroelectrica.cota_id, "cota"); //[actual, lunes, lunesdate]
-    var caudales = await getInfoById(hidroelectrica.caudal_id, "caudal"); //[actual, -3h]
-    var turbinasActivas = await getInfoById(hidroelectrica.turbinas_id); //turbinasactivas
-    var produccion = await getEnergy(hidroelectrica.prefix); //[actual, -3h, lunes, lunesdate]
+        if(cotas[0] === null || caudales[0] === null || turbinasActivas[0] === null || produccion[0] === null){ //if one of the values is not yet added (if one of the values is null)
+            //try again 10 minutes later
+            setTimeout(() => {
+                postearInfo(hidroelectrica);
+            }, 10 * 60 * 1000); //10 minutes in miliseconds
 
-    if(cotas[0] === null || caudales[0] === null || turbinasActivas[0] === null || produccion[0] === null){ //if one of the values is not yet added (if one of the values is null)
+            return; //out
+        }else{
+            var indicadorPaute = (hidroelectrica.paute) ? " #Paute" : "";
+            //cotas and caudales
+            var signo_cota = (cotas[0] >= cotas[1]) ? "+" : "-";
+            var delta_caudal = caudales[1] === 0 ? (caudales[0] > 0 ? 100 : 0) : ((caudales[0] - caudales[1]) / caudales[1]) * 100;
+            var signo_caudal = (caudales[0] >= caudales[1]) ? "+" : "-";
+
+            //energy
+            var signo_ener_3h = (produccion[0] >= produccion[1]) ? "+" : "-";
+            var delta_ener_3h = produccion[1] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[1]) / produccion[1]) * 100;
+            var signo_ener_lunes = (produccion[0] >= produccion[2]) ? "+" : "-";
+            var delta_ener_lunes = produccion[2] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[2]) / produccion[2]) * 100;
+            var trabajoEnergia = (produccion[0] / hidroelectrica.energiaMax) * 100;
+
+            var message = "Hidroeléctrica #" + hidroelectrica.nombre.split(' ').join('') + indicadorPaute + "\n\n" + 
+            "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
+            //signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
+            "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
+            "🌊Caudal: " + caudales[0].toFixed(2) + " m³/s\n" +
+            signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
+            "🔋Generación: " + produccion[0].toFixed(2) + " MWh\n" +
+            "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
+            //signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
+            //signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
+            "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
+            
+            
+            //IMAGE GENERATION
+            const canvas = createCanvas(1000, 1000);
+            const ctx = canvas.getContext('2d');
+            var textFont = "DejaVu Sans Mono";
+
+            function formatDateTime() {
+                var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+                fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+                var year = fecha.getUTCFullYear().toString(); //gets year
+                var month = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+                var day = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+                
+                var hours = fecha.getUTCHours().toString().padStart(2, '0'); //this for knowing which item from the response get, works in localtime
+                var minutes = fecha.getUTCMinutes().toString().padStart(2, '0');;
+            
+                const formattedDate = `${day}/${month}/${year}`;
+                const formattedTime = `${hours}:${minutes}`;
+            
+                return { date: formattedDate, time: formattedTime };
+            }
+            const { date: formattedDate, time: formattedTime } = formatDateTime();
+
+
+            ctx.fillStyle = "#f0d9c2";
+            ctx.fillRect(0, 0, 1000, 1000);
+            
+            //right offset
+            const offsetX = 100;
+            
+            //draw hydroelectric
+            ctx.beginPath();
+            ctx.moveTo(0, 925);
+            ctx.lineTo(offsetX + 50, 890);
+            ctx.quadraticCurveTo(offsetX + 100, 870, offsetX + 120, 800);
+            ctx.lineTo(offsetX + 200, 400);
+            ctx.quadraticCurveTo(offsetX + 210, 350, offsetX + 275, 350);
+            ctx.lineTo(offsetX + 275, 300);
+            ctx.lineTo(offsetX + 300, 300);
+            ctx.lineTo(offsetX + 300, 230);
+            ctx.lineTo(offsetX + 360, 230);
+            ctx.lineTo(offsetX + 360, 275);
+            ctx.lineTo(offsetX + 400, 275);
+            ctx.lineTo(offsetX + 400, 1000);
+            ctx.lineTo( 0, 1000);
+            ctx.closePath();
+            
+            ctx.fillStyle = "#5f5c63"; //hydroelectric fill
+            ctx.fill();
+            
+            ctx.strokeStyle = "black"; //line style
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            //lateral lines
+            ctx.beginPath();
+            ctx.moveTo(offsetX + 275, 350);
+            ctx.lineTo(offsetX + 175, 1000);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(offsetX + 360, 275);
+            ctx.lineTo(offsetX + 360, 1000);
+            ctx.stroke();
+            
+            var nivel_agua = interpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax, 760, 300);
+            
+            //draw water level
+            ctx.beginPath();
+            ctx.moveTo(offsetX + 400, 1000);
+            ctx.lineTo(1000, 1000);
+            ctx.lineTo(1000, nivel_agua);
+            ctx.lineTo(offsetX + 400, nivel_agua);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fillStyle = "#0793de"; //water tone
+            ctx.fill();
+            
+
+            //watermark
+            ctx.font = 'bold 32px ' + textFont;
+            ctx.fillStyle = 'black';
+            ctx.fillText("@Hidro_Info_Bot", 705, 30);
+            //title and date
+            ctx.font = 'bold 60px ' + textFont;
+            ctx.fillStyle = 'black';
+            ctx.fillText(hidroelectrica.nombre, 20, 70);
+            ctx.font = 'bold 50px ' + textFont;
+            ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
+            
+            
+            //minimum cota RED line and text
+            ctx.font = 'bold 30px ' + textFont;
+            ctx.fillStyle = "red";
+            ctx.fillText("Cota mínima: " + hidroelectrica.cotaMin + " msnm", 510, 790);
+            ctx.beginPath();
+            ctx.moveTo(500, 760);
+            ctx.lineTo(1000, 760);
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            
+            //current cota text
+            ctx.font = 'bold 30px ' + textFont;
+            ctx.fillStyle = "#0793de";
+            ctx.fillText("Cota actual: " + cotas[0].toFixed(2) + " msnm", 510, nivel_agua - 10);
+
+            //maximum cota
+            ctx.font = 'bold 30px ' + textFont;
+            ctx.fillStyle = 'gray';
+            ctx.fillText("-Cota máxima: " + hidroelectrica.cotaMax + " msnm", 500, 305);
+            
+            //caudal text
+            ctx.font = 'bold 40px ' + textFont;
+            ctx.fillStyle = "black";
+            ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 575, 200);
+            var caudaloutput = getCaudalCategory(caudales[0].toFixed(2), hidroelectrica.maxCaudal);
+            ctx.fillStyle = caudaloutput[1];
+            ctx.fillText(caudaloutput[0], 775, 235);
+            
+            //battery
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "black";
+            ctx.moveTo(11, 310);
+            ctx.lineTo(11, 345);
+            ctx.lineTo(170, 345);
+            ctx.lineTo(170, 335);
+            ctx.lineTo(175, 335);
+            ctx.lineTo(175, 320);
+            ctx.lineTo(170, 320);
+            ctx.lineTo(170, 310);
+            ctx.closePath();
+            ctx.stroke();
+            
+            var energiaPixelsFill = interpolation(produccion[0].toFixed(2), 0, hidroelectrica.energiaMax, 0, 150);
+            var energiaoutput = getEnergyCategory(energiaPixelsFill); //color
+            
+            //battery content
+            ctx.fillStyle = energiaoutput[1];
+            ctx.fillRect(16, 315, energiaPixelsFill, 25);
+            
+            //generation
+            ctx.font = 'bold 40px ' + textFont;
+            ctx.fillStyle = "black";
+            ctx.fillText("Generación:", 10, 250);
+            ctx.fillText(produccion[0].toFixed(2) + " MW", 10, 300);
+            
+            ctx.fillStyle = energiaoutput[1];
+            ctx.fillText(energiaoutput[0], 185, 340);
+            
+            ctx.closePath();
+            ctx.stroke();
+            //save the image
+            const imageBuffer = canvas.toBuffer('image/png');
+            //fs.writeFileSync("./postear.png", imageBuffer);
+
+            //post the tweet
+            try{
+                await twitterService.postTweet(message, imageBuffer);
+            }catch(error){
+                console.error("Error with TwitterService");
+                return error;
+            }
+        }
+    } catch (error) {
+        console.error('Error posting information in postearInfo:', error);
         //try again 10 minutes later
         setTimeout(() => {
             postearInfo(hidroelectrica);
         }, 10 * 60 * 1000); //10 minutes in miliseconds
-
-        return; //out
-    }else{
-        var indicadorPaute = (hidroelectrica.paute) ? " #Paute" : "";
-        //cotas and caudales
-        var signo_cota = (cotas[0] >= cotas[1]) ? "+" : "-";
-        var delta_caudal = caudales[1] === 0 ? (caudales[0] > 0 ? 100 : 0) : ((caudales[0] - caudales[1]) / caudales[1]) * 100;
-        var signo_caudal = (caudales[0] >= caudales[1]) ? "+" : "-";
-
-        //energy
-        var signo_ener_3h = (produccion[0] >= produccion[1]) ? "+" : "-";
-        var delta_ener_3h = produccion[1] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[1]) / produccion[1]) * 100;
-        var signo_ener_lunes = (produccion[0] >= produccion[2]) ? "+" : "-";
-        var delta_ener_lunes = produccion[2] === 0 ? (produccion[0] > 0 ? 100 : 0) : ((produccion[0] - produccion[2]) / produccion[2]) * 100;
-        var trabajoEnergia = (produccion[0] / hidroelectrica.energiaMax) * 100;
-
-        var message = "Hidroeléctrica #" + hidroelectrica.nombre.split(' ').join('') + indicadorPaute + "\n\n" + 
-        "💧Cota: " + cotas[0].toFixed(2) + " msnm\n" +
-        //signo_cota + Math.abs(cotas[0]-cotas[1]).toFixed(2) + " m desde el lunes " + cotas[2] + "\n" +
-        "A " + (cotas[0]-hidroelectrica.cotaMin).toFixed(2) + " m de la cota mínima\n\n" +
-        "🌊Caudal: " + caudales[0].toFixed(2) + " m³/s\n" +
-        signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n\n" +
-        "🔋Generación: " + produccion[0].toFixed(2) + " MWh\n" +
-        "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
-        //signo_ener_3h + Math.abs(delta_ener_3h).toFixed(2) + "% desde hace 3h\n" +
-        //signo_ener_lunes + Math.abs(delta_ener_lunes).toFixed(2) + "% desde el lunes " + produccion[3] + "\n" +
-        "Turbinas Activas: " + turbinasActivas + "/" + hidroelectrica.turbinasMax;
-        
-        
-        //IMAGE GENERATION
-        const canvas = createCanvas(1000, 1000);
-        const ctx = canvas.getContext('2d');
-        var textFont = "DejaVu Sans Mono";
-
-        function formatDateTime() {
-            var fecha = new Date(); //UTC date, 5 hours ahead from localtime
-            fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
-            var year = fecha.getUTCFullYear().toString(); //gets year
-            var month = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
-            var day = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
-            
-            var hours = fecha.getUTCHours().toString().padStart(2, '0'); //this for knowing which item from the response get, works in localtime
-            var minutes = fecha.getUTCMinutes().toString().padStart(2, '0');;
-        
-            const formattedDate = `${day}/${month}/${year}`;
-            const formattedTime = `${hours}:${minutes}`;
-        
-            return { date: formattedDate, time: formattedTime };
-        }
-        const { date: formattedDate, time: formattedTime } = formatDateTime();
-
-
-        ctx.fillStyle = "#f0d9c2";
-        ctx.fillRect(0, 0, 1000, 1000);
-        
-        //right offset
-        const offsetX = 100;
-        
-        //draw hydroelectric
-        ctx.beginPath();
-        ctx.moveTo(0, 925);
-        ctx.lineTo(offsetX + 50, 890);
-        ctx.quadraticCurveTo(offsetX + 100, 870, offsetX + 120, 800);
-        ctx.lineTo(offsetX + 200, 400);
-        ctx.quadraticCurveTo(offsetX + 210, 350, offsetX + 275, 350);
-        ctx.lineTo(offsetX + 275, 300);
-        ctx.lineTo(offsetX + 300, 300);
-        ctx.lineTo(offsetX + 300, 230);
-        ctx.lineTo(offsetX + 360, 230);
-        ctx.lineTo(offsetX + 360, 275);
-        ctx.lineTo(offsetX + 400, 275);
-        ctx.lineTo(offsetX + 400, 1000);
-        ctx.lineTo( 0, 1000);
-        ctx.closePath();
-        
-        ctx.fillStyle = "#5f5c63"; //hydroelectric fill
-        ctx.fill();
-        
-        ctx.strokeStyle = "black"; //line style
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        //lateral lines
-        ctx.beginPath();
-        ctx.moveTo(offsetX + 275, 350);
-        ctx.lineTo(offsetX + 175, 1000);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(offsetX + 360, 275);
-        ctx.lineTo(offsetX + 360, 1000);
-        ctx.stroke();
-        
-        var nivel_agua = interpolation(cotas[0].toFixed(2), hidroelectrica.cotaMin, hidroelectrica.cotaMax, 760, 300);
-        
-        //draw water level
-        ctx.beginPath();
-        ctx.moveTo(offsetX + 400, 1000);
-        ctx.lineTo(1000, 1000);
-        ctx.lineTo(1000, nivel_agua);
-        ctx.lineTo(offsetX + 400, nivel_agua);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fillStyle = "#0793de"; //water tone
-        ctx.fill();
-        
-
-        //watermark
-        ctx.font = 'bold 32px ' + textFont;
-        ctx.fillStyle = 'black';
-        ctx.fillText("@Hidro_Info_Bot", 705, 30);
-        //title and date
-        ctx.font = 'bold 60px ' + textFont;
-        ctx.fillStyle = 'black';
-        ctx.fillText(hidroelectrica.nombre, 20, 70);
-        ctx.font = 'bold 50px ' + textFont;
-        ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
-        
-        
-        //minimum cota RED line and text
-        ctx.font = 'bold 30px ' + textFont;
-        ctx.fillStyle = "red";
-        ctx.fillText("Cota mínima: " + hidroelectrica.cotaMin + " msnm", 510, 790);
-        ctx.beginPath();
-        ctx.moveTo(500, 760);
-        ctx.lineTo(1000, 760);
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        
-        //current cota text
-        ctx.font = 'bold 30px ' + textFont;
-        ctx.fillStyle = "#0793de";
-        ctx.fillText("Cota actual: " + cotas[0].toFixed(2) + " msnm", 510, nivel_agua - 10);
-
-        //maximum cota
-        ctx.font = 'bold 30px ' + textFont;
-        ctx.fillStyle = 'gray';
-        ctx.fillText("-Cota máxima: " + hidroelectrica.cotaMax + " msnm", 500, 305);
-        
-        //caudal text
-        ctx.font = 'bold 40px ' + textFont;
-        ctx.fillStyle = "black";
-        ctx.fillText("Caudal: " + caudales[0].toFixed(2) + "m³/s", 575, 200);
-        var caudaloutput = getCaudalCategory(caudales[0].toFixed(2), hidroelectrica.maxCaudal);
-        ctx.fillStyle = caudaloutput[1];
-        ctx.fillText(caudaloutput[0], 775, 235);
-        
-        //battery
-        ctx.beginPath();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "black";
-        ctx.moveTo(11, 310);
-        ctx.lineTo(11, 345);
-        ctx.lineTo(170, 345);
-        ctx.lineTo(170, 335);
-        ctx.lineTo(175, 335);
-        ctx.lineTo(175, 320);
-        ctx.lineTo(170, 320);
-        ctx.lineTo(170, 310);
-        ctx.closePath();
-        ctx.stroke();
-        
-        var energiaPixelsFill = interpolation(produccion[0].toFixed(2), 0, hidroelectrica.energiaMax, 0, 150);
-        var energiaoutput = getEnergyCategory(energiaPixelsFill); //color
-        
-        //battery content
-        ctx.fillStyle = energiaoutput[1];
-        ctx.fillRect(16, 315, energiaPixelsFill, 25);
-        
-        //generation
-        ctx.font = 'bold 40px ' + textFont;
-        ctx.fillStyle = "black";
-        ctx.fillText("Generación:", 10, 250);
-        ctx.fillText(produccion[0].toFixed(2) + " MW", 10, 300);
-        
-        ctx.fillStyle = energiaoutput[1];
-        ctx.fillText(energiaoutput[0], 185, 340);
-        
-        ctx.closePath();
-        ctx.stroke();
-        //save the image
-        const imageBuffer = canvas.toBuffer('image/png');
-        //fs.writeFileSync("./postear.png", imageBuffer);
-
-        //post the tweet
-        try{
-            await twitterService.postTweet(message, imageBuffer);
-        }catch(error){
-            console.error("Error with TwitterService");
-            return error;
-        }
+        return;
     }
 }
 
@@ -515,336 +523,341 @@ async function getDailyInfo(){
 
     } catch (error) {
         console.error('Error fetching daily data:', error);
-        return error;
+        throw error;
     }
 }
 
 
 async function dailyReport(){
-    const masterInfo = await getDailyInfo();
-    var width = 2200;
-    var height = 2500;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    var textFont = "DejaVu Sans Mono"; //cross compatible font
+    try{
+        const masterInfo = await getDailyInfo();
+        var width = 2200;
+        var height = 2500;
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+        var textFont = "DejaVu Sans Mono"; //cross compatible font
 
 
-    //pretty obvious
-    function formatDateTime() {
-        var fecha = new Date(); //UTC date, 5 hours ahead from localtime
-        fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
-        fecha.setDate(fecha.getDate() - 1);
-        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        const diaSemana = diasSemana[fecha.getUTCDay()];
+        //pretty obvious
+        function formatDateTime() {
+            var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+            fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+            fecha.setDate(fecha.getDate() - 1);
+            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaSemana = diasSemana[fecha.getUTCDay()];
 
-        const year = fecha.getFullYear();
-        const diaMes = fecha.getUTCDate().toString().padStart(2, '0');
-        const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        const mes = meses[fecha.getUTCMonth()];
+            const year = fecha.getFullYear();
+            const diaMes = fecha.getUTCDate().toString().padStart(2, '0');
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const mes = meses[fecha.getUTCMonth()];
 
-        return [diaSemana, diaMes, mes, year];
-    }
-    const dateInfo = formatDateTime();
-
-    ctx.fillStyle = "#f0d9c2"; //background color
-    ctx.fillRect(0, 0, 2200, 2500); //background filler
-    //watermark text
-    ctx.font = 'bold 46px ' + textFont;
-    ctx.fillStyle = 'black';
-    ctx.textAlign = "end";
-    ctx.fillText("@Hidro_Info_Bot", 2190, 40);
-    //title text
-    ctx.font = 'bold 102px ' + textFont;
-    ctx.fillStyle = 'black';
-    ctx.textAlign = "start";
-    ctx.fillText("Reporte Diario Complejo Paute", 20, 120); //title
-    ctx.font = 'bold 96px ' + textFont;
-    ctx.fillText(`${dateInfo[0]}, ${dateInfo[1]} de ${dateInfo[2]} del ${dateInfo[3]}`, 20, 235); //date and stuff
-
-    //PARAMETERS
-    //main box
-    var anchor = [25, 350];
-    //infoblocks
-    var initialYcoords = anchor[1];
-    var infoBlock_height = 500;
-    var infoBlockSpacing = 70;
-    //infoblocks content
-    var contentHeight = 450;
-    var infoBlock_margin = (infoBlock_height - contentHeight) / 2;
-    var infoBlock_width = width - infoBlock_margin * 2;
-    var graphSpacing = 10;
-    var labels = ["Generación", "Turbinas", "Cota"];
-    var totalDailyGeneration = 0;
-    //infoblocks PARAMETERS
-    var graphLineWidth = 5; //Y axis ticks line width
-    var graphLineLength = 20; //Y axis ticks line length
-    var estTextWidth = 180; //hydroelectric name title width
-    var bigSpace = 710; //space allocated to generation chart + battery
-    var normalSpace = 565; //space that the other 2 graph take
-    var lastSpacing = 100; //space between water level graph and turbines graph
-
-    var individualEnergy = []; //for later tweet message
-
-    //GRAY LABELS FOR GENERACIÓN, TURBINAS, AND COTA
-    //x axis values (TIME) (in array because they are not that ordered, they are actually kind of chaotic)
-    var xvalues = [anchor[0] + estTextWidth, anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing];
-    text(xvalues[0] + bigSpace / 2 - 50, anchor[1] - 20, labels[0], " 70px " + textFont, "center", "gray");
-    text(xvalues[1] + normalSpace / 2, anchor[1] - 20, labels[1], " 70px " + textFont, "center", "gray");
-    text(xvalues[2] + normalSpace / 2, anchor[1] - 20, labels[2], " 70px " + textFont, "center", "gray");
-
-
-    //generate infoBlocks
-    for(i = 0; i < 3; i++){
-
-        //each infoblock
-        ctx.beginPath();
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 5;
-        ctx.rect(anchor[0], initialYcoords, infoBlock_width, infoBlock_height + infoBlockSpacing); //add +infoBlockSpacing to the end
-        ctx.stroke();
-        rotatedText(anchor[0] + infoBlock_margin + 55, initialYcoords + infoBlock_height / 2, hidroelectricas[i].nombre, "bold 80px " + textFont); //hydroelectric title
-        
-        //SMALL BOXES FOR GRAPH LABELING, ALSO INCLUDES INDIVIDUAL BATTERY
-        //GENERATION GRAPH
-        testRect(anchor[0] + estTextWidth, initialYcoords + infoBlock_margin, 565, contentHeight, "Black", graphLineWidth); //graph box
-
-        var startingPoint = [anchor[0] + estTextWidth, initialYcoords + infoBlock_margin + contentHeight]; //will adjust the X position to where the left line is (to place the ticks in the Y axis)
-
-        //for the line ticks in the Y axis
-        var genPointer = 0;
-        for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){ //add a bunch of pixels (that correspond to a fifth of the total graph height)
-            test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //adds line ticks
-
-            rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round(hidroelectricas[i].energiaMax / 5 * genPointer), "bold 30px " + textFont, true); //adds ticks labeling
-
-            genPointer++; //increase pointer to label in next iteration
+            return [diaSemana, diaMes, mes, year];
         }
+        const dateInfo = formatDateTime();
 
-        text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MWh", "bold 30px " + textFont); //MWh indicator atop of Y axis
+        ctx.fillStyle = "#f0d9c2"; //background color
+        ctx.fillRect(0, 0, 2200, 2500); //background filler
+        //watermark text
+        ctx.font = 'bold 46px ' + textFont;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = "end";
+        ctx.fillText("@Hidro_Info_Bot", 2190, 40);
+        //title text
+        ctx.font = 'bold 102px ' + textFont;
+        ctx.fillStyle = 'black';
+        ctx.textAlign = "start";
+        ctx.fillText("Reporte Diario Complejo Paute", 20, 120); //title
+        ctx.font = 'bold 96px ' + textFont;
+        ctx.fillText(`${dateInfo[0]}, ${dateInfo[1]} de ${dateInfo[2]} del ${dateInfo[3]}`, 20, 235); //date and stuff
 
-        //individual BATTERY DRAWING
-        test(estTextWidth + bigSpace - 110, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin + 2.5);
-        test(estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin, estTextWidth + bigSpace - 10, initialYcoords + contentHeight + infoBlock_margin);
-        test(estTextWidth + bigSpace - 10, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 10, initialYcoords + contentHeight + infoBlock_margin + 2.5);
-        test(estTextWidth + bigSpace - 112.5, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 85, initialYcoords + 22.5 + 30);
-        test(estTextWidth + bigSpace - 7.5, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 35, initialYcoords + 22.5 + 30);
-        test(estTextWidth + bigSpace - 35, initialYcoords + 25 + 30, estTextWidth + bigSpace - 35, initialYcoords + 30);
-        test(estTextWidth + bigSpace - 85, initialYcoords + 25 + 30, estTextWidth + bigSpace - 85, initialYcoords + 30);
-        test(estTextWidth + bigSpace - 87.5, initialYcoords + 30, estTextWidth + bigSpace - 32.5, initialYcoords + 30);
+        //PARAMETERS
+        //main box
+        var anchor = [25, 350];
+        //infoblocks
+        var initialYcoords = anchor[1];
+        var infoBlock_height = 500;
+        var infoBlockSpacing = 70;
+        //infoblocks content
+        var contentHeight = 450;
+        var infoBlock_margin = (infoBlock_height - contentHeight) / 2;
+        var infoBlock_width = width - infoBlock_margin * 2;
+        var graphSpacing = 10;
+        var labels = ["Generación", "Turbinas", "Cota"];
+        var totalDailyGeneration = 0;
+        //infoblocks PARAMETERS
+        var graphLineWidth = 5; //Y axis ticks line width
+        var graphLineLength = 20; //Y axis ticks line length
+        var estTextWidth = 180; //hydroelectric name title width
+        var bigSpace = 710; //space allocated to generation chart + battery
+        var normalSpace = 565; //space that the other 2 graph take
+        var lastSpacing = 100; //space between water level graph and turbines graph
 
+        var individualEnergy = []; //for later tweet message
 
-        var energySum = 0; //individual energy sum
-        var maxDailyEnergy = hidroelectricas[i].energiaMax * 24; //individual max daily energy
-        
-        for (let h = 0; h < masterInfo[i][0].length; h++) {
-            energySum += masterInfo[i][0][h]; //for individual battery drawing
-        }
-        individualEnergy[i] = energySum; //for later tweet message
-        totalDailyGeneration += energySum; //for big battery drawing
-        //individual battery fill
-        testRect(estTextWidth + bigSpace - 105, initialYcoords + contentHeight + 20, 90, interpolation(energySum, 0, maxDailyEnergy, 0, -412.5), cGreen, 5, cGreen); //battery fill (0, -412.5)
-        //END GENERATION GRAPH
-
-
-
-        //TURBINE GARPH
-        testRect(anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), initialYcoords + infoBlock_margin, normalSpace, contentHeight, "Black", graphLineWidth); //graph box
-        startingPoint[0] += bigSpace + (graphSpacing / 2); //upgrade the line ticks to the new X position
-        var turbinePointer = 0; //tick labeling pointer
-        //same thing than with other graphs, but adds 1 more unit to the turbine maximum for aesthetics
-        for(y = 0; y < contentHeight - infoBlock_margin; y = y + (contentHeight / (hidroelectricas[i].turbinasMax + 1))){
-            test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //ticks
-
-            text(startingPoint[0] - graphLineLength / 2 - 3, startingPoint[1] - y, turbinePointer, "bold 20px " + textFont, "end"); //labeling
-
-            turbinePointer++;
-        }
-        //END TURBINE GRAPH
-
-
-
-        //WATER LEVEL GRAPH
-        testRect(anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing, initialYcoords + infoBlock_margin, normalSpace, contentHeight, "Black", graphLineWidth); //graph box
-        startingPoint[0] = startingPoint[0] - (graphSpacing / 2) + (graphSpacing / 2 * 3) + normalSpace + lastSpacing; //upgrade the line ticks to the new X position
-        var wlPointer = 0;
-        //ticks as with other graphs
-        for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){
-            test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //draws ticks lines
-            rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round((hidroelectricas[i].cotaMax - hidroelectricas[i].cotaMin) / 5 * wlPointer + hidroelectricas[i].cotaMin), "bold 30px " + textFont, true); //writes ticks labels, changed to stay in the interval between minimum and maximum water leels
-            wlPointer++;
-        }
-        text(startingPoint[0] - graphLineLength / 2 - 35, initialYcoords + 40, "msnm", "bold 30px " + textFont);
-        //END WATER LEVEL GRAPH
-        
+        //GRAY LABELS FOR GENERACIÓN, TURBINAS, AND COTA
+        //x axis values (TIME) (in array because they are not that ordered, they are actually kind of chaotic)
+        var xvalues = [anchor[0] + estTextWidth, anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing];
+        text(xvalues[0] + bigSpace / 2 - 50, anchor[1] - 20, labels[0], " 70px " + textFont, "center", "gray");
+        text(xvalues[1] + normalSpace / 2, anchor[1] - 20, labels[1], " 70px " + textFont, "center", "gray");
+        text(xvalues[2] + normalSpace / 2, anchor[1] - 20, labels[2], " 70px " + textFont, "center", "gray");
 
 
-        //loop each graph inside an infoBlock
-        for(k = 0; k < 3; k++){
+        //generate infoBlocks
+        for(i = 0; i < 3; i++){
+
+            //each infoblock
             ctx.beginPath();
-            ctx.strokeStyle = colors[k];
-            ctx.lineWidth = 4; //optimal lineWidth
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 5;
+            ctx.rect(anchor[0], initialYcoords, infoBlock_width, infoBlock_height + infoBlockSpacing); //add +infoBlockSpacing to the end
+            ctx.stroke();
+            rotatedText(anchor[0] + infoBlock_margin + 55, initialYcoords + infoBlock_height / 2, hidroelectricas[i].nombre, "bold 80px " + textFont); //hydroelectric title
+            
+            //SMALL BOXES FOR GRAPH LABELING, ALSO INCLUDES INDIVIDUAL BATTERY
+            //GENERATION GRAPH
+            testRect(anchor[0] + estTextWidth, initialYcoords + infoBlock_margin, 565, contentHeight, "Black", graphLineWidth); //graph box
 
+            var startingPoint = [anchor[0] + estTextWidth, initialYcoords + infoBlock_margin + contentHeight]; //will adjust the X position to where the left line is (to place the ticks in the Y axis)
 
-            //for each bit of information, draw another line
-            if(k == 1){ //for turbines
-                ctx.moveTo(xvalues[k], interpolation(masterInfo[i][1][0], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
+            //for the line ticks in the Y axis
+            var genPointer = 0;
+            for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){ //add a bunch of pixels (that correspond to a fifth of the total graph height)
+                test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //adds line ticks
 
-                for (j = 1; j <= 24; j++) {
-                    //previous coords
-                    //previous Y uses last data value to mark where it should increase or decrease from
-                    //it wont define it to nothing if we reached the end (so the next continuation line isnt drawn)
-                    const prevY = interpolation(masterInfo[i][1][j - 1], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin);
+                rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round(hidroelectricas[i].energiaMax / 5 * genPointer), "bold 30px " + textFont, true); //adds ticks labeling
 
-                    //current coords
-                    const currentX = xvalues[k] + (j - 1) * 24.5; //this works differently as the other ones, because the value jumps one space
-                    //current Y uses current data value
-                    const currentY = interpolation(masterInfo[i][1][j], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin);
-
-                    //if its past the last one (23rd last one bc it started on 0), just dont draw anything
-                    ctx.lineTo(currentX, prevY);
-                    ctx.lineTo(currentX, currentY);
-
-
-                    //we still have to use currentX value to write x axis
-                    //x axis
-                    if(j % 6 === 0) {
-                        rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true);
-                    }
-                }
-
-            }else if(k == 2){ //if its a water graph
-                ctx.moveTo(xvalues[k], interpolation(masterInfo[i][2][0], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
-                for(j = 1; j <= 24; j++){
-
-                    if(j < 24){
-                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][2][j], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
-                    }
-                    if(j % 6 == 0){
-                        rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
-                    }
-
-                } 
-            }else{ //for generation
-                ctx.moveTo(xvalues[k], interpolation(masterInfo[i][0][0], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
-                for(j = 1; j <= 24; j++){
-                    
-                    if(j < 24){
-                        ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
-                    }
-                    if(j % 6 == 0){
-                        rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
-                    }
-                    
-                }
+                genPointer++; //increase pointer to label in next iteration
             }
 
+            text(startingPoint[0] - graphLineLength / 2 - 30, initialYcoords + 40, "MWh", "bold 30px " + textFont); //MWh indicator atop of Y axis
+
+            //individual BATTERY DRAWING
+            test(estTextWidth + bigSpace - 110, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin + 2.5);
+            test(estTextWidth + bigSpace - 110, initialYcoords + contentHeight + infoBlock_margin, estTextWidth + bigSpace - 10, initialYcoords + contentHeight + infoBlock_margin);
+            test(estTextWidth + bigSpace - 10, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 10, initialYcoords + contentHeight + infoBlock_margin + 2.5);
+            test(estTextWidth + bigSpace - 112.5, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 85, initialYcoords + 22.5 + 30);
+            test(estTextWidth + bigSpace - 7.5, initialYcoords + 22.5 + 30, estTextWidth + bigSpace - 35, initialYcoords + 22.5 + 30);
+            test(estTextWidth + bigSpace - 35, initialYcoords + 25 + 30, estTextWidth + bigSpace - 35, initialYcoords + 30);
+            test(estTextWidth + bigSpace - 85, initialYcoords + 25 + 30, estTextWidth + bigSpace - 85, initialYcoords + 30);
+            test(estTextWidth + bigSpace - 87.5, initialYcoords + 30, estTextWidth + bigSpace - 32.5, initialYcoords + 30);
+
+
+            var energySum = 0; //individual energy sum
+            var maxDailyEnergy = hidroelectricas[i].energiaMax * 24; //individual max daily energy
+            
+            for (let h = 0; h < masterInfo[i][0].length; h++) {
+                energySum += masterInfo[i][0][h]; //for individual battery drawing
+            }
+            individualEnergy[i] = energySum; //for later tweet message
+            totalDailyGeneration += energySum; //for big battery drawing
+            //individual battery fill
+            testRect(estTextWidth + bigSpace - 105, initialYcoords + contentHeight + 20, 90, interpolation(energySum, 0, maxDailyEnergy, 0, -412.5), cGreen, 5, cGreen); //battery fill (0, -412.5)
+            //END GENERATION GRAPH
+
+
+
+            //TURBINE GARPH
+            testRect(anchor[0] + estTextWidth + bigSpace + (graphSpacing / 2), initialYcoords + infoBlock_margin, normalSpace, contentHeight, "Black", graphLineWidth); //graph box
+            startingPoint[0] += bigSpace + (graphSpacing / 2); //upgrade the line ticks to the new X position
+            var turbinePointer = 0; //tick labeling pointer
+            //same thing than with other graphs, but adds 1 more unit to the turbine maximum for aesthetics
+            for(y = 0; y < contentHeight - infoBlock_margin; y = y + (contentHeight / (hidroelectricas[i].turbinasMax + 1))){
+                test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //ticks
+
+                text(startingPoint[0] - graphLineLength / 2 - 3, startingPoint[1] - y, turbinePointer, "bold 20px " + textFont, "end"); //labeling
+
+                turbinePointer++;
+            }
+            //END TURBINE GRAPH
+
+
+
+            //WATER LEVEL GRAPH
+            testRect(anchor[0] + estTextWidth + bigSpace + normalSpace + (graphSpacing / 2 * 3) + lastSpacing, initialYcoords + infoBlock_margin, normalSpace, contentHeight, "Black", graphLineWidth); //graph box
+            startingPoint[0] = startingPoint[0] - (graphSpacing / 2) + (graphSpacing / 2 * 3) + normalSpace + lastSpacing; //upgrade the line ticks to the new X position
+            var wlPointer = 0;
+            //ticks as with other graphs
+            for(y = 0; y < contentHeight; y = y + (contentHeight / 5)){
+                test(startingPoint[0] - graphLineLength / 2, startingPoint[1] - 6 - y, startingPoint[0] + graphLineLength / 2, startingPoint[1] - 6 - y, "black", 4); //draws ticks lines
+                rotatedText(startingPoint[0] - graphLineLength / 2 - 20, startingPoint[1] - 6 - y + 5, Math.round((hidroelectricas[i].cotaMax - hidroelectricas[i].cotaMin) / 5 * wlPointer + hidroelectricas[i].cotaMin), "bold 30px " + textFont, true); //writes ticks labels, changed to stay in the interval between minimum and maximum water leels
+                wlPointer++;
+            }
+            text(startingPoint[0] - graphLineLength / 2 - 35, initialYcoords + 40, "msnm", "bold 30px " + textFont);
+            //END WATER LEVEL GRAPH
+            
+
+
+            //loop each graph inside an infoBlock
+            for(k = 0; k < 3; k++){
+                ctx.beginPath();
+                ctx.strokeStyle = colors[k];
+                ctx.lineWidth = 4; //optimal lineWidth
+
+
+                //for each bit of information, draw another line
+                if(k == 1){ //for turbines
+                    ctx.moveTo(xvalues[k], interpolation(masterInfo[i][1][0], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
+
+                    for (j = 1; j <= 24; j++) {
+                        //previous coords
+                        //previous Y uses last data value to mark where it should increase or decrease from
+                        //it wont define it to nothing if we reached the end (so the next continuation line isnt drawn)
+                        const prevY = interpolation(masterInfo[i][1][j - 1], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin);
+
+                        //current coords
+                        const currentX = xvalues[k] + (j - 1) * 24.5; //this works differently as the other ones, because the value jumps one space
+                        //current Y uses current data value
+                        const currentY = interpolation(masterInfo[i][1][j], 0, hidroelectricas[i].turbinasMax + 1, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin);
+
+                        //if its past the last one (23rd last one bc it started on 0), just dont draw anything
+                        ctx.lineTo(currentX, prevY);
+                        ctx.lineTo(currentX, currentY);
+
+
+                        //we still have to use currentX value to write x axis
+                        //x axis
+                        if(j % 6 === 0) {
+                            rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true);
+                        }
+                    }
+
+                }else if(k == 2){ //if its a water graph
+                    ctx.moveTo(xvalues[k], interpolation(masterInfo[i][2][0], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
+                    for(j = 1; j <= 24; j++){
+
+                        if(j < 24){
+                            ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][2][j], hidroelectricas[i].cotaMin, hidroelectricas[i].cotaMax, initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                        }
+                        if(j % 6 == 0){
+                            rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
+                        }
+
+                    } 
+                }else{ //for generation
+                    ctx.moveTo(xvalues[k], interpolation(masterInfo[i][0][0], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight, initialYcoords + infoBlock_margin)); //starts in the first bit of data in the retrieved information
+                    for(j = 1; j <= 24; j++){
+                        
+                        if(j < 24){
+                            ctx.lineTo(xvalues[k] + j * 24.5, interpolation(masterInfo[i][0][j], 0, (hidroelectricas[i].energiaMax + hidroelectricas[i].energiaMax * 0.04), initialYcoords + infoBlock_margin + contentHeight - 5, initialYcoords + infoBlock_margin));
+                        }
+                        if(j % 6 == 0){
+                            rotatedText(xvalues[k] + (j - 1) * 24.5 - 25, initialYcoords + infoBlock_margin + contentHeight + 50, j.toString().padStart(2, "0") + ":00", "bold 30px " + textFont, true)    
+                        }
+                        
+                    }
+                }
+
+                ctx.stroke();
+            }
+
+            //Y COORDS FOR NEXT INFOBLOCK
+            initialYcoords += infoBlock_height + infoBlockSpacing;
+            
+        }
+
+        //BIG BATTERY DRAWING
+        var totalMaxDailyGeneration = hidroelectricas[0].energiaMax * 24 + hidroelectricas[1].energiaMax * 24 + hidroelectricas[2].energiaMax * 24;
+        var batterySpacing = 12.5;
+        var batteryAnchor = infoBlock_height * 3 + infoBlockSpacing * 3 + batterySpacing + anchor[1] + 115;
+        ctx.strokeStyle = "black";
+        var batteryLength = 80; //length in respect to the end
+        var batteryHeight = 300;
+        var batteryLineWidth = 10;
+        var lineCorrectionFactor = 5;
+
+        //BATTERY TEXT
+        text(anchor[0], batteryAnchor - 15, "Producción: " + totalDailyGeneration.toFixed(2) + " MWh (" + interpolation(totalDailyGeneration + 34, 0, totalMaxDailyGeneration, 0, 100).toFixed(2) + "% del máximo)", "bold 80px " + textFont, "start")
+
+        anchor[0] += 10;
+        testRect(anchor[0] + 5, batteryAnchor + batterySpacing + 5, interpolation(totalDailyGeneration, 0, totalMaxDailyGeneration, 0, 2065), batteryHeight - 22.5, cGreen, 5, cGreen); //BATTERY FILL
+        test(anchor[0], batteryAnchor + batterySpacing, anchor[0], batteryAnchor + batteryHeight, "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batterySpacing, anchor[0] - lineCorrectionFactor, batteryAnchor + batterySpacing,  "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batteryHeight, anchor[0] - lineCorrectionFactor, batteryAnchor + batteryHeight,  "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing, anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3) + lineCorrectionFactor, "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight, anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight - (batteryHeight * 0.3) - lineCorrectionFactor,  "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight - (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batteryHeight - (batteryHeight * 0.3), "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batterySpacing + (batteryHeight * 0.3),  "black", batteryLineWidth);
+        test(anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batteryHeight - (batteryHeight * 0.3),  "black", batteryLineWidth)
+
+        //not elegant but will refactor later
+        var deltaMazar = (masterInfo[0][2][0] < masterInfo[0][2][23]) ? ", un aumento de " : ", una reducción de ";
+        var deltaMolino = (masterInfo[1][2][0] < masterInfo[1][2][23]) ? ", un aumento de " : ", una reducción de ";
+        var deltaSopladora = (masterInfo[2][2][0] < masterInfo[2][2][23]) ? ", un aumento de " : ", una reducción de ";
+
+
+        var dailyMessage = "Reporte Diario del Complejo #Paute\n" +
+        //"Durante las 24 horas del " + dateInfo[0] + ", " + dateInfo[1] + " de " + dateInfo[2] + ":\n" +
+        "Durante 24 horas:\n" +
+        "\n" +
+        "#Mazar\n" +
+        "Generó " + individualEnergy[0].toFixed(2) + " MWh, un " + interpolation(individualEnergy[0], 0, (mazar.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
+        //"Su cota pasó de " + masterInfo[0][2][0].toFixed(2) + " msnm, a " + masterInfo[0][2][23].toFixed(2) + deltaMazar + Math.abs(masterInfo[0][2][0] - masterInfo[0][2][23]).toFixed(2)  + " metros\n" +
+        "\n" +
+        "#Molino\n" +
+        "Generó " + individualEnergy[1].toFixed(2) + " MWh, un " + interpolation(individualEnergy[1], 0, (molino.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
+        //"Su cota pasó de " + masterInfo[1][2][0].toFixed(2) + " msnm, a " + masterInfo[1][2][23].toFixed(2) + deltaMolino + Math.abs(masterInfo[1][2][0] - masterInfo[1][2][23]).toFixed(2) + " metros\n" +
+        "\n" +
+        "#Sopladora\n" +
+        "Generó " + individualEnergy[2].toFixed(2) + " MWh, un " + interpolation(individualEnergy[2], 0, (sopladora.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n";// +
+        //"Su cota pasó de " + masterInfo[2][2][0].toFixed(2) + " msnm, a " + masterInfo[2][2][23].toFixed(2) + deltaSopladora + Math.abs(masterInfo[2][2][0] - masterInfo[2][2][23]).toFixed(2) + " metros\n";
+
+        const imageBuffer = canvas.toBuffer('image/png');
+        //fs.writeFileSync("./test.png", imageBuffer);
+        
+        try{
+            await twitterService.postTweet(dailyMessage, imageBuffer);
+        }catch(error){
+            console.error("Error with TwitterService in Daily Reporting");
+            return error;
+        }
+        
+
+        //FUNCTIONS
+        function test(X, Y, X1, Y1, color, optionalLineWidth){
+            ctx.beginPath();
+            ctx.lineWidth = (optionalLineWidth) ? optionalLineWidth : 5;
+            ctx.strokeStyle = color;
+            ctx.moveTo(X, Y);
+            ctx.lineTo(X1, Y1);
             ctx.stroke();
         }
-
-        //Y COORDS FOR NEXT INFOBLOCK
-        initialYcoords += infoBlock_height + infoBlockSpacing;
         
-    }
-
-    //BIG BATTERY DRAWING
-    var totalMaxDailyGeneration = hidroelectricas[0].energiaMax * 24 + hidroelectricas[1].energiaMax * 24 + hidroelectricas[2].energiaMax * 24;
-    var batterySpacing = 12.5;
-    var batteryAnchor = infoBlock_height * 3 + infoBlockSpacing * 3 + batterySpacing + anchor[1] + 115;
-    ctx.strokeStyle = "black";
-    var batteryLength = 80; //length in respect to the end
-    var batteryHeight = 300;
-    var batteryLineWidth = 10;
-    var lineCorrectionFactor = 5;
-
-    //BATTERY TEXT
-    text(anchor[0], batteryAnchor - 15, "Producción: " + totalDailyGeneration.toFixed(2) + " MWh (" + interpolation(totalDailyGeneration + 34, 0, totalMaxDailyGeneration, 0, 100).toFixed(2) + "% del máximo)", "bold 80px " + textFont, "start")
-
-    anchor[0] += 10;
-    testRect(anchor[0] + 5, batteryAnchor + batterySpacing + 5, interpolation(totalDailyGeneration, 0, totalMaxDailyGeneration, 0, 2065), batteryHeight - 22.5, cGreen, 5, cGreen); //BATTERY FILL
-    test(anchor[0], batteryAnchor + batterySpacing, anchor[0], batteryAnchor + batteryHeight, "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batterySpacing, anchor[0] - lineCorrectionFactor, batteryAnchor + batterySpacing,  "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - batteryLength + lineCorrectionFactor, batteryAnchor + batteryHeight, anchor[0] - lineCorrectionFactor, batteryAnchor + batteryHeight,  "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing, anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3) + lineCorrectionFactor, "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight, anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight - (batteryHeight * 0.3) - lineCorrectionFactor,  "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batteryHeight - (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batteryHeight - (batteryHeight * 0.3), "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - batteryLength, batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4) + lineCorrectionFactor, batteryAnchor + batterySpacing + (batteryHeight * 0.3),  "black", batteryLineWidth);
-    test(anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batterySpacing + (batteryHeight * 0.3), anchor[0] + infoBlock_width - (batteryLength * 0.4), batteryAnchor + batteryHeight - (batteryHeight * 0.3),  "black", batteryLineWidth)
-
-    //not elegant but will refactor later
-    var deltaMazar = (masterInfo[0][2][0] < masterInfo[0][2][23]) ? ", un aumento de " : ", una reducción de ";
-    var deltaMolino = (masterInfo[1][2][0] < masterInfo[1][2][23]) ? ", un aumento de " : ", una reducción de ";
-    var deltaSopladora = (masterInfo[2][2][0] < masterInfo[2][2][23]) ? ", un aumento de " : ", una reducción de ";
-
-
-    var dailyMessage = "Reporte Diario del Complejo #Paute\n" +
-    //"Durante las 24 horas del " + dateInfo[0] + ", " + dateInfo[1] + " de " + dateInfo[2] + ":\n" +
-    "Durante 24 horas:\n" +
-    "\n" +
-    "#Mazar\n" +
-    "Generó " + individualEnergy[0].toFixed(2) + " MWh, un " + interpolation(individualEnergy[0], 0, (mazar.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
-    //"Su cota pasó de " + masterInfo[0][2][0].toFixed(2) + " msnm, a " + masterInfo[0][2][23].toFixed(2) + deltaMazar + Math.abs(masterInfo[0][2][0] - masterInfo[0][2][23]).toFixed(2)  + " metros\n" +
-    "\n" +
-    "#Molino\n" +
-    "Generó " + individualEnergy[1].toFixed(2) + " MWh, un " + interpolation(individualEnergy[1], 0, (molino.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n" +
-    //"Su cota pasó de " + masterInfo[1][2][0].toFixed(2) + " msnm, a " + masterInfo[1][2][23].toFixed(2) + deltaMolino + Math.abs(masterInfo[1][2][0] - masterInfo[1][2][23]).toFixed(2) + " metros\n" +
-    "\n" +
-    "#Sopladora\n" +
-    "Generó " + individualEnergy[2].toFixed(2) + " MWh, un " + interpolation(individualEnergy[2], 0, (sopladora.energiaMax * 24), 0, 100).toFixed(2) + "% de su capacidad máxima\n";// +
-    //"Su cota pasó de " + masterInfo[2][2][0].toFixed(2) + " msnm, a " + masterInfo[2][2][23].toFixed(2) + deltaSopladora + Math.abs(masterInfo[2][2][0] - masterInfo[2][2][23]).toFixed(2) + " metros\n";
-
-    const imageBuffer = canvas.toBuffer('image/png');
-    //fs.writeFileSync("./test.png", imageBuffer);
-    
-    try{
-        await twitterService.postTweet(dailyMessage, imageBuffer);
-    }catch(error){
-        console.error("Error with TwitterService in Daily Reporting");
-        return error;
-    }
-    
-
-    //FUNCTIONS
-    function test(X, Y, X1, Y1, color, optionalLineWidth){
-        ctx.beginPath();
-        ctx.lineWidth = (optionalLineWidth) ? optionalLineWidth : 5;
-        ctx.strokeStyle = color;
-        ctx.moveTo(X, Y);
-        ctx.lineTo(X1, Y1);
-        ctx.stroke();
-    }
-    
-    function testRect(X, Y, X1, Y1, color, optionalLineWidth, fillColor){
-        ctx.beginPath();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = optionalLineWidth;
-        if (fillColor) {
-            ctx.fillStyle = fillColor;
-            ctx.fillRect(X, Y, X1, Y1);
-            return;
+        function testRect(X, Y, X1, Y1, color, optionalLineWidth, fillColor){
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = optionalLineWidth;
+            if (fillColor) {
+                ctx.fillStyle = fillColor;
+                ctx.fillRect(X, Y, X1, Y1);
+                return;
+            }
+            ctx.rect(X, Y, X1, Y1);
+            ctx.stroke();
         }
-        ctx.rect(X, Y, X1, Y1);
-        ctx.stroke();
-    }
-    
-    function text(X, Y, text, textValue, alignment, optionalColor){
-        ctx.font = textValue;
-        ctx.fillStyle = (optionalColor) ? optionalColor : "black";
-        ctx.textAlign = (alignment) ? alignment : "center";
-    
-        ctx.fillText(text, X, Y);
-    }
-    
-    
-    function rotatedText(X, Y, text, textValue, inclination){ //inclination is optional
-        ctx.font = textValue;
-        ctx.fillStyle = 'black';
-        ctx.textAlign = "center";
-    
-        ctx.save(); //save initial state
-        ctx.translate(X, Y); //move coord system to input params
-        ctx.rotate(inclination ? -Math.PI / 4 : -Math.PI / 2); //rotate context to the left(equivalent to -90 degrees o -Math.PI/2 radians)
-        ctx.fillText(text, 0, 0); //write text in new orientation
-        ctx.restore(); //restore text to not mess it up in any other text writing
+        
+        function text(X, Y, text, textValue, alignment, optionalColor){
+            ctx.font = textValue;
+            ctx.fillStyle = (optionalColor) ? optionalColor : "black";
+            ctx.textAlign = (alignment) ? alignment : "center";
+        
+            ctx.fillText(text, X, Y);
+        }
+        
+        
+        function rotatedText(X, Y, text, textValue, inclination){ //inclination is optional
+            ctx.font = textValue;
+            ctx.fillStyle = 'black';
+            ctx.textAlign = "center";
+        
+            ctx.save(); //save initial state
+            ctx.translate(X, Y); //move coord system to input params
+            ctx.rotate(inclination ? -Math.PI / 4 : -Math.PI / 2); //rotate context to the left(equivalent to -90 degrees o -Math.PI/2 radians)
+            ctx.fillText(text, 0, 0); //write text in new orientation
+            ctx.restore(); //restore text to not mess it up in any other text writing
+        }
+    } catch(error){
+        console.error("Error in dailyReport function: ", error);
+        return error;
     }
 }
 
@@ -883,148 +896,152 @@ function getEnergyCategory(value) {
 
 
 async function updateCocaCodoSinclair(){ //normal 3hour report
-    var width = 1000;
-    var height = 600;
-    const canvas = createCanvas(width, height); // Ajuste de altura del canvas
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = "#f0d9c2";
-    ctx.fillRect(0, 0, 1000, 600);
-    
-    //pretty obvious
-    function formatDateTime() {
-        var fecha = new Date(); //UTC date, 5 hours ahead from localtime
-        fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
-        var year = fecha.getUTCFullYear().toString(); //gets year
-        var month = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
-        var day = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+    try {
+        var width = 1000;
+        var height = 600;
+        const canvas = createCanvas(width, height); // Ajuste de altura del canvas
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = "#f0d9c2";
+        ctx.fillRect(0, 0, 1000, 600);
         
-        var hours = fecha.getUTCHours().toString().padStart(2, '0'); //this for knowing which item from the response get, works in localtime
-        var minutes = fecha.getUTCMinutes().toString().padStart(2, '0');;
-    
-        const formattedDate = `${day}/${month}/${year}`;
-        const formattedTime = `${hours}:${minutes}`;
-    
-        return { date: formattedDate, time: formattedTime };
-    }
-    
-    const { date: formattedDate, time: formattedTime } = formatDateTime();
-    
-    //get hydroelectric info upfront
-    var caudales = await getInfoById(cocaCodoSinclair.caudal_id, "caudal");
-    var currentCaudal = caudales[0]; 
-    
-    var textFont = "DejaVu Sans Mono";
-    ctx.font = 'bold 32px ' + textFont;
-    ctx.fillStyle = 'black';
-    ctx.fillText("@Hidro_Info_Bot", 705, 30);
-    
-    ctx.font = 'bold 60px ' + textFont;
-    ctx.fillStyle = 'black';
-    ctx.fillText("Coca Codo Sinclair", 20, 70);
-    ctx.font = 'bold 50px ' + textFont;
-    ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
-
-    //hydroelectric
-    ctx.beginPath();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 5;
-
-    ctx.moveTo(600, 600);
-    ctx.lineTo(600, 200);
-    ctx.lineTo(625, 200);
-    ctx.lineTo(625, 175);
-    ctx.lineTo(400, 175);
-    ctx.lineTo(400, 200);
-    ctx.lineTo(425, 200);
-    ctx.arcTo(425, 240, 180, 400, 20);
-    ctx.arcTo(180, 400, 0, 400, 30);
-    ctx.lineTo(0, 400);
-    ctx.lineTo(0, 600);
-    ctx.closePath();
-    
-    ctx.fillStyle = "#5f5c63"; //hydroelectric fill
-    ctx.fill();
-    
-    ctx.moveTo(400, 200);
-    ctx.lineTo(625, 200); //upper line
-    
-    ctx.stroke();
-    
-
-    //water
-    ctx.lineWidth = 2;
-    var caudalLevel;
-    if(currentCaudal < 400){ //500 because of CCS specifics
-        caudalLevel = interpolation(currentCaudal, 0, 400, 585, 250); // 250 max - 585 min
-    }else{
-        caudalLevel = interpolation(currentCaudal, 0, cocaCodoSinclair.maxCaudal, 585, 250); // 250 max - 585 min
-    }
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.moveTo(602.5, 600);
-    ctx.lineTo(1000, 600);
-    
-    var wavePronuntiation = 20;
-    var waveRadius = 30;
-    ctx.lineTo(1000, caudalLevel + wavePronuntiation / 3);
-    
-    for(i = 1; i < 8; i++){
-        var waveY = (i % 2 == 0) ? caudalLevel + wavePronuntiation : caudalLevel - wavePronuntiation;
-        var nextWaveY = (i % 2 == 0) ? caudalLevel - wavePronuntiation : caudalLevel + wavePronuntiation;
+        //pretty obvious
+        function formatDateTime() {
+            var fecha = new Date(); //UTC date, 5 hours ahead from localtime
+            fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
+            var year = fecha.getUTCFullYear().toString(); //gets year
+            var month = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
+            var day = (fecha.getUTCDate()).toString().padStart(2, '0'); //gets day of the month
+            
+            var hours = fecha.getUTCHours().toString().padStart(2, '0'); //this for knowing which item from the response get, works in localtime
+            var minutes = fecha.getUTCMinutes().toString().padStart(2, '0');;
         
-        ctx.arcTo(1000 - i * 50, waveY, 1000 - (i + 1) * 50, nextWaveY, waveRadius);
-    }
-    ctx.arcTo(602.5, caudalLevel + wavePronuntiation, 600, caudalLevel - wavePronuntiation, 13)
-    
-    ctx.lineTo(602.5, caudalLevel);
-    ctx.closePath();
-    ctx.fillStyle = "#0793de"; //water tone
-    ctx.fill();
-    ctx.stroke();
+            const formattedDate = `${day}/${month}/${year}`;
+            const formattedTime = `${hours}:${minutes}`;
+        
+            return { date: formattedDate, time: formattedTime };
+        }
+        
+        const { date: formattedDate, time: formattedTime } = formatDateTime();
+        
+        //get hydroelectric info upfront
+        var caudales = await getInfoById(cocaCodoSinclair.caudal_id, "caudal");
+        var currentCaudal = caudales[0]; 
+        
+        var textFont = "DejaVu Sans Mono";
+        ctx.font = 'bold 32px ' + textFont;
+        ctx.fillStyle = 'black';
+        ctx.fillText("@Hidro_Info_Bot", 705, 30);
+        
+        ctx.font = 'bold 60px ' + textFont;
+        ctx.fillStyle = 'black';
+        ctx.fillText("Coca Codo Sinclair", 20, 70);
+        ctx.font = 'bold 50px ' + textFont;
+        ctx.fillText(`${formattedDate} ${formattedTime}`, 20, 125);
+
+        //hydroelectric
+        ctx.beginPath();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 5;
+
+        ctx.moveTo(600, 600);
+        ctx.lineTo(600, 200);
+        ctx.lineTo(625, 200);
+        ctx.lineTo(625, 175);
+        ctx.lineTo(400, 175);
+        ctx.lineTo(400, 200);
+        ctx.lineTo(425, 200);
+        ctx.arcTo(425, 240, 180, 400, 20);
+        ctx.arcTo(180, 400, 0, 400, 30);
+        ctx.lineTo(0, 400);
+        ctx.lineTo(0, 600);
+        ctx.closePath();
+        
+        ctx.fillStyle = "#5f5c63"; //hydroelectric fill
+        ctx.fill();
+        
+        ctx.moveTo(400, 200);
+        ctx.lineTo(625, 200); //upper line
+        
+        ctx.stroke();
+        
+
+        //water
+        ctx.lineWidth = 2;
+        var caudalLevel;
+        if(currentCaudal < 400){ //500 because of CCS specifics
+            caudalLevel = interpolation(currentCaudal, 0, 400, 585, 250); // 250 max - 585 min
+        }else{
+            caudalLevel = interpolation(currentCaudal, 0, cocaCodoSinclair.maxCaudal, 585, 250); // 250 max - 585 min
+        }
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.moveTo(602.5, 600);
+        ctx.lineTo(1000, 600);
+        
+        var wavePronuntiation = 20;
+        var waveRadius = 30;
+        ctx.lineTo(1000, caudalLevel + wavePronuntiation / 3);
+        
+        for(i = 1; i < 8; i++){
+            var waveY = (i % 2 == 0) ? caudalLevel + wavePronuntiation : caudalLevel - wavePronuntiation;
+            var nextWaveY = (i % 2 == 0) ? caudalLevel - wavePronuntiation : caudalLevel + wavePronuntiation;
+            
+            ctx.arcTo(1000 - i * 50, waveY, 1000 - (i + 1) * 50, nextWaveY, waveRadius);
+        }
+        ctx.arcTo(602.5, caudalLevel + wavePronuntiation, 600, caudalLevel - wavePronuntiation, 13)
+        
+        ctx.lineTo(602.5, caudalLevel);
+        ctx.closePath();
+        ctx.fillStyle = "#0793de"; //water tone
+        ctx.fill();
+        ctx.stroke();
 
 
-    var caudalTextInfo = getCaudalCategory(currentCaudal, 300); //caudal value and color //300 because of CCS specifics
-    var textXanchor = 700; //image text pos
-    ctx.fillStyle = "black";
-    ctx.font = 'bold 50px ' + textFont;
-    ctx.fillText("Caudal: ", textXanchor, caudalLevel - 20 - 140);
-    ctx.fillText(currentCaudal + " m³/s", textXanchor, caudalLevel - 20 - 80);
-    ctx.fillStyle = caudalTextInfo[1];
-    ctx.fillText(caudalTextInfo[0], textXanchor, caudalLevel - 20 - 20); //MEDIO, BAJO, ALTO, ETC
-    
-    ctx.fillStyle = "black";
-    var delta_caudal = caudales[1] === 0 ? (currentCaudal > 0 ? 100 : 0) : ((currentCaudal - caudales[1]) / caudales[1]) * 100;
-    var signo_caudal = (currentCaudal >= caudales[1]) ? "+" : "-";
-    
-    //delta info on image
-    ctx.font = 'bold 40px ' + textFont;
-    ctx.fillText("El caudal cambió", 20, 480);
-    ctx.fillText(signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h", 20, 520);
-    
-    //tweet message
-    var message = "Hidroeléctrica Coca Codo Sinclair\n" + 
-    "#" + cocaCodoSinclair.nombre.split(' ').join('') + " #CCS\n" +
-    "\n" +
-    "🌊Caudal: " + currentCaudal.toFixed(2) + " m³/s\n" +
-    signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n" +
-    "\n"; /* +
-    "🔋Generación: " + currentEnergy.toFixed(2) + " MWh\n" +
-    "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
-    "Turbinas Activas: " + currentTurbines + "/" + cocaCodoSinclair.turbinasMax;
-    */
-    
-    //save the image
-    const imageBuffer = canvas.toBuffer('image/png');
-    //fs.writeFileSync("./ccs.png", imageBuffer);
-    
-    //post the tweet
-    try{
-        await twitterService.postTweet(message, imageBuffer);
-    }catch(error){
-        console.error("Error with TwitterService when posting Coca Codo Sinclair");
-        return error;
+        var caudalTextInfo = getCaudalCategory(currentCaudal, 300); //caudal value and color //300 because of CCS specifics
+        var textXanchor = 700; //image text pos
+        ctx.fillStyle = "black";
+        ctx.font = 'bold 50px ' + textFont;
+        ctx.fillText("Caudal: ", textXanchor, caudalLevel - 20 - 140);
+        ctx.fillText(currentCaudal + " m³/s", textXanchor, caudalLevel - 20 - 80);
+        ctx.fillStyle = caudalTextInfo[1];
+        ctx.fillText(caudalTextInfo[0], textXanchor, caudalLevel - 20 - 20); //MEDIO, BAJO, ALTO, ETC
+        
+        ctx.fillStyle = "black";
+        var delta_caudal = caudales[1] === 0 ? (currentCaudal > 0 ? 100 : 0) : ((currentCaudal - caudales[1]) / caudales[1]) * 100;
+        var signo_caudal = (currentCaudal >= caudales[1]) ? "+" : "-";
+        
+        //delta info on image
+        ctx.font = 'bold 40px ' + textFont;
+        ctx.fillText("El caudal cambió", 20, 480);
+        ctx.fillText(signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h", 20, 520);
+        
+        //tweet message
+        var message = "Hidroeléctrica Coca Codo Sinclair\n" + 
+        "#" + cocaCodoSinclair.nombre.split(' ').join('') + " #CCS\n" +
+        "\n" +
+        "🌊Caudal: " + currentCaudal.toFixed(2) + " m³/s\n" +
+        signo_caudal + Math.abs(delta_caudal).toFixed(2) + "% desde hace 3h\n" +
+        "\n"; /* +
+        "🔋Generación: " + currentEnergy.toFixed(2) + " MWh\n" +
+        "Al " + trabajoEnergia.toFixed(2) + "% de capacidad máxima\n" +
+        "Turbinas Activas: " + currentTurbines + "/" + cocaCodoSinclair.turbinasMax;
+        */
+        
+        //save the image
+        const imageBuffer = canvas.toBuffer('image/png');
+        //fs.writeFileSync("./ccs.png", imageBuffer);
+        
+        //post the tweet
+        try{
+            await twitterService.postTweet(message, imageBuffer);
+        }catch(error){
+            console.error("Error with TwitterService when posting Coca Codo Sinclair");
+            return error;
+        }
+    } catch (error) {
+        console.error("Error in updateCocaCodoSinclair function:", error);
+        return;
     }
-    
 }
 
 async function CCSdailyReport(){
