@@ -15,6 +15,45 @@ const twitterService = new TwitterService();
 var colors = ["Green", "Red", "Blue"]; //for generation, turbines, and water level
 var cGreen = "#0ba408";
 
+// Force publish on startup if FORCE_PUBLISH env var is set
+if (process.env.FORCE_PUBLISH === 'true') {
+    console.log('[FORCE PUBLISH] Ejecutando publicación forzada al inicio...');
+
+    // Wait a bit to ensure services are ready
+    setTimeout(async () => {
+        try {
+            // Publicar las 4 hidroeléctricas
+            console.log('[FORCE PUBLISH] Publicando hidroeléctricas individuales...');
+            for (let i = 0; i < 3; i++) {
+                postearInfo(hidroelectricas[i]);
+            }
+            await updateCocaCodoSinclair();
+
+            // Esperar a que terminen las publicaciones individuales antes del reporte diario
+            setTimeout(async () => {
+                console.log('[FORCE PUBLISH] Publicando reporte diario de ayer (jueves)...');
+                await dailyReport(1); // Reporte de ayer (díasAgo = 1)
+                console.log('[FORCE PUBLISH] Reporte diario de ayer completado');
+
+                // Si también se quiere el reporte de anteayer (miércoles)
+                if (process.env.FORCE_PUBLISH_BACKUP === 'true') {
+                    setTimeout(async () => {
+                        console.log('[FORCE PUBLISH] Publicando reporte diario de anteayer (miércoles)...');
+                        await dailyReport(2); // Reporte de anteayer (díasAgo = 2)
+                        await CCSdailyReport(2); // Reporte CCS de anteayer también
+                        console.log('[FORCE PUBLISH] Reporte de anteayer completado');
+                        console.log('[FORCE PUBLISH] Publicación forzada completada');
+                    }, 30000); // Esperar 30 segundos entre reportes
+                } else {
+                    console.log('[FORCE PUBLISH] Publicación forzada completada');
+                }
+            }, 60000); // Esperar 1 minuto entre las individuales y el diario
+        } catch (error) {
+            console.error('[FORCE PUBLISH] Error:', error);
+        }
+    }, 5000); // Esperar 5 segundos al inicio
+}
+
 const job = new CronJob('15 7-22/6 * * *', () => { //hour to hour updates
     console.log('Tik');
     trigger();
@@ -452,13 +491,13 @@ async function trigger() {
 }
 
 //DAILY REPORTS
-async function getDailyInfo(){
+async function getDailyInfo(daysAgo = 1){
     var fecha = new Date(); //UTC Date
     fecha.setHours(fecha.getHours() - 5); //reduce it to gmt-5
 
 
-    //reduce a day
-    fecha.setDate(fecha.getDate() - 1);
+    //reduce a day (or more days if specified)
+    fecha.setDate(fecha.getDate() - daysAgo);
 
     var anio = fecha.getUTCFullYear().toString(); //gets year
     var mes = (fecha.getUTCMonth()+1).toString().padStart(2, '0'); //gets month
@@ -528,9 +567,9 @@ async function getDailyInfo(){
 }
 
 
-async function dailyReport(){
+async function dailyReport(daysAgo = 1){
     try{
-        const masterInfo = await getDailyInfo();
+        const masterInfo = await getDailyInfo(daysAgo);
         var width = 2200;
         var height = 2500;
         const canvas = createCanvas(width, height);
@@ -542,7 +581,7 @@ async function dailyReport(){
         function formatDateTime() {
             var fecha = new Date(); //UTC date, 5 hours ahead from localtime
             fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
-            fecha.setDate(fecha.getDate() - 1);
+            fecha.setDate(fecha.getDate() - daysAgo);
             const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
             const diaSemana = diasSemana[fecha.getUTCDay()];
 
@@ -1044,19 +1083,19 @@ async function updateCocaCodoSinclair(){ //normal 3hour report
     }
 }
 
-async function CCSdailyReport(){
+async function CCSdailyReport(daysAgo = 1){
     var width = 2050;
     var height = 2500;
     const canvas = createCanvas(width, height); // Ajuste de altura del canvas
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = "#f0d9c2";
     ctx.fillRect(0, 0, 1000, 600);
-    
+
     //pretty obvious
     function formatDateTime() {
         var fecha = new Date(); //UTC date, 5 hours ahead from localtime
         fecha.setHours(fecha.getHours() - 5); //modify UTC date to be the same as GMT-5
-        fecha.setDate(fecha.getDate() - 1);
+        fecha.setDate(fecha.getDate() - daysAgo);
         const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const diaSemana = diasSemana[fecha.getUTCDay()];
 
@@ -1072,7 +1111,7 @@ async function CCSdailyReport(){
     const dateInfo = formatDateTime();
 
     //get CCS info upfront
-    var masterInfo = await getDailyInfo();
+    var masterInfo = await getDailyInfo(daysAgo);
     var dayInfo = masterInfo[3];
 
     var energySum = 0;
