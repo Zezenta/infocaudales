@@ -1475,11 +1475,16 @@ async function CCSdailyReport(daysAgo = 1){
 //CLOCK JOBS
 const testito = new Date().toLocaleString("es-EC", { timeZone: "America/Guayaquil" }); //status on
 
-try{
-    twitterService.postText("Status on " + testito + " test: 💧íóú");
-}catch(error){
-    console.error("Error with TwitterService when posting status on");
-    return error;
+// Only post test tweet if NOT in force publish mode
+if (process.env.FORCE_PUBLISH !== 'true' && process.env.FORCE_PUBLISH_BACKUP !== 'true') {
+    try{
+        twitterService.postText("Status on " + testito + " test: 💧íóú");
+    }catch(error){
+        console.error("Error with TwitterService when posting status on");
+        return error;
+    }
+} else {
+    console.log('[FORCE PUBLISH] Saltando tweet de prueba en modo publicación forzada');
 }
 
 /*
