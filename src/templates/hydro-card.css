@@ -229,6 +229,9 @@ body {
 .card-container .plant-image {
   position: absolute;
   z-index: 2;
+  display: block;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 .card-container .visualizer-svg {

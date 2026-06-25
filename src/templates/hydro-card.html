@@ -358,6 +358,7 @@
   </div>
 
   <script>
+    const imageDimensionsCache = {};
     const plantsData = {
       mazar: {
         name: 'Mazar',
@@ -839,20 +840,41 @@
         document.querySelectorAll('.plant-image').forEach(el => {
           el.style.display = 'block';
 
-          // Only update src and attach onload if the image is actually changing
+          // Only update src if the image is actually changing
           const currentSrc = el.getAttribute('src') || '';
           const isSameSrc = currentSrc === plant.drawingImage || currentSrc.endsWith(plant.drawingImage);
-          
           if (!isSameSrc) {
-            el.onload = () => {
-              updateCards();
-            };
             el.src = plant.drawingImage;
           }
 
-          // Use natural dimensions if loaded, fallback to viewport dimensions if not loaded yet
-          const naturalWidth = el.naturalWidth || 600;
-          const naturalHeight = el.naturalHeight || 420;
+          // Determine natural width and height using dimension cache
+          let naturalWidth = 600;
+          let naturalHeight = 420;
+
+          if (imageDimensionsCache[plant.drawingImage]) {
+            naturalWidth = imageDimensionsCache[plant.drawingImage].width;
+            naturalHeight = imageDimensionsCache[plant.drawingImage].height;
+          } else {
+            // Cache dimensions if already loaded, otherwise load asynchronously
+            if (el.complete && el.naturalWidth > 0 && (el.src === plant.drawingImage || el.src.endsWith(plant.drawingImage))) {
+              imageDimensionsCache[plant.drawingImage] = {
+                width: el.naturalWidth,
+                height: el.naturalHeight
+              };
+              naturalWidth = el.naturalWidth;
+              naturalHeight = el.naturalHeight;
+            } else {
+              const tempImg = new Image();
+              tempImg.onload = () => {
+                imageDimensionsCache[plant.drawingImage] = {
+                  width: tempImg.naturalWidth,
+                  height: tempImg.naturalHeight
+                };
+                updateCards();
+              };
+              tempImg.src = plant.drawingImage;
+            }
+          }
           
           // Calculate manual dimensions and offsets preserving aspect ratio
           const scale = imgScale / 100;
@@ -1254,7 +1276,7 @@
     const generateAllBtn = document.getElementById('generate-all-btn');
     const statusMsg = document.getElementById('generation-status');
 
-    generateBtn.addEventListener('click', () => {
+    generateBtn.addEventListener('click', async () => {
       const cardElement = document.querySelector('.card-obsidian-grotesk');
       if (!cardElement) {
         statusMsg.style.color = '#ef4444';
@@ -1266,6 +1288,15 @@
       statusMsg.textContent = 'Generando imagen...';
       generateBtn.disabled = true;
       generateAllBtn.disabled = true;
+
+      // Wait for current plant drawing cache to load
+      const currentPlantKey = plantSelect.value;
+      const currentDrawingImage = plantsData[currentPlantKey].drawingImage;
+      if (currentDrawingImage) {
+        while (!imageDimensionsCache[currentDrawingImage]) {
+          await new Promise(resolve => setTimeout(resolve, 30));
+        }
+      }
 
       // Ensure all images within the card are fully loaded
       const images = Array.from(cardElement.querySelectorAll('img, image'));
@@ -1377,6 +1408,14 @@
           // 2. Trigger loadPlantControls (which also calls updateCards)
           loadPlantControls();
           
+          // Wait for the plant drawing to load its dimensions and populate the cache
+          const drawingImage = plantsData[key].drawingImage;
+          if (drawingImage) {
+            while (!imageDimensionsCache[drawingImage]) {
+              await new Promise(resolve => setTimeout(resolve, 30));
+            }
+          }
+
           // 3. Wait for DOM and images to settle
           await new Promise(resolve => setTimeout(resolve, 250));
           
