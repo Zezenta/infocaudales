@@ -1,0 +1,593 @@
+/* Font face registrations for DejaVu Sans Mono */
+@font-face {
+  font-family: 'DejaVu Sans Mono';
+  src: url('/fonts/DejaVuSansMono.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'DejaVu Sans Mono';
+  src: url('/fonts/DejaVuSansMono-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+/* Global reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #12151a; /* Dark slate page background */
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 80px;
+  padding: 60px;
+  min-height: 100vh;
+}
+
+/* ==========================================================================
+   THEME WRAPPER & TITLE LABELS
+   ========================================================================== */
+.theme-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-title {
+  color: #64748b;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   SHARED SQUARE CARD LAYOUT (600px x 600px)
+   ========================================================================== */
+.card-container {
+  width: 600px;
+  height: 600px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Header Area */
+.card-container .header {
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-container .header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.card-container .header-right {
+  display: flex;
+  align-items: center;
+}
+
+.card-container .header-pre-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.0;
+  margin-bottom: 3px;
+}
+
+.card-container .plant-name {
+  font-size: 38px;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.0;
+  letter-spacing: -0.01em;
+}
+
+.card-container .timestamp {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 4px 0 0 0;
+  line-height: 1.0;
+}
+
+.card-container .watermark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.0;
+}
+
+.card-container .x-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4.5px;
+  flex-shrink: 0;
+}
+
+.card-container .x-logo {
+  display: block;
+}
+
+/* Generación Section */
+.card-container .generation-section {
+  position: absolute;
+  top: 125px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-container .section-label {
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.card-container .generation-value {
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 2px;
+  line-height: 1.1;
+}
+
+/* Horizontal battery representation */
+.card-container .battery-row {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.card-container .battery-body {
+  width: 90px;
+  height: 24px;
+  border: 2.5px solid currentColor;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.card-container .battery-fill {
+  height: 100%;
+}
+
+.card-container .battery-cap {
+  width: 4px;
+  height: 10px;
+  margin-left: 2.5px;
+  border-radius: 0 1px 1px 0;
+}
+
+.card-container .status-text {
+  font-size: 20px;
+  font-weight: bold;
+  margin-left: 10px;
+  line-height: 1.0;
+}
+
+/* Caudal Section */
+.card-container .flow-section {
+  position: absolute;
+  top: 125px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.card-container .flow-label {
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.card-container .flow-status {
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 4px;
+  line-height: 1.1;
+}
+
+/* Visualizer Panel at the bottom */
+.card-container .visualizer-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 600px;
+  height: 420px;
+  overflow: hidden;
+}
+
+.card-container .plant-image {
+  position: absolute;
+  z-index: 2;
+}
+
+.card-container .visualizer-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.card-container .dam-concrete {
+  stroke-width: 2.5px;
+}
+
+.card-container .water-body {
+  stroke-width: 2.5px;
+}
+
+/* Reference levels overlaying the water */
+.card-container .reference-levels {
+  position: absolute;
+  left: 290px;
+  right: 0;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.card-container .cota-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+}
+
+.card-container .cota-text {
+  font-size: 14px;
+  font-weight: bold;
+  position: absolute;
+  left: 10px;
+  bottom: 4px;
+  white-space: nowrap;
+}
+
+.card-obsidian-grotesk {
+  background-color: #080c14;
+  border: 3px solid #1e293b;
+  font-family: 'Space Grotesk', sans-serif;
+  color: #f3f4f6;
+}
+.card-obsidian-grotesk .watermark {
+  color: #4b5563;
+}
+.card-obsidian-grotesk .battery-body {
+  border-color: #1e293b;
+  background-color: #0c111c;
+}
+.card-obsidian-grotesk .battery-fill {
+  background-color: #00e676;
+}
+.card-obsidian-grotesk .battery-cap {
+  background-color: #1e293b;
+}
+.card-obsidian-grotesk .text-green {
+  color: #00e676;
+}
+.card-obsidian-grotesk .text-cyan {
+  color: #00b0ff;
+}
+.card-obsidian-grotesk .dam-concrete {
+  fill: #1e293b;
+  stroke: #475569;
+}
+.card-obsidian-grotesk .water-body {
+  stroke: #1e293b;
+}
+.card-obsidian-grotesk .water-top {
+  fill: #38bdf8;
+  stroke: #1e293b;
+  stroke-width: 2.5px;
+}
+.card-obsidian-grotesk .water-ripple {
+  stroke: #e0f2fe;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
+.card-obsidian-grotesk .cota-max {
+  border-top: 2px dashed #4b5563;
+}
+.card-obsidian-grotesk .cota-current {
+  border-top: 2.5px solid #00b0ff;
+}
+.card-obsidian-grotesk .cota-min {
+  border-top: 2.5px solid #f43f5e;
+}
+
+/* Monospace overrides for status (Alta, Muy alto) and cota information */
+.card-obsidian-grotesk .status-text,
+.card-obsidian-grotesk .flow-status,
+.card-obsidian-grotesk .cota-text {
+  font-family: 'DejaVu Sans Mono', monospace;
+}
+
+/* Color definitions for references in monospace */
+.card-obsidian-grotesk .status-text {
+  color: #00e676;
+}
+.card-obsidian-grotesk .flow-status {
+  color: #00b0ff;
+}
+.card-obsidian-grotesk .cota-max .cota-text {
+  color: #4b5563;
+}
+.card-obsidian-grotesk .cota-current .cota-text {
+  color: #00b0ff;
+}
+.card-obsidian-grotesk .cota-min .cota-text {
+  color: #f43f5e;
+}
+
+/* ==========================================================================
+   MAIN LAYOUT & CONTROL PANEL STYLES
+   ========================================================================== */
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 50px;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+}
+
+.cards-column {
+  display: flex;
+  flex-direction: column;
+  width: 600px;
+  order: 1; /* Card displays on the left */
+}
+
+.control-panel {
+  width: 400px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  color: #f3f4f6;
+  font-family: 'Space Grotesk', sans-serif;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  order: 2; /* Menu displays on the right */
+}
+
+.panel-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 12px;
+}
+
+.panel-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.panel-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.panel-top-row {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-sliders-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-label .badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'DejaVu Sans Mono', monospace;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.form-select, .form-input {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-select:focus, .form-input:focus {
+  border-color: #00b0ff;
+  box-shadow: 0 0 0 3px rgba(0, 176, 255, 0.2);
+}
+
+/* Custom range inputs */
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slider-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #1e293b;
+  outline: none;
+}
+
+.slider-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00b0ff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 176, 255, 0.5);
+  transition: transform 0.1s;
+}
+
+.slider-range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slider-limits {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #64748b;
+  font-family: 'DejaVu Sans Mono', monospace;
+}
+
+/* Turbines info inside card */
+.turbines-info {
+  font-size: 13px;
+  line-height: 1.0;
+  margin: 0;
+}
+
+
+.card-obsidian-grotesk .turbines-info {
+  font-family: 'Space Grotesk', sans-serif;
+  color: #94a3b8;
+}
+
+.card-obsidian-grotesk .turbines-active {
+  color: #f3f4f6;
+  font-weight: bold;
+}
+
+/* Dynamic color helpers for Obsidian status values */
+.card-obsidian-grotesk .text-red {
+  color: #f43f5e;
+}
+
+.card-obsidian-grotesk .text-orange {
+  color: #fb923c;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 640px) {
+  body {
+    padding: 20px 10px;
+  }
+}
+
+.slider-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+}
+
+.slider-row .slider-container {
+  flex: 1;
+}
+
+.card-obsidian-grotesk .flow-current {
+  fill: none;
+  stroke: #00e5ff;
+  stroke-width: 2.2px;
+  stroke-linecap: round;
+  opacity: 0.65;
+}
+
+/* Turbines Box Styles */
+.turbines-box {
+  position: relative;
+  z-index: 10;
+  border: 1.5px solid #1e293b;
+  background-color: #0c111c;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: fit-content;
+  align-items: flex-start;
+}
+
+.turbines-grid {
+  display: grid;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.turbine-icon {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: auto;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.turbine-icon.inactive {
+  opacity: 0.22;
+  filter: grayscale(1) brightness(0.6);
+}

@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hydroelectric Plant Cards (Square Iterations)</title>
+  <link rel="stylesheet" href="/hydro-card.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="main-layout">
+    <!-- Control Panel (Compact & On Top) -->
+    <div class="control-panel">
+      <div class="panel-header-compact">
+        <h3 class="panel-title">Filtros & Telemetría</h3>
+        <p class="panel-subtitle">Modifica datos ficticios for reportes</p>
+      </div>
+
+      <!-- Top Row: Central Dropdown, Date Input -->
+      <div class="panel-top-row">
+        <!-- Dropdown Central -->
+        <div class="form-group">
+          <label class="form-label" for="plant-select">Central</label>
+          <select id="plant-select" class="form-select">
+            <!-- Populated by JS -->
+          </select>
+        </div>
+
+        <!-- Date Input -->
+        <div class="form-group">
+          <label class="form-label" for="date-input">Fecha & Hora</label>
+          <input type="datetime-local" id="date-input" class="form-input">
+        </div>
+      </div>
+
+      <!-- Sliders Grid (2 Columns) -->
+      <div class="panel-sliders-grid">
+        <!-- Generation Slider -->
+        <div class="form-group slider-container">
+          <label class="form-label">
+            Generación
+            <span id="gen-badge" class="badge">0 MW</span>
+          </label>
+          <input type="range" id="gen-slider" class="slider-range">
+          <div class="slider-limits">
+            <span>0 MW</span>
+            <span id="gen-max-label">0 MW</span>
+          </div>
+        </div>
+
+        <!-- Turbines Slider -->
+        <div class="form-group slider-container" id="turbines-container">
+          <label class="form-label">
+            Turbinas Activas
+            <span id="turbines-badge" class="badge">0 / 0</span>
+          </label>
+          <input type="range" id="turbines-slider" class="slider-range" step="1">
+          <div class="slider-limits">
+            <span>0</span>
+            <span id="turbines-max-label">0</span>
+          </div>
+        </div>
+
+        <!-- Flow Slider -->
+        <div class="form-group slider-container">
+          <label class="form-label">
+            Caudal de Ingreso
+            <span id="flow-badge" class="badge">0 m³/s</span>
+          </label>
+          <input type="range" id="flow-slider" class="slider-range">
+          <div class="slider-limits">
+            <span>0 m³/s</span>
+            <span id="flow-max-label">0 m³/s</span>
+          </div>
+        </div>
+
+        <!-- Cota Slider -->
+        <div class="form-group slider-container" id="cota-container">
+          <label class="form-label">
+            Embalse (Cota)
+            <span id="cota-badge" class="badge">0 msnm</span>
+          </label>
+          <input type="range" id="cota-slider" class="slider-range" step="0.01">
+          <div class="slider-limits">
+            <span id="cota-min-label">0 msnm</span>
+            <span id="cota-max-label">0 msnm</span>
+          </div>
+        </div>
+
+        <!-- Image X Coordinate Slider -->
+        <div class="form-group slider-container" id="img-x-container" style="display: none;">
+          <label class="form-label">
+            Imagen X
+            <span id="img-x-badge" class="badge">0 px</span>
+          </label>
+          <input type="range" id="img-x-slider" class="slider-range" min="-400" max="400" value="0">
+          <div class="slider-limits">
+            <span>-400 px</span>
+            <span>400 px</span>
+          </div>
+        </div>
+
+        <!-- Image Y Coordinate Slider -->
+        <div class="form-group slider-container" id="img-y-container" style="display: none;">
+          <label class="form-label">
+            Imagen Y
+            <span id="img-y-badge" class="badge">0 px</span>
+          </label>
+          <input type="range" id="img-y-slider" class="slider-range" min="-400" max="400" value="0">
+          <div class="slider-limits">
+            <span>-400 px</span>
+            <span>400 px</span>
+          </div>
+        </div>
+
+        <!-- Image Scale Slider -->
+        <div class="form-group slider-container" id="img-scale-container" style="display: none;">
+          <label class="form-label">
+            Tamaño Imagen
+            <span id="img-scale-badge" class="badge">100%</span>
+          </label>
+          <input type="range" id="img-scale-slider" class="slider-range" min="10" max="300" value="100">
+          <div class="slider-limits">
+            <span>10%</span>
+            <span>300%</span>
+          </div>
+        </div>
+
+
+
+        <!-- Cota Max Y Slider -->
+        <div class="form-group slider-container" id="cota-max-y-container" style="display: none;">
+          <label class="form-label">
+            Cota Máx Y
+            <span id="cota-max-y-badge" class="badge">320 px</span>
+          </label>
+          <input type="range" id="cota-max-y-slider" class="slider-range" min="0" max="420" value="320">
+          <div class="slider-limits">
+            <span>0 px</span>
+            <span>420 px</span>
+          </div>
+        </div>
+
+        <!-- Cota Min Y Slider -->
+        <div class="form-group slider-container" id="cota-min-y-container" style="display: none;">
+          <label class="form-label">
+            Cota Mín Y
+            <span id="cota-min-y-badge" class="badge">60 px</span>
+          </label>
+          <input type="range" id="cota-min-y-slider" class="slider-range" min="0" max="420" value="60">
+          <div class="slider-limits">
+            <span>0 px</span>
+            <span>420 px</span>
+          </div>
+        </div>
+
+        <!-- Cota X Double Slider Row -->
+        <div class="slider-row" id="cota-x-double-container" style="display: none;">
+          <!-- Cota X Min Slider -->
+          <div class="form-group slider-container" id="cota-x-min-container">
+            <label class="form-label">
+              Límite X Mín
+              <span id="cota-x-min-badge" class="badge">0 px</span>
+            </label>
+            <input type="range" id="cota-x-min-slider" class="slider-range" min="0" max="600" value="0">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>600 px</span>
+            </div>
+          </div>
+
+          <!-- Cota X Max Slider -->
+          <div class="form-group slider-container" id="cota-x-max-container">
+            <label class="form-label">
+              Límite X Máx
+              <span id="cota-x-max-badge" class="badge">600 px</span>
+            </label>
+            <input type="range" id="cota-x-max-slider" class="slider-range" min="0" max="600" value="600">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>600 px</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D Water Top Slider -->
+        <div class="form-group slider-container" id="water-3d-container" style="display: none;">
+          <label class="form-label">
+            Tapa 3D (Grosor)
+            <span id="water-3d-badge" class="badge">15 px</span>
+          </label>
+          <input type="range" id="water-3d-slider" class="slider-range" min="0" max="100" value="15">
+          <div class="slider-limits">
+            <span>0 px</span>
+            <span>100 px</span>
+          </div>
+        </div>
+      </div>
+      <!-- Generate PNG Button -->
+      <div style="margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <button id="generate-png-btn" class="form-btn" style="width: 100%; padding: 10px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#2563eb'" onmouseout="this.style.backgroundColor='#3b82f6'">
+          Guardar Reporte en Disco (PNG)
+        </button>
+        <button id="generate-all-btn" class="form-btn" style="width: 100%; padding: 10px; background-color: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#059669'" onmouseout="this.style.backgroundColor='#10b981'">
+          Guardar Todos los Reportes (PNG)
+        </button>
+        <div id="generation-status" style="font-size: 13px; text-align: center; font-weight: 500; min-height: 18px;"></div>
+      </div>
+    </div>
+
+    <!-- Report Section (Obsidian Card - Full Square 600x600px) -->
+    <div class="cards-column">
+      <!-- ==========================================================================
+           THEME 2: Electric Obsidian (Space Grotesk Font)
+           ========================================================================== -->
+      <div class="theme-wrapper">
+        <h2 class="theme-title">Electric Obsidian (Space Grotesk Font)</h2>
+        <div class="card-container card-obsidian-grotesk">
+          <!-- Header -->
+          <div class="header">
+            <div class="header-left">
+              <span class="header-pre-title">HIDROELÉCTRICA</span>
+              <h1 class="plant-name">Molino</h1>
+              <p class="timestamp">09/06/2026 13:15</p>
+            </div>
+            <div class="header-right">
+              <div class="watermark">
+                <div class="x-icon-container">
+                  <svg class="x-logo" viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </div>
+                <span>@Hidro_Info_Bot</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Generación Section -->
+          <div class="generation-section">
+            <span class="section-label">Generación:</span>
+            <span class="generation-value text-green">913.23 MW</span>
+            <div class="battery-row">
+              <div class="battery-body">
+                <div class="battery-fill" style="width: 90%;"></div>
+              </div>
+              <div class="battery-cap"></div>
+              <span class="status-text text-green">Alta</span>
+            </div>
+            <div class="turbines-box" id="turbines-box" style="display: none;">
+              <div class="turbines-info">Turbinas activas: <span class="turbines-active">8</span>/<span class="turbines-max">10</span></div>
+              <div class="turbines-grid" id="turbines-overlay"></div>
+            </div>
+          </div>
+
+          <!-- Caudal Section -->
+          <div class="flow-section">
+            <span class="flow-label">Caudal: 154.43m³/s</span>
+            <span class="flow-status text-cyan">Muy Alto</span>
+          </div>
+
+          <!-- Visualizer Panel -->
+          <div class="visualizer-panel">
+            <img class="plant-image" src="" style="display: none; position: absolute; z-index: 2;" />
+            <svg class="visualizer-svg" width="600" height="420" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="water-gradient-obsidian-grotesk" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#00b0ff" />
+                  <stop offset="100%" stop-color="#075985" />
+                </linearGradient>
+                <linearGradient id="water-top-gradient-obsidian" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#a5f3fc" />
+                  <stop offset="50%" stop-color="#38bdf8" />
+                  <stop offset="100%" stop-color="#0284c7" />
+                </linearGradient>
+                <!-- Flow Arrowhead Marker -->
+                <marker id="flow-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 2 L 6 5 L 0 8 z" fill="#00e5ff" />
+                </marker>
+              </defs>
+              <rect class="water-body" x="290" y="120" width="310" height="300" fill="url(#water-gradient-obsidian-grotesk)" />
+              <path class="water-body-coca" fill="url(#water-gradient-obsidian-grotesk)" style="display: none;" />
+              <rect class="water-top" x="290" y="120" width="310" height="15" />
+              <line class="water-ripple ripple-1" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="30, 25" />
+              <line class="water-ripple ripple-2" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="20, 20" />
+              <line class="water-ripple ripple-3" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="40, 30" />
+              
+              <!-- Flow current lines specifically for Coca Codo Sinclair -->
+              <g class="coca-flow-lines" style="display: none;">
+                <path class="flow-current line-1" fill="none" d="" marker-end="url(#flow-arrow)" />
+                <path class="flow-current line-2" fill="none" d="" marker-end="url(#flow-arrow)" />
+                <path class="flow-current line-3" fill="none" d="" marker-end="url(#flow-arrow)" />
+                <path class="flow-current line-4" fill="none" d="" marker-end="url(#flow-arrow)" />
+                
+                <!-- Foam / Bubble elements (grouped trails going to the right) -->
+                <g class="bubble-group bg-1">
+                  <circle cx="0" cy="0" r="3" fill="#ffffff" opacity="0.85" />
+                  <circle cx="7" cy="2" r="4" fill="#ffffff" opacity="0.65" />
+                  <circle cx="-6" cy="-3" r="2" fill="#a5f3fc" opacity="0.9" />
+                  <circle cx="14" cy="-1" r="3" fill="#e0f2fe" opacity="0.75" />
+                  <circle cx="21" cy="3" r="2.5" fill="#ffffff" opacity="0.8" />
+                </g>
+                <g class="bubble-group bg-2">
+                  <circle cx="0" cy="0" r="4" fill="#ffffff" opacity="0.75" />
+                  <circle cx="8" cy="-2" r="2.5" fill="#ffffff" opacity="0.85" />
+                  <circle cx="-8" cy="3" r="3" fill="#a5f3fc" opacity="0.9" />
+                  <circle cx="15" cy="1" r="3.5" fill="#e0f2fe" opacity="0.7" />
+                  <circle cx="23" cy="-3" r="2" fill="#ffffff" opacity="0.8" />
+                </g>
+                <g class="bubble-group bg-3">
+                  <circle cx="0" cy="0" r="3" fill="#ffffff" opacity="0.8" />
+                  <circle cx="6" cy="3" r="4.5" fill="#ffffff" opacity="0.6" />
+                  <circle cx="-9" cy="-2" r="2" fill="#a5f3fc" opacity="0.9" />
+                  <circle cx="13" cy="-3" r="3" fill="#e0f2fe" opacity="0.7" />
+                  <circle cx="20" cy="2" r="2.5" fill="#ffffff" opacity="0.85" />
+                </g>
+                <g class="bubble-group bg-4">
+                  <circle cx="0" cy="0" r="3.5" fill="#ffffff" opacity="0.85" />
+                  <circle cx="9" cy="-1" r="2" fill="#ffffff" opacity="0.9" />
+                  <circle cx="-7" cy="-3" r="4" fill="#a5f3fc" opacity="0.65" />
+                  <circle cx="16" cy="2" r="3" fill="#e0f2fe" opacity="0.75" />
+                  <circle cx="24" cy="-1" r="2.5" fill="#ffffff" opacity="0.8" />
+                </g>
+                <g class="bubble-group bg-5">
+                  <circle cx="0" cy="0" r="3" fill="#ffffff" opacity="0.8" />
+                  <circle cx="7" cy="-2" r="4" fill="#ffffff" opacity="0.6" />
+                  <circle cx="-6" cy="2" r="2.5" fill="#a5f3fc" opacity="0.9" />
+                  <circle cx="14" cy="1" r="3" fill="#e0f2fe" opacity="0.75" />
+                  <circle cx="21" cy="-3" r="2" fill="#ffffff" opacity="0.85" />
+                </g>
+                <g class="bubble-group bg-6">
+                  <circle cx="0" cy="0" r="4" fill="#ffffff" opacity="0.75" />
+                  <circle cx="8" cy="3" r="2.5" fill="#ffffff" opacity="0.85" />
+                  <circle cx="-8" cy="-2" r="3.5" fill="#a5f3fc" opacity="0.65" />
+                  <circle cx="15" cy="-1" r="3" fill="#e0f2fe" opacity="0.7" />
+                  <circle cx="23" cy="2" r="2" fill="#ffffff" opacity="0.8" />
+                </g>
+              </g>
+              
+              <path class="dam-concrete" d="M 0 420 L 290 420 L 290 100 L 268 100 L 268 50 L 250 50 L 250 20 L 235 20 C 200 150 140 220 0 390 Z" />
+            </svg>
+
+            <div class="reference-levels">
+              <div class="cota-line cota-max" style="bottom: 320px;">
+                <span class="cota-text text-muted">-Cota máxima: 1991 msnm</span>
+              </div>
+              <div class="cota-line cota-current" style="bottom: 300px;">
+                <span class="cota-text text-cyan">Cota actual: 1987.74 msnm</span>
+              </div>
+              <div class="cota-line cota-min" style="bottom: 60px;">
+                <span class="cota-text text-red">Cota mínima: 1975 msnm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const plantsData = {
+      mazar: {
+        name: 'Mazar',
+        maxEnergyMW: 170,
+        maxTurbines: 2,
+        maxFlowM3s: 150,
+        minLevelMasl: 2098,
+        maxLevelMasl: 2153,
+        defaultGen: 136,
+        defaultTurbines: 2,
+        defaultFlow: 85,
+        defaultCota: 2135.2,
+        drawingImage: '/hydroelectric-drawings/Mazar.png',
+        defaultTurbinesX: 150,
+        defaultTurbinesY: 250,
+        defaultTurbinesW: 80,
+        defaultTurbinesH: 45
+      },
+      molino: {
+        name: 'Molino',
+        maxEnergyMW: 1100,
+        maxTurbines: 10,
+        maxFlowM3s: 150,
+        minLevelMasl: 1975,
+        maxLevelMasl: 1991,
+        defaultGen: 913.23,
+        defaultTurbines: 8,
+        defaultFlow: 154.43,
+        defaultCota: 1987.74,
+        drawingImage: '/hydroelectric-drawings/Molino.png',
+        defaultTurbinesX: 200,
+        defaultTurbinesY: 280,
+        defaultTurbinesW: 180,
+        defaultTurbinesH: 70
+      },
+      sopladora: {
+        name: 'Sopladora',
+        maxEnergyMW: 487,
+        maxTurbines: 3,
+        maxFlowM3s: 100,
+        defaultGen: 350,
+        defaultTurbines: 2,
+        defaultFlow: 65,
+        drawingImage: '/hydroelectric-drawings/Sopladora.png',
+        defaultTurbinesX: 220,
+        defaultTurbinesY: 240,
+        defaultTurbinesW: 120,
+        defaultTurbinesH: 50
+      },
+      minasSanFrancisco: {
+        name: 'Minas San Francisco',
+        maxEnergyMW: 270,
+        maxTurbines: 3,
+        maxFlowM3s: 80,
+        minLevelMasl: 783,
+        maxLevelMasl: 792,
+        defaultGen: 180,
+        defaultTurbines: 2,
+        defaultFlow: 45,
+        defaultCota: 788.4,
+        drawingImage: '/hydroelectric-drawings/Minas_San_Francisco.png',
+        defaultTurbinesX: 250,
+        defaultTurbinesY: 260,
+        defaultTurbinesW: 120,
+        defaultTurbinesH: 50
+      },
+      cocaCodoSinclair: {
+        name: 'Coca Codo Sinclair',
+        maxEnergyMW: 1500,
+        maxTurbines: 8,
+        maxFlowM3s: 3000,
+        defaultGen: 1120,
+        defaultTurbines: 6,
+        defaultFlow: 620,
+        drawingImage: '/hydroelectric-drawings/Coca_Codo_Sinclair.png',
+        defaultTurbinesX: 220,
+        defaultTurbinesY: 280,
+        defaultTurbinesW: 160,
+        defaultTurbinesH: 75
+      },
+      agoyan: {
+        name: 'Agoyán',
+        maxEnergyMW: 120,
+        maxTurbines: 2,
+        maxFlowM3s: 120,
+        minLevelMasl: 1645,
+        maxLevelMasl: 1651,
+        defaultGen: 95,
+        defaultTurbines: 2,
+        defaultFlow: 80,
+        defaultCota: 1648.5,
+        drawingImage: '/hydroelectric-drawings/Agoyan.png',
+        defaultTurbinesX: 230,
+        defaultTurbinesY: 270,
+        defaultTurbinesW: 80,
+        defaultTurbinesH: 45
+      }
+    };
+
+    const turbineLayouts = {
+      molino: { rows: 2, cols: 5, type: 'Pelton', width: 140, height: 60 },
+      sopladora: { rows: 1, cols: 3, type: 'Francis', width: 90, height: 36 },
+      minasSanFrancisco: { rows: 1, cols: 3, type: 'Pelton', width: 90, height: 36 },
+      mazar: { rows: 1, cols: 2, type: 'Francis', width: 64, height: 36 },
+      agoyan: { rows: 1, cols: 2, type: 'Francis', width: 64, height: 36 }
+    };
+
+    // DOM Elements
+    const plantSelect = document.getElementById('plant-select');
+    const dateInput = document.getElementById('date-input');
+    const genSlider = document.getElementById('gen-slider');
+    const genBadge = document.getElementById('gen-badge');
+    const genMaxLabel = document.getElementById('gen-max-label');
+    const turbinesContainer = document.getElementById('turbines-container');
+    const turbinesSlider = document.getElementById('turbines-slider');
+    const turbinesBadge = document.getElementById('turbines-badge');
+    const turbinesMaxLabel = document.getElementById('turbines-max-label');
+    const flowSlider = document.getElementById('flow-slider');
+    const flowBadge = document.getElementById('flow-badge');
+    const flowMaxLabel = document.getElementById('flow-max-label');
+    const cotaContainer = document.getElementById('cota-container');
+    const cotaSlider = document.getElementById('cota-slider');
+    const cotaBadge = document.getElementById('cota-badge');
+    const cotaMinLabel = document.getElementById('cota-min-label');
+    const cotaMaxLabel = document.getElementById('cota-max-label');
+    const imgXSlider = document.getElementById('img-x-slider');
+    const imgXBadge = document.getElementById('img-x-badge');
+    const imgXContainer = document.getElementById('img-x-container');
+    const imgYSlider = document.getElementById('img-y-slider');
+    const imgYBadge = document.getElementById('img-y-badge');
+    const imgYContainer = document.getElementById('img-y-container');
+    const imgScaleSlider = document.getElementById('img-scale-slider');
+    const imgScaleBadge = document.getElementById('img-scale-badge');
+    const imgScaleContainer = document.getElementById('img-scale-container');
+    const cotaMaxYSlider = document.getElementById('cota-max-y-slider');
+    const cotaMaxYBadge = document.getElementById('cota-max-y-badge');
+    const cotaMaxYContainer = document.getElementById('cota-max-y-container');
+    const cotaMinYSlider = document.getElementById('cota-min-y-slider');
+    const cotaMinYBadge = document.getElementById('cota-min-y-badge');
+    const cotaMinYContainer = document.getElementById('cota-min-y-container');
+    const cotaXMinSlider = document.getElementById('cota-x-min-slider');
+    const cotaXMinBadge = document.getElementById('cota-x-min-badge');
+    const cotaXMaxSlider = document.getElementById('cota-x-max-slider');
+    const cotaXMaxBadge = document.getElementById('cota-x-max-badge');
+    const cotaXDoubleContainer = document.getElementById('cota-x-double-container');
+    const water3dSlider = document.getElementById('water-3d-slider');
+    const water3dBadge = document.getElementById('water-3d-badge');
+    const water3dContainer = document.getElementById('water-3d-container');
+
+    const turbinesOverlay = document.getElementById('turbines-overlay');
+
+    // Load last plant from localStorage
+    const savedLastPlant = localStorage.getItem('hydro_last_plant');
+
+    // Initialize Dropdown
+    Object.keys(plantsData).forEach(key => {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = plantsData[key].name;
+      if (savedLastPlant) {
+        if (key === savedLastPlant) option.selected = true;
+      } else {
+        if (key === 'molino') option.selected = true; // Default
+      }
+      plantSelect.appendChild(option);
+    });
+
+    // Initialize DateTime
+    const savedLastDate = localStorage.getItem('hydro_last_date');
+    if (savedLastDate) {
+      dateInput.value = savedLastDate;
+    } else {
+      const now = new Date();
+      const tzOffset = now.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(now - tzOffset)).toISOString().slice(0, 16);
+      dateInput.value = localISOTime;
+    }
+
+    // Load plant specific controls
+    function loadPlantControls() {
+      const plantKey = plantSelect.value;
+      const plant = plantsData[plantKey];
+
+      // Load config from localStorage if exists
+      let savedConfig = null;
+      try {
+        const saved = localStorage.getItem('hydro_plant_configs');
+        if (saved) {
+          const configs = JSON.parse(saved);
+          if (configs[plantKey]) {
+            savedConfig = configs[plantKey];
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      // Generation Slider Setup
+      genSlider.min = 0;
+      genSlider.max = plant.maxEnergyMW;
+      if (savedConfig && savedConfig.gen !== undefined) {
+        genSlider.value = savedConfig.gen;
+      } else {
+        genSlider.value = plant.defaultGen !== undefined ? plant.defaultGen : (plant.maxEnergyMW * 0.8);
+      }
+      genMaxLabel.textContent = `${plant.maxEnergyMW} MW`;
+
+      // Turbines Setup
+      if (plant.maxTurbines && turbineLayouts[plantKey]) {
+        turbinesContainer.style.display = 'flex';
+        turbinesSlider.min = 0;
+        turbinesSlider.max = plant.maxTurbines;
+        if (savedConfig && savedConfig.turbines !== undefined) {
+          turbinesSlider.value = savedConfig.turbines;
+        } else {
+          turbinesSlider.value = plant.defaultTurbines !== undefined ? plant.defaultTurbines : plant.maxTurbines;
+        }
+        turbinesMaxLabel.textContent = plant.maxTurbines;
+      } else {
+        turbinesContainer.style.display = 'none';
+      }
+
+      // Flow Slider Setup
+      flowSlider.min = 0;
+      flowSlider.max = plant.maxFlowM3s;
+      if (savedConfig && savedConfig.flow !== undefined) {
+        flowSlider.value = savedConfig.flow;
+      } else {
+        flowSlider.value = plant.defaultFlow !== undefined ? plant.defaultFlow : (plant.maxFlowM3s * 0.7);
+      }
+      flowMaxLabel.textContent = `${plant.maxFlowM3s} m³/s`;
+
+      // Cota Setup
+      if (plant.minLevelMasl && plant.maxLevelMasl) {
+        cotaContainer.style.display = 'flex';
+        cotaSlider.min = plant.minLevelMasl;
+        cotaSlider.max = plant.maxLevelMasl;
+        if (savedConfig && savedConfig.cota !== undefined) {
+          cotaSlider.value = savedConfig.cota;
+        } else {
+          cotaSlider.value = plant.defaultCota !== undefined ? plant.defaultCota : (plant.minLevelMasl + (plant.maxLevelMasl - plant.minLevelMasl) * 0.75);
+        }
+        cotaMinLabel.textContent = `${plant.minLevelMasl} msnm`;
+        cotaMaxLabel.textContent = `${plant.maxLevelMasl} msnm`;
+      } else {
+        cotaContainer.style.display = 'none';
+      }
+
+      // Image X/Y and Cota Min/Max Y Sliders Setup
+      if (plant.drawingImage) {
+        imgXContainer.style.display = 'flex';
+        imgYContainer.style.display = 'flex';
+        imgScaleContainer.style.display = 'flex';
+        cotaMaxYContainer.style.display = 'flex';
+        cotaMinYContainer.style.display = 'flex';
+        cotaXDoubleContainer.style.display = 'flex';
+        water3dContainer.style.display = 'flex';
+        if (savedConfig && savedConfig.imgX !== undefined) {
+          imgXSlider.value = savedConfig.imgX;
+        } else {
+          imgXSlider.value = 0;
+        }
+        if (savedConfig && savedConfig.imgY !== undefined) {
+          imgYSlider.value = savedConfig.imgY;
+        } else {
+          imgYSlider.value = 0;
+        }
+        if (savedConfig && savedConfig.imgScale !== undefined) {
+          imgScaleSlider.value = savedConfig.imgScale;
+        } else {
+          imgScaleSlider.value = 100;
+        }
+        if (savedConfig && savedConfig.cotaMaxY !== undefined) {
+          cotaMaxYSlider.value = savedConfig.cotaMaxY;
+        } else {
+          cotaMaxYSlider.value = 320;
+        }
+        if (savedConfig && savedConfig.cotaMinY !== undefined) {
+          cotaMinYSlider.value = savedConfig.cotaMinY;
+        } else {
+          cotaMinYSlider.value = 60;
+        }
+        if (savedConfig && savedConfig.cotaXMin !== undefined) {
+          cotaXMinSlider.value = savedConfig.cotaXMin;
+        } else {
+          cotaXMinSlider.value = 0;
+        }
+        if (savedConfig && savedConfig.cotaXMax !== undefined) {
+          cotaXMaxSlider.value = savedConfig.cotaXMax;
+        } else {
+          cotaXMaxSlider.value = 600;
+        }
+        if (savedConfig && savedConfig.water3d !== undefined) {
+          water3dSlider.value = savedConfig.water3d;
+        } else {
+          water3dSlider.value = 15;
+        }
+      } else {
+        imgXContainer.style.display = 'none';
+        imgYContainer.style.display = 'none';
+        imgScaleContainer.style.display = 'none';
+        cotaMaxYContainer.style.display = 'none';
+        cotaMinYContainer.style.display = 'none';
+        cotaXDoubleContainer.style.display = 'none';
+        water3dContainer.style.display = 'none';
+      }
+
+
+
+      updateCards();
+    }
+
+    function updateCards() {
+      const plantKey = plantSelect.value;
+      const plant = plantsData[plantKey];
+
+      const genVal = parseFloat(genSlider.value);
+      const flowVal = parseFloat(flowSlider.value);
+      
+      let turbinesActive = 0;
+      if (plant.maxTurbines) {
+        turbinesActive = parseInt(turbinesSlider.value);
+      }
+
+
+
+      // 1. Plant name
+      document.querySelectorAll('.plant-name').forEach(el => {
+        el.textContent = plant.name;
+      });
+
+      // 2. Timestamp formatting (DD/MM/YYYY HH:MM)
+      const selectedDate = new Date(dateInput.value);
+      if (!isNaN(selectedDate.getTime())) {
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const year = selectedDate.getFullYear();
+        const hours = String(selectedDate.getHours()).padStart(2, '0');
+        const minutes = String(selectedDate.getMinutes()).padStart(2, '0');
+        const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}`;
+        document.querySelectorAll('.timestamp').forEach(el => {
+          el.textContent = formattedDate;
+        });
+      }
+
+      // 3. Generation
+      genBadge.textContent = `${genVal.toFixed(2)} MW`;
+      document.querySelectorAll('.generation-value').forEach(el => {
+        el.textContent = `${genVal.toFixed(2)} MW`;
+      });
+
+      const genPercent = (genVal / plant.maxEnergyMW) * 100;
+      document.querySelectorAll('.battery-fill').forEach(el => {
+        el.style.width = `${genPercent}%`;
+      });
+
+      // Gen status determination
+      const genRatio = genVal / plant.maxEnergyMW;
+      let genStatus = '';
+      if (genVal === 0) {
+        genStatus = 'Nula';
+      } else if (genRatio < 0.33) {
+        genStatus = 'Baja';
+      } else if (genRatio <= 0.66) {
+        genStatus = 'Media';
+      } else {
+        genStatus = 'Alta';
+      }
+
+      document.querySelectorAll('.status-text').forEach(el => {
+        el.textContent = genStatus;
+      });
+
+      // Apply dynamic colors for status values
+      // Obsidian Card Status Color
+      const obsidianStatus = document.querySelector('.card-obsidian-grotesk .status-text');
+      const obsidianGenVal = document.querySelector('.card-obsidian-grotesk .generation-value');
+      if (obsidianStatus && obsidianGenVal) {
+        // Reset classes
+        obsidianStatus.className = 'status-text';
+        obsidianGenVal.className = 'generation-value';
+        
+        if (genStatus === 'Baja' || genStatus === 'Nula') {
+          obsidianStatus.classList.add('text-red');
+          obsidianGenVal.classList.add('text-red');
+        } else if (genStatus === 'Media') {
+          obsidianStatus.classList.add('text-orange');
+          obsidianGenVal.classList.add('text-orange');
+        } else {
+          obsidianStatus.classList.add('text-green');
+          obsidianGenVal.classList.add('text-green');
+        }
+      }
+
+      // 4. Turbines
+      if (plant.maxTurbines && turbineLayouts[plantKey]) {
+        turbinesBadge.textContent = `${turbinesActive} / ${plant.maxTurbines}`;
+        document.querySelectorAll('.turbines-box').forEach(el => {
+          el.style.display = 'flex';
+        });
+        document.querySelectorAll('.turbines-active').forEach(el => {
+          el.textContent = turbinesActive;
+        });
+        document.querySelectorAll('.turbines-max').forEach(el => {
+          el.textContent = plant.maxTurbines;
+        });
+      } else {
+        document.querySelectorAll('.turbines-box').forEach(el => {
+          el.style.display = 'none';
+        });
+      }
+
+      // 5. Flow (Caudal)
+      flowBadge.textContent = `${flowVal.toFixed(2)} m³/s`;
+      document.querySelectorAll('.flow-label').forEach(el => {
+        el.textContent = `Caudal: ${flowVal.toFixed(2)}m³/s`;
+      });
+
+      // Flow status determination
+      const flowRatio = flowVal / plant.maxFlowM3s;
+      let flowStatus = '';
+      if (flowRatio < 0.25) {
+        flowStatus = 'Bajo';
+      } else if (flowRatio < 0.50) {
+        flowStatus = 'Normal';
+      } else if (flowRatio < 0.75) {
+        flowStatus = 'Alto';
+      } else {
+        flowStatus = 'Muy Alto';
+      }
+
+      document.querySelectorAll('.flow-status').forEach(el => {
+        el.textContent = flowStatus;
+      });
+
+
+      const obsidianFlowStatus = document.querySelector('.card-obsidian-grotesk .flow-status');
+      if (obsidianFlowStatus) {
+        obsidianFlowStatus.className = 'flow-status';
+        if (flowStatus === 'Bajo') {
+          obsidianFlowStatus.classList.add('text-red');
+        } else if (flowStatus === 'Normal') {
+          obsidianFlowStatus.style.color = '#94a3b8';
+        } else if (flowStatus === 'Alto') {
+          obsidianFlowStatus.classList.add('text-orange');
+          obsidianFlowStatus.style.color = '';
+        } else {
+          obsidianFlowStatus.classList.add('text-cyan');
+          obsidianFlowStatus.style.color = '';
+        }
+      }
+
+      // Get image positioning values
+      const imgX = parseFloat(imgXSlider.value);
+      const imgY = parseFloat(imgYSlider.value);
+      const imgScale = parseFloat(imgScaleSlider.value);
+      imgXBadge.textContent = `${imgX} px`;
+      imgYBadge.textContent = `${imgY} px`;
+      imgScaleBadge.textContent = `${imgScale}%`;
+
+      // Get cota min/max Y and X values
+      const cotaMaxY = cotaMaxYSlider.value;
+      const cotaMinY = cotaMinYSlider.value;
+      cotaMaxYBadge.textContent = `${cotaMaxY} px`;
+      cotaMinYBadge.textContent = `${cotaMinY} px`;
+
+      const cotaXMin = cotaXMinSlider.value;
+      const cotaXMax = cotaXMaxSlider.value;
+      cotaXMinBadge.textContent = `${cotaXMin} px`;
+      cotaXMaxBadge.textContent = `${cotaXMax} px`;
+
+      // Get 3D water top perspective value
+      const water3dVal = parseFloat(water3dSlider.value);
+      water3dBadge.textContent = `${water3dVal} px`;
+
+      // 6. Visualizer Drawing (PNG vs SVG Dam)
+      if (plant.drawingImage) {
+        // Show Plant Image
+        document.querySelectorAll('.plant-image').forEach(el => {
+          el.style.display = 'block';
+
+          // Only update src and attach onload if the image is actually changing
+          const currentSrc = el.getAttribute('src') || '';
+          const isSameSrc = currentSrc === plant.drawingImage || currentSrc.endsWith(plant.drawingImage);
+          
+          if (!isSameSrc) {
+            el.onload = () => {
+              updateCards();
+            };
+            el.src = plant.drawingImage;
+          }
+
+          // Use natural dimensions if loaded, fallback to viewport dimensions if not loaded yet
+          const naturalWidth = el.naturalWidth || 600;
+          const naturalHeight = el.naturalHeight || 420;
+          
+          // Calculate manual dimensions and offsets preserving aspect ratio
+          const scale = imgScale / 100;
+          const containerWidth = 600;
+          const containerHeight = 420;
+          
+          const containerRatio = containerWidth / containerHeight;
+          const imageRatio = naturalWidth / naturalHeight;
+          
+          let renderWidth = containerWidth;
+          let renderHeight = containerHeight;
+          
+          if (imageRatio > containerRatio) {
+            // Image is wider than container aspect ratio
+            renderHeight = containerWidth / imageRatio;
+          } else {
+            // Image is taller than container aspect ratio
+            renderWidth = containerHeight * imageRatio;
+          }
+          
+          const width = renderWidth * scale;
+          const height = renderHeight * scale;
+          const left = (containerWidth - width) / 2 + imgX;
+          const top = (containerHeight - height) / 2 + imgY;
+          
+          el.style.width = `${width}px`;
+          el.style.height = `${height}px`;
+          el.style.left = `${left}px`;
+          el.style.top = `${top}px`;
+          el.setAttribute('width', width);
+          el.setAttribute('height', height);
+        });
+        // Show SVG but hide concrete dam and cota reference lines
+        document.querySelectorAll('.visualizer-svg').forEach(el => {
+          el.style.display = 'block';
+        });
+        document.querySelectorAll('.dam-concrete').forEach(el => {
+          el.style.display = 'none';
+        });
+        document.querySelectorAll('.reference-levels').forEach(el => {
+          el.style.display = 'none';
+        });
+
+        // Set dynamic width and position for water body for PNG plants
+        const cotaXMinVal = parseFloat(cotaXMin);
+        const cotaXMaxVal = parseFloat(cotaXMax);
+        const waterWidthVal = Math.max(0, cotaXMaxVal - cotaXMinVal);
+
+        document.querySelectorAll('.water-body').forEach(el => {
+          el.setAttribute('x', cotaXMinVal);
+          el.setAttribute('width', waterWidthVal);
+        });
+
+        // Calculate water height using custom min/max Y coordinates
+        const cotaMinYVal = parseFloat(cotaMinY);
+        const cotaMaxYVal = parseFloat(cotaMaxY);
+        
+        let bottomPos = cotaMinYVal;
+        const isCocaCodo = plantKey === 'cocaCodoSinclair';
+        const hasLevels = plant.minLevelMasl && plant.maxLevelMasl;
+        
+        if (isCocaCodo) {
+          let flowPct = 0;
+          if (flowVal <= 300) {
+            flowPct = (flowVal / 300) * 0.5;
+          } else if (flowVal <= 1500) {
+            flowPct = 0.5 + ((flowVal - 300) / 1200) * 0.3;
+          } else if (flowVal <= 2500) {
+            flowPct = 0.8 + ((flowVal - 1500) / 1000) * 0.2;
+          } else {
+            flowPct = 1.0;
+          }
+          bottomPos = cotaMinYVal + flowPct * (cotaMaxYVal - cotaMinYVal);
+        } else if (hasLevels) {
+          const cotaVal = parseFloat(cotaSlider.value);
+          cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
+
+          const cotaRange = plant.maxLevelMasl - plant.minLevelMasl;
+          const cotaPct = Math.max(0, Math.min(1, (cotaVal - plant.minLevelMasl) / cotaRange));
+          bottomPos = cotaMinYVal + cotaPct * (cotaMaxYVal - cotaMinYVal);
+        } else {
+          bottomPos = cotaMaxYVal;
+        }
+
+        const yPos = 420 - bottomPos;
+        const heightVal = bottomPos;
+
+        document.querySelectorAll('.water-body').forEach(el => {
+          el.setAttribute('y', yPos);
+          el.setAttribute('height', heightVal);
+          el.style.display = (isCocaCodo || !hasLevels) ? 'none' : 'block';
+        });
+
+        // Curvy water body generator
+        const getCurvyWaterPath = (x1, x2, y, waveCount = 8, amplitude = 6) => {
+          const w = x2 - x1;
+          const step = w / waveCount;
+          let pathStr = `M ${x1} 420 L ${x1} ${y}`;
+          for (let i = 0; i < waveCount; i++) {
+            const currX = x1 + i * step;
+            const nextX = x1 + (i + 1) * step;
+            const midX = currX + step / 2;
+            const controlY = (i % 2 === 0) ? (y - amplitude) : (y + amplitude);
+            pathStr += ` Q ${midX} ${controlY} ${nextX} ${y}`;
+          }
+          pathStr += ` L ${x2} 420 Z`;
+          return pathStr;
+        };
+
+        document.querySelectorAll('.water-body-coca').forEach(el => {
+          if (isCocaCodo) {
+            el.setAttribute('d', getCurvyWaterPath(cotaXMinVal, cotaXMaxVal, yPos, 8, 6));
+            el.style.display = 'block';
+          } else {
+            el.style.display = 'none';
+          }
+        });
+
+        // Update the 3D top rectangle (hidden for Coca Codo flow visualizer)
+        document.querySelectorAll('.water-top').forEach(el => {
+          el.setAttribute('x', cotaXMinVal);
+          el.setAttribute('y', yPos - water3dVal);
+          el.setAttribute('width', waterWidthVal);
+          el.setAttribute('height', water3dVal);
+          el.style.display = (isCocaCodo || !hasLevels) ? 'none' : 'block';
+        });
+
+        // Update ripples inside the 3D top area (hidden for Coca Codo flow visualizer)
+        document.querySelectorAll('.ripple-1').forEach(el => {
+          el.setAttribute('x1', cotaXMinVal + waterWidthVal * (50 / 600));
+          el.setAttribute('x2', cotaXMinVal + waterWidthVal * (550 / 600));
+          el.setAttribute('y1', yPos - water3dVal * 0.35);
+          el.setAttribute('y2', yPos - water3dVal * 0.35);
+          el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
+        });
+        document.querySelectorAll('.ripple-2').forEach(el => {
+          el.setAttribute('x1', cotaXMinVal + waterWidthVal * (150 / 600));
+          el.setAttribute('x2', cotaXMinVal + waterWidthVal * (450 / 600));
+          el.setAttribute('y1', yPos - water3dVal * 0.75);
+          el.setAttribute('y2', yPos - water3dVal * 0.75);
+          el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
+        });
+        document.querySelectorAll('.ripple-3').forEach(el => {
+          el.setAttribute('x1', cotaXMinVal + waterWidthVal * (80 / 600));
+          el.setAttribute('x2', cotaXMinVal + waterWidthVal * (520 / 600));
+          el.setAttribute('y1', yPos - water3dVal * 0.55);
+          el.setAttribute('y2', yPos - water3dVal * 0.55);
+          el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
+        });
+
+        // Coca Codo Sinclair Flow lines (curvy currents & foam bubbles)
+        if (isCocaCodo) {
+          document.querySelectorAll('.coca-flow-lines').forEach(el => {
+            el.style.display = 'block';
+          });
+
+          // Curvy flow paths
+          const getWaveLinePath = (x1, x2, y, amp = 5) => {
+            const w = x2 - x1;
+            const cp1x = x1 + w * 0.25;
+            const cp2x = x1 + w * 0.5;
+            return `M ${x1} ${y} Q ${cp1x} ${y - amp} ${cp2x} ${y} T ${x2} ${y}`;
+          };
+          
+          document.querySelectorAll('.coca-flow-lines .line-1').forEach(el => {
+            const y = yPos + heightVal * 0.15;
+            const rx1 = cotaXMinVal + waterWidthVal * 0.1;
+            const rx2 = cotaXMinVal + waterWidthVal * 0.85;
+            el.setAttribute('d', getWaveLinePath(rx1, rx2, y, 6));
+          });
+          document.querySelectorAll('.coca-flow-lines .line-2').forEach(el => {
+            const y = yPos + heightVal * 0.60;
+            const rx1 = cotaXMinVal + waterWidthVal * 0.15;
+            const rx2 = cotaXMinVal + waterWidthVal * 0.80;
+            el.setAttribute('d', getWaveLinePath(rx1, rx2, y, -5));
+          });
+          document.querySelectorAll('.coca-flow-lines .line-3').forEach(el => {
+            const y = yPos + heightVal * 0.38;
+            const rx1 = cotaXMinVal + waterWidthVal * 0.20;
+            const rx2 = cotaXMinVal + waterWidthVal * 0.90;
+            el.setAttribute('d', getWaveLinePath(rx1, rx2, y, 4));
+          });
+          document.querySelectorAll('.coca-flow-lines .line-4').forEach(el => {
+            const y = yPos + heightVal * 0.82;
+            const rx1 = cotaXMinVal + waterWidthVal * 0.25;
+            const rx2 = cotaXMinVal + waterWidthVal * 0.75;
+            el.setAttribute('d', getWaveLinePath(rx1, rx2, y, -6));
+          });
+
+          // Position foam bubble groups (staggered to avoid overlapping with arrow lines)
+          document.querySelectorAll('.coca-flow-lines .bg-1').forEach(el => {
+            const x = cotaXMinVal + waterWidthVal * 0.18;
+            const y = yPos + heightVal * 0.26;
+            el.setAttribute('transform', `translate(${x}, ${y})`);
+          });
+          document.querySelectorAll('.coca-flow-lines .bg-2').forEach(el => {
+            const x = cotaXMinVal + waterWidthVal * 0.3;
+            const y = yPos + heightVal * 0.70;
+            el.setAttribute('transform', `translate(${x}, ${y})`);
+          });
+          document.querySelectorAll('.coca-flow-lines .bg-3').forEach(el => {
+            const x = cotaXMinVal + waterWidthVal * 0.5;
+            const y = yPos + heightVal * 0.08;
+            el.setAttribute('transform', `translate(${x}, ${y})`);
+          });
+          document.querySelectorAll('.coca-flow-lines .bg-4').forEach(el => {
+            const x = cotaXMinVal + waterWidthVal * 0.75;
+            const y = yPos + heightVal * 0.32;
+            el.setAttribute('transform', `translate(${x}, ${y})`);
+          });
+          document.querySelectorAll('.coca-flow-lines .bg-5').forEach(el => {
+            const x = cotaXMinVal + waterWidthVal * 0.4;
+            const y = yPos + heightVal * 0.90;
+            el.setAttribute('transform', `translate(${x}, ${y})`);
+          });
+          document.querySelectorAll('.coca-flow-lines .bg-6').forEach(el => {
+            const x = cotaXMinVal + waterWidthVal * 0.55;
+            const y = yPos + heightVal * 0.48;
+            el.setAttribute('transform', `translate(${x}, ${y})`);
+          });
+        } else {
+          document.querySelectorAll('.coca-flow-lines').forEach(el => {
+            el.style.display = 'none';
+          });
+        }
+      } else {
+        // Hide Plant Image
+        document.querySelectorAll('.plant-image').forEach(el => {
+          el.style.display = 'none';
+          el.style.width = '';
+          el.style.height = '';
+          el.style.left = '';
+          el.style.top = '';
+        });
+        // Hide 3D top rectangle, ripples, and flow lines for non-PNG plants
+        document.querySelectorAll('.water-top').forEach(el => {
+          el.style.display = 'none';
+        });
+        document.querySelectorAll('.ripple-1, .ripple-2, .ripple-3, .coca-flow-lines').forEach(el => {
+          el.style.display = 'none';
+        });
+        // Show SVG and concrete dam
+        document.querySelectorAll('.visualizer-svg').forEach(el => {
+          el.style.display = 'block';
+        });
+        document.querySelectorAll('.dam-concrete').forEach(el => {
+          el.style.display = 'block';
+        });
+
+        // Reset default water body layout
+        document.querySelectorAll('.water-body').forEach(el => {
+          el.setAttribute('x', '290');
+          el.setAttribute('width', '310');
+        });
+
+        // 7. Cota Level Readings
+        const hasLevels = plant.minLevelMasl && plant.maxLevelMasl;
+        if (hasLevels) {
+          const cotaVal = parseFloat(cotaSlider.value);
+          cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
+
+          document.querySelectorAll('.reference-levels').forEach(el => {
+            el.style.display = 'block';
+          });
+
+          // Update levels labels on card
+          document.querySelectorAll('.cota-max .cota-text').forEach(el => {
+            el.textContent = `-Cota máxima: ${plant.maxLevelMasl} msnm`;
+          });
+          document.querySelectorAll('.cota-min .cota-text').forEach(el => {
+            el.textContent = `Cota mínima: ${plant.minLevelMasl} msnm`;
+          });
+          document.querySelectorAll('.cota-current .cota-text').forEach(el => {
+            el.textContent = `Cota actual: ${cotaVal.toFixed(2)} msnm`;
+          });
+
+          // Position current cota line and set water height
+          const cotaRange = plant.maxLevelMasl - plant.minLevelMasl;
+          const cotaPct = Math.max(0, Math.min(1, (cotaVal - plant.minLevelMasl) / cotaRange));
+          const bottomPos = 60 + cotaPct * 260; // range from bottom:60px to bottom:320px
+          
+          document.querySelectorAll('.cota-current').forEach(el => {
+            el.style.bottom = `${bottomPos}px`;
+          });
+
+          const yPos = 420 - bottomPos;
+          const heightVal = bottomPos;
+
+          document.querySelectorAll('.water-body').forEach(el => {
+            el.setAttribute('y', yPos);
+            el.setAttribute('height', heightVal);
+            el.style.display = 'block';
+          });
+        } else {
+          // Hide cota reference lines
+          document.querySelectorAll('.reference-levels').forEach(el => {
+            el.style.display = 'none';
+          });
+          // Set static baseline water level for aesthetic representation
+          document.querySelectorAll('.water-body').forEach(el => {
+            el.setAttribute('y', 200);
+            el.setAttribute('height', 220);
+            el.style.display = 'block';
+          });
+        }
+      }
+
+      // 8. Turbines Overlay Rendering
+      const layout = turbineLayouts[plantKey];
+      if (layout && plant.maxTurbines) {
+        turbinesOverlay.style.display = 'grid';
+        turbinesOverlay.style.width = `${layout.width}px`;
+        turbinesOverlay.style.height = `${layout.height}px`;
+        turbinesOverlay.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+        turbinesOverlay.style.gridTemplateColumns = `repeat(${layout.cols}, 1fr)`;
+
+        const iconPath = layout.type === 'Pelton' 
+          ? '/hydroelectric-drawings/Turbina_Pelton.png' 
+          : '/hydroelectric-drawings/Turbina_Francis.png';
+
+        let html = '';
+        const totalTurbines = plant.maxTurbines;
+        for (let i = 0; i < totalTurbines; i++) {
+          const isActive = i < turbinesActive;
+          const activeClass = isActive ? '' : 'inactive';
+          html += `<img src="${iconPath}" class="turbine-icon ${activeClass}" title="Turbina ${i+1} (${isActive ? 'Activa' : 'Inactiva'})" />`;
+        }
+        turbinesOverlay.innerHTML = html;
+      } else {
+        turbinesOverlay.style.display = 'none';
+        turbinesOverlay.innerHTML = '';
+      }
+
+      // Save current configuration to localStorage
+      try {
+        const pKey = plantSelect.value;
+        localStorage.setItem('hydro_last_plant', pKey);
+        localStorage.setItem('hydro_last_date', dateInput.value);
+
+        let configs = {};
+        const saved = localStorage.getItem('hydro_plant_configs');
+        if (saved) {
+          configs = JSON.parse(saved);
+        }
+        configs[pKey] = {
+          gen: genSlider.value,
+          turbines: turbinesSlider.value,
+          flow: flowSlider.value,
+          cota: cotaSlider.value,
+          imgX: imgXSlider.value,
+          imgY: imgYSlider.value,
+          imgScale: imgScaleSlider.value,
+          cotaMaxY: cotaMaxYSlider.value,
+          cotaMinY: cotaMinYSlider.value,
+          cotaXMin: cotaXMinSlider.value,
+          cotaXMax: cotaXMaxSlider.value,
+          water3d: water3dSlider.value
+        };
+        localStorage.setItem('hydro_plant_configs', JSON.stringify(configs));
+      } catch (e) {
+        console.error('Error saving config to localStorage:', e);
+      }
+    }
+
+
+
+    // Attach Event Listeners
+    plantSelect.addEventListener('change', loadPlantControls);
+    dateInput.addEventListener('input', updateCards);
+    genSlider.addEventListener('input', updateCards);
+    turbinesSlider.addEventListener('input', updateCards);
+    flowSlider.addEventListener('input', updateCards);
+    cotaSlider.addEventListener('input', updateCards);
+    imgXSlider.addEventListener('input', updateCards);
+    imgYSlider.addEventListener('input', updateCards);
+    imgScaleSlider.addEventListener('input', updateCards);
+    cotaMaxYSlider.addEventListener('input', updateCards);
+    cotaMinYSlider.addEventListener('input', updateCards);
+    cotaXMinSlider.addEventListener('input', () => {
+      const minVal = parseInt(cotaXMinSlider.value);
+      const maxVal = parseInt(cotaXMaxSlider.value);
+      if (minVal > maxVal) {
+        cotaXMaxSlider.value = minVal;
+      }
+      updateCards();
+    });
+    cotaXMaxSlider.addEventListener('input', () => {
+      const minVal = parseInt(cotaXMinSlider.value);
+      const maxVal = parseInt(cotaXMaxSlider.value);
+      if (maxVal < minVal) {
+        cotaXMinSlider.value = maxVal;
+      }
+      updateCards();
+    });
+
+
+    // PNG Generation Click Handler
+    const generateBtn = document.getElementById('generate-png-btn');
+    const generateAllBtn = document.getElementById('generate-all-btn');
+    const statusMsg = document.getElementById('generation-status');
+
+    generateBtn.addEventListener('click', () => {
+      const cardElement = document.querySelector('.card-obsidian-grotesk');
+      if (!cardElement) {
+        statusMsg.style.color = '#ef4444';
+        statusMsg.textContent = 'Error: No se encontró la tarjeta del reporte.';
+        return;
+      }
+
+      statusMsg.style.color = '#e2e8f0';
+      statusMsg.textContent = 'Generando imagen...';
+      generateBtn.disabled = true;
+      generateAllBtn.disabled = true;
+
+      // Ensure all images within the card are fully loaded
+      const images = Array.from(cardElement.querySelectorAll('img, image'));
+      const promises = images.map(img => {
+        const src = img.getAttribute('href') || img.src;
+        if (!src) return Promise.resolve();
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          const loadHandler = () => {
+            img.removeEventListener('load', loadHandler);
+            img.removeEventListener('error', errorHandler);
+            resolve();
+          };
+          const errorHandler = () => {
+            img.removeEventListener('load', loadHandler);
+            img.removeEventListener('error', errorHandler);
+            resolve();
+          };
+          img.addEventListener('load', loadHandler);
+          img.addEventListener('error', errorHandler);
+          setTimeout(loadHandler, 500); // safety timeout
+        });
+      });
+
+      Promise.all(promises).then(() => {
+        // Wait a tiny bit for rendering/loading stability
+        setTimeout(() => {
+          html2canvas(cardElement, {
+            width: 600,
+            height: 600,
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            logging: false
+          }).then(canvas => {
+            const imageData = canvas.toDataURL('image/png');
+            
+            // Format filename: [hydroelectric plant name]_date_time.png
+            const plantKey = plantSelect.value;
+            const plant = plantsData[plantKey];
+            const plantName = plant.name.replace(/\s+/g, '_');
+            
+            const selectedDateStr = dateInput.value; // "YYYY-MM-DDTHH:MM"
+            const sanitizedDateTime = selectedDateStr.replace('T', '_').replace(/:/g, '-');
+            const filename = `${plantName}_${sanitizedDateTime}.png`;
+
+            // POST to visualizer server
+            fetch('/generate-report', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ filename, imageData })
+            })
+            .then(res => {
+              if (!res.ok) {
+                return res.text().then(text => {
+                  throw new Error(`Server returned ${res.status}: ${text}`);
+                });
+              }
+              return res.json();
+            })
+            .then(data => {
+              generateBtn.disabled = false;
+              generateAllBtn.disabled = false;
+              if (data.success) {
+                statusMsg.style.color = '#10b981';
+                statusMsg.textContent = `¡Guardado! /generated/${filename}`;
+                setTimeout(() => {
+                  statusMsg.textContent = '';
+                }, 5000);
+              } else {
+                statusMsg.style.color = '#ef4444';
+                statusMsg.textContent = `Error: ${data.error}`;
+              }
+            })
+            .catch(err => {
+              generateBtn.disabled = false;
+              generateAllBtn.disabled = false;
+              statusMsg.style.color = '#ef4444';
+              statusMsg.textContent = `Error de red: ${err.message}`;
+            });
+          }).catch(err => {
+            generateBtn.disabled = false;
+            generateAllBtn.disabled = false;
+            statusMsg.style.color = '#ef4444';
+            statusMsg.textContent = `Error de render: ${err.message}`;
+          });
+        }, 150);
+      });
+    });
+
+    generateAllBtn.addEventListener('click', async () => {
+      const plantKeys = Object.keys(plantsData);
+      statusMsg.style.color = '#e2e8f0';
+      statusMsg.textContent = 'Iniciando generación en lote...';
+      generateBtn.disabled = true;
+      generateAllBtn.disabled = true;
+
+      const originalPlantKey = plantSelect.value;
+
+      try {
+        for (const key of plantKeys) {
+          statusMsg.textContent = `Generando reporte para ${plantsData[key].name}...`;
+          
+          // 1. Select the plant
+          plantSelect.value = key;
+          // 2. Trigger loadPlantControls (which also calls updateCards)
+          loadPlantControls();
+          
+          // 3. Wait for DOM and images to settle
+          await new Promise(resolve => setTimeout(resolve, 250));
+          
+          const cardElement = document.querySelector('.card-obsidian-grotesk');
+          if (!cardElement) throw new Error('No se encontró la tarjeta del reporte.');
+
+          // Ensure images inside card are complete
+          const images = Array.from(cardElement.querySelectorAll('img, image'));
+          const imgPromises = images.map(img => {
+            const src = img.getAttribute('href') || img.src;
+            if (!src) return Promise.resolve();
+            if (img.complete) return Promise.resolve();
+            return new Promise(res => {
+              const loadHandler = () => {
+                img.removeEventListener('load', loadHandler);
+                img.removeEventListener('error', errorHandler);
+                res();
+              };
+              const errorHandler = () => {
+                img.removeEventListener('load', loadHandler);
+                img.removeEventListener('error', errorHandler);
+                res();
+              };
+              img.addEventListener('load', loadHandler);
+              img.addEventListener('error', errorHandler);
+              setTimeout(loadHandler, 500); // safety timeout
+            });
+          });
+          await Promise.all(imgPromises);
+
+          const canvas = await html2canvas(cardElement, {
+            width: 600,
+            height: 600,
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            logging: false
+          });
+
+          const imageData = canvas.toDataURL('image/png');
+          const plantName = plantsData[key].name.replace(/\s+/g, '_');
+          const selectedDateStr = dateInput.value;
+          const sanitizedDateTime = selectedDateStr.replace('T', '_').replace(/:/g, '-');
+          const filename = `${plantName}_${sanitizedDateTime}.png`;
+
+          // 5. POST to server
+          const res = await fetch('/generate-report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ filename, imageData })
+          });
+          
+          const data = await res.json();
+          if (!data.success) {
+            throw new Error(`Error en ${plantsData[key].name}: ${data.error}`);
+          }
+        }
+
+        statusMsg.style.color = '#10b981';
+        statusMsg.textContent = '¡Todos los reportes guardados en /generated!';
+        setTimeout(() => {
+          statusMsg.textContent = '';
+        }, 6000);
+      } catch (err) {
+        statusMsg.style.color = '#ef4444';
+        statusMsg.textContent = `Fallo en lote: ${err.message}`;
+      } finally {
+        // Restore original plant selection
+        plantSelect.value = originalPlantKey;
+        loadPlantControls();
+        generateBtn.disabled = false;
+        generateAllBtn.disabled = false;
+      }
+    });
+
+    // Initial Load
+    loadPlantControls();
+  </script>
+
+  <!-- Small hot reload client -->
+  <script>
+    const sse = new EventSource('/sse');
+    sse.onmessage = (event) => {
+      if (event.data === 'reload') {
+        console.log('Template changes detected! Reloading...');
+        window.location.reload();
+      }
+    };
+  </script>
+</body>
+</html>

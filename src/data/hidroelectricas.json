@@ -27,8 +27,6 @@
     },
     "sopladora": {
         "nombre": "Sopladora",
-        "cotaMin": 1312,
-        "cotaMax": 1318,
         "energiaMax": 487,
         "turbinasMax": 3,
         "prefix": "sop",
@@ -59,7 +57,7 @@
         "turbinas_id": 100503,
         "caudal_id": 100037,
         "cota_id": 100540,
-        "maxCaudal": 1000,
+        "maxCaudal": 3000,
         "paute": false
     },
     "celecSur": {

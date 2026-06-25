@@ -6,3 +6,4 @@ index.html
 infos.txt
 nohup.out
 *.log
+generated/

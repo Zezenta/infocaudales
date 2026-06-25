@@ -4,7 +4,12 @@
   "description": "",
   "main": "infocaudalesbot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx src/index.ts",
+    "visualizer": "tsx src/visualizer/server.ts",
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -18,11 +23,15 @@
   "homepage": "https://github.com/Zezenta/infocaudales#readme",
   "dependencies": {
     "axios": "^1.7.7",
-    "canvas": "^2.11.2",
     "cron": "^3.1.7",
     "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "http": "^0.0.1-security",
     "twitter-api-v2": "^1.18.1"
+  },
+  "devDependencies": {
+    "@types/cron": "^2.0.1",
+    "@types/node": "^26.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }
