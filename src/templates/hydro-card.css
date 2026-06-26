@@ -208,6 +208,11 @@ body {
   white-space: nowrap; /* Prevent line breaks */
 }
 
+.card-container .text-dimmed {
+  color: #64748b; /* Premium slate gray for dimmed elements */
+  font-weight: normal; /* Less bold for contrast */
+}
+
 /* Horizontal battery representation */
 .card-container .battery-row {
   display: flex;
@@ -320,14 +325,14 @@ body {
   color: #4b5563;
 }
 .card-obsidian-grotesk .battery-body {
-  border-color: #1e293b;
+  border-color: #475569;
   background-color: #0c111c;
 }
 .card-obsidian-grotesk .battery-fill {
   background-color: #00e676;
 }
 .card-obsidian-grotesk .battery-cap {
-  background-color: #1e293b;
+  background-color: #475569;
 }
 .card-obsidian-grotesk .text-green {
   color: #00e676;
@@ -623,14 +628,9 @@ body {
 .turbines-box {
   position: relative;
   z-index: 10;
-  border: 1.5px solid #1e293b;
-  background-color: #0c111c;
-  padding: 8px;
-  border-radius: 4px;
-  margin-top: 8px;
+  margin-top: 4px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   width: fit-content;
   align-items: flex-start;
 }
@@ -652,8 +652,8 @@ body {
 }
 
 .turbine-icon.inactive {
-  opacity: 0.22;
-  filter: grayscale(1) brightness(0.6);
+  opacity: 0.45;
+  filter: grayscale(1) brightness(0.8);
 }
 
 /* Slider Menu Sections */
