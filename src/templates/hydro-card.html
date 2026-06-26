@@ -294,6 +294,127 @@
             </div>
           </div>
         </div>
+
+        <!-- Sección: Tercios (Fila de Estadísticas) -->
+        <div class="panel-section" id="thirds-section">
+          <div class="panel-section-title">Tercios (Stats Row)</div>
+          
+          <!-- Y Position Slider -->
+          <div class="form-group slider-container">
+            <label for="thirds-y-slider" class="form-label">
+              Posición Y
+              <span class="badge" id="thirds-y-badge">125 px</span>
+            </label>
+            <input type="range" id="thirds-y-slider" class="slider-range" min="50" max="300" value="125">
+            <div class="slider-limits">
+              <span>50 px</span>
+              <span>300 px</span>
+            </div>
+          </div>
+
+          <!-- X Position Slider -->
+          <div class="form-group slider-container">
+            <label for="thirds-x-slider" class="form-label">
+              Posición X
+              <span class="badge" id="thirds-x-badge">0 px</span>
+            </label>
+            <input type="range" id="thirds-x-slider" class="slider-range" min="-100" max="100" value="0">
+            <div class="slider-limits">
+              <span>-100 px</span>
+              <span>100 px</span>
+            </div>
+          </div>
+
+          <!-- Separation (Gap) Slider -->
+          <div class="form-group slider-container">
+            <label for="thirds-gap-slider" class="form-label">
+              Separación Columnas
+              <span class="badge" id="thirds-gap-badge">16 px</span>
+            </label>
+            <input type="range" id="thirds-gap-slider" class="slider-range" min="0" max="200" value="16">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>200 px</span>
+            </div>
+          </div>
+
+          <!-- Text Size Slider -->
+          <div class="form-group slider-container">
+            <label for="thirds-size-slider" class="form-label">
+              Tamaño Letra
+              <span class="badge" id="thirds-size-badge">20 px</span>
+            </label>
+            <input type="range" id="thirds-size-slider" class="slider-range" min="10" max="30" value="20">
+            <div class="slider-limits">
+              <span>10 px</span>
+              <span>30 px</span>
+            </div>
+          </div>
+
+          <!-- Boxes Switch -->
+          <div class="switch-container">
+            <span class="switch-label">Enmarcar en Cajas</span>
+            <input type="checkbox" id="thirds-boxes-switch" class="switch-input">
+          </div>
+
+          <!-- Box Width Slider -->
+          <div class="form-group slider-container" id="thirds-box-width-container" style="display: none;">
+            <label for="thirds-box-width-slider" class="form-label">
+              Ancho de Cajas
+              <span class="badge" id="thirds-box-width-badge">170 px</span>
+            </label>
+            <input type="range" id="thirds-box-width-slider" class="slider-range" min="100" max="250" value="170">
+            <div class="slider-limits">
+              <span>100 px</span>
+              <span>250 px</span>
+            </div>
+          </div>
+
+          <!-- Box Height Slider -->
+          <div class="form-group slider-container" id="thirds-box-height-container" style="display: none;">
+            <label for="thirds-box-height-slider" class="form-label">
+              Alto de Cajas
+              <span class="badge" id="thirds-box-height-badge">100 px</span>
+            </label>
+            <input type="range" id="thirds-box-height-slider" class="slider-range" min="50" max="250" value="100">
+            <div class="slider-limits">
+              <span>50 px</span>
+              <span>250 px</span>
+            </div>
+          </div>
+
+          <!-- Separation Lines Switch -->
+          <div class="switch-container">
+            <span class="switch-label">Líneas de Separación</span>
+            <input type="checkbox" id="thirds-lines-switch" class="switch-input">
+          </div>
+
+          <!-- Separation Lines Length Slider -->
+          <div class="form-group slider-container" id="thirds-lines-length-container" style="display: none;">
+            <label for="thirds-lines-length-slider" class="form-label">
+              Largo de Líneas
+              <span class="badge" id="thirds-lines-length-badge">40 px</span>
+            </label>
+            <input type="range" id="thirds-lines-length-slider" class="slider-range" min="10" max="150" value="40">
+            <div class="slider-limits">
+              <span>10 px</span>
+              <span>150 px</span>
+            </div>
+          </div>
+
+          <!-- Separation Lines Y Position Slider -->
+          <div class="form-group slider-container" id="thirds-lines-y-container" style="display: none;">
+            <label for="thirds-lines-y-slider" class="form-label">
+              Posición Y de Líneas
+              <span class="badge" id="thirds-lines-y-badge">0 px</span>
+            </label>
+            <input type="range" id="thirds-lines-y-slider" class="slider-range" min="-100" max="100" value="0">
+            <div class="slider-limits">
+              <span>-100 px</span>
+              <span>100 px</span>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- Generate PNG Button -->
       <div style="margin-top: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
@@ -334,27 +455,40 @@
             </div>
           </div>
 
-          <!-- Generación Section -->
-          <div class="generation-section">
-            <span class="section-label">Generación:</span>
-            <span class="generation-value text-green">913.23 MW</span>
-            <div class="battery-row">
-              <div class="battery-body">
-                <div class="battery-fill" style="width: 90%;"></div>
+          <!-- Stats Row: Generación, Turbinas, Caudal in thirds -->
+          <div class="stats-row">
+            <!-- Column 1: Generación -->
+            <div class="stats-col generation-col">
+              <span class="section-label">Generación:</span>
+              <span class="generation-value text-green">913.23 MW</span>
+              <div class="battery-row">
+                <div class="battery-body">
+                  <div class="battery-fill" style="width: 90%;"></div>
+                </div>
+                <div class="battery-cap"></div>
+                <span class="status-text text-green">Alta</span>
               </div>
-              <div class="battery-cap"></div>
-              <span class="status-text text-green">Alta</span>
             </div>
-            <div class="turbines-box" id="turbines-box" style="display: none;">
-              <div class="turbines-info">Turbinas activas: <span class="turbines-active">8</span>/<span class="turbines-max">10</span></div>
-              <div class="turbines-grid" id="turbines-overlay"></div>
-            </div>
-          </div>
 
-          <!-- Caudal Section -->
-          <div class="flow-section">
-            <span class="flow-label">Caudal: 154.43m³/s</span>
-            <span class="flow-status text-cyan">Muy Alto</span>
+            <div class="thirds-divider divider-1"></div>
+
+            <!-- Column 2: Turbinas Activas -->
+            <div class="stats-col turbines-col" id="turbines-box" style="display: none;">
+              <span class="section-label">Turbinas Activas:</span>
+              <span class="turbines-value text-muted"><span class="turbines-active">8</span>/<span class="turbines-max">10</span></span>
+              <div class="turbines-box" style="margin-top: 6px;">
+                <div class="turbines-grid" id="turbines-overlay"></div>
+              </div>
+            </div>
+
+            <div class="thirds-divider divider-2"></div>
+
+            <!-- Column 3: Caudal -->
+            <div class="stats-col flow-col">
+              <span class="section-label">Caudal:</span>
+              <span class="flow-value text-cyan">154.43 m³/s</span>
+              <span class="flow-status text-cyan">Muy Alto</span>
+            </div>
           </div>
 
           <!-- Visualizer Panel -->
@@ -644,6 +778,31 @@
     const cotaMinSizeSlider = document.getElementById('cota-min-size-slider');
     const cotaMinSizeBadge = document.getElementById('cota-min-size-badge');
 
+    const thirdsYSlider = document.getElementById('thirds-y-slider');
+    const thirdsYBadge = document.getElementById('thirds-y-badge');
+    const thirdsXSlider = document.getElementById('thirds-x-slider');
+    const thirdsXBadge = document.getElementById('thirds-x-badge');
+    const thirdsGapSlider = document.getElementById('thirds-gap-slider');
+    const thirdsGapBadge = document.getElementById('thirds-gap-badge');
+    const thirdsSizeSlider = document.getElementById('thirds-size-slider');
+    const thirdsSizeBadge = document.getElementById('thirds-size-badge');
+
+    const thirdsBoxesSwitch = document.getElementById('thirds-boxes-switch');
+    const thirdsLinesSwitch = document.getElementById('thirds-lines-switch');
+    const thirdsLinesLengthContainer = document.getElementById('thirds-lines-length-container');
+    const thirdsLinesLengthSlider = document.getElementById('thirds-lines-length-slider');
+    const thirdsLinesLengthBadge = document.getElementById('thirds-lines-length-badge');
+    const thirdsLinesYContainer = document.getElementById('thirds-lines-y-container');
+    const thirdsLinesYSlider = document.getElementById('thirds-lines-y-slider');
+    const thirdsLinesYBadge = document.getElementById('thirds-lines-y-badge');
+
+    const thirdsBoxWidthContainer = document.getElementById('thirds-box-width-container');
+    const thirdsBoxWidthSlider = document.getElementById('thirds-box-width-slider');
+    const thirdsBoxWidthBadge = document.getElementById('thirds-box-width-badge');
+    const thirdsBoxHeightContainer = document.getElementById('thirds-box-height-container');
+    const thirdsBoxHeightSlider = document.getElementById('thirds-box-height-slider');
+    const thirdsBoxHeightBadge = document.getElementById('thirds-box-height-badge');
+
     // Load last plant from localStorage
     const savedLastPlant = localStorage.getItem('hydro_last_plant');
 
@@ -846,12 +1005,141 @@
           cotaMinSizeSlider.value = 12;
         }
       } else {
-        embalseTextContainer.style.display = 'none';
+      embalseTextContainer.style.display = 'none';
         cotaMinTextContainer.style.display = 'none';
         cotaContainer.style.display = 'none';
       }
 
+      // Load thirds configuration: Posición Y is plant-specific for all plants.
+      if (savedConfig && savedConfig.thirdsY !== undefined) {
+        thirdsYSlider.value = savedConfig.thirdsY;
+      } else {
+        thirdsYSlider.value = 125;
+      }
 
+      // X, Gap, Size, Boxes, BoxWidth, BoxHeight, Lines, LinesLength, LinesY are plant-specific for Coca Codo Sinclair, but global for others
+      if (plantKey === 'cocaCodoSinclair') {
+        if (savedConfig && savedConfig.thirdsX !== undefined) {
+          thirdsXSlider.value = savedConfig.thirdsX;
+        } else {
+          thirdsXSlider.value = 0;
+        }
+        if (savedConfig && savedConfig.thirdsGap !== undefined) {
+          thirdsGapSlider.value = savedConfig.thirdsGap;
+        } else {
+          thirdsGapSlider.value = 16;
+        }
+        if (savedConfig && savedConfig.thirdsSize !== undefined) {
+          thirdsSizeSlider.value = savedConfig.thirdsSize;
+        } else {
+          thirdsSizeSlider.value = 20;
+        }
+        if (savedConfig && savedConfig.thirdsBoxes !== undefined) {
+          thirdsBoxesSwitch.checked = savedConfig.thirdsBoxes;
+        } else {
+          thirdsBoxesSwitch.checked = false;
+        }
+        if (savedConfig && savedConfig.thirdsBoxWidth !== undefined) {
+          thirdsBoxWidthSlider.value = savedConfig.thirdsBoxWidth;
+        } else {
+          thirdsBoxWidthSlider.value = 170;
+        }
+        if (savedConfig && savedConfig.thirdsBoxHeight !== undefined) {
+          thirdsBoxHeightSlider.value = savedConfig.thirdsBoxHeight;
+        } else {
+          thirdsBoxHeightSlider.value = 100;
+        }
+        if (savedConfig && savedConfig.thirdsLines !== undefined) {
+          thirdsLinesSwitch.checked = savedConfig.thirdsLines;
+        } else {
+          thirdsLinesSwitch.checked = false;
+        }
+        if (savedConfig && savedConfig.thirdsLinesLength !== undefined) {
+          thirdsLinesLengthSlider.value = savedConfig.thirdsLinesLength;
+        } else {
+          thirdsLinesLengthSlider.value = 40;
+        }
+        if (savedConfig && savedConfig.thirdsLinesY !== undefined) {
+          thirdsLinesYSlider.value = savedConfig.thirdsLinesY;
+        } else {
+          thirdsLinesYSlider.value = 0;
+        }
+      } else {
+        // Load global thirds configuration from localStorage
+        let globalThirds = null;
+        try {
+          const savedGlobal = localStorage.getItem('hydro_global_thirds');
+          if (savedGlobal) {
+            globalThirds = JSON.parse(savedGlobal);
+          }
+        } catch (e) {
+          console.error('Error loading global thirds config:', e);
+        }
+
+        if (globalThirds && globalThirds.thirdsX !== undefined) {
+          thirdsXSlider.value = globalThirds.thirdsX;
+        } else {
+          thirdsXSlider.value = 0;
+        }
+        if (globalThirds && globalThirds.thirdsGap !== undefined) {
+          thirdsGapSlider.value = globalThirds.thirdsGap;
+        } else {
+          thirdsGapSlider.value = 16;
+        }
+        if (globalThirds && globalThirds.thirdsSize !== undefined) {
+          thirdsSizeSlider.value = globalThirds.thirdsSize;
+        } else {
+          thirdsSizeSlider.value = 20;
+        }
+        if (globalThirds && globalThirds.thirdsBoxes !== undefined) {
+          thirdsBoxesSwitch.checked = globalThirds.thirdsBoxes;
+        } else {
+          thirdsBoxesSwitch.checked = false;
+        }
+        if (globalThirds && globalThirds.thirdsBoxWidth !== undefined) {
+          thirdsBoxWidthSlider.value = globalThirds.thirdsBoxWidth;
+        } else {
+          thirdsBoxWidthSlider.value = 170;
+        }
+        if (globalThirds && globalThirds.thirdsBoxHeight !== undefined) {
+          thirdsBoxHeightSlider.value = globalThirds.thirdsBoxHeight;
+        } else {
+          thirdsBoxHeightSlider.value = 100;
+        }
+        if (globalThirds && globalThirds.thirdsLines !== undefined) {
+          thirdsLinesSwitch.checked = globalThirds.thirdsLines;
+        } else {
+          thirdsLinesSwitch.checked = false;
+        }
+        if (globalThirds && globalThirds.thirdsLinesLength !== undefined) {
+          thirdsLinesLengthSlider.value = globalThirds.thirdsLinesLength;
+        } else {
+          thirdsLinesLengthSlider.value = 40;
+        }
+        if (globalThirds && globalThirds.thirdsLinesY !== undefined) {
+          thirdsLinesYSlider.value = globalThirds.thirdsLinesY;
+        } else {
+          thirdsLinesYSlider.value = 0;
+        }
+      }
+
+      // Update visibility of boxes config inputs
+      if (thirdsBoxesSwitch.checked) {
+        thirdsBoxWidthContainer.style.display = 'flex';
+        thirdsBoxHeightContainer.style.display = 'flex';
+      } else {
+        thirdsBoxWidthContainer.style.display = 'none';
+        thirdsBoxHeightContainer.style.display = 'none';
+      }
+
+      // Update visibility of separation lines config inputs
+      if (thirdsLinesSwitch.checked) {
+        thirdsLinesLengthContainer.style.display = 'flex';
+        thirdsLinesYContainer.style.display = 'flex';
+      } else {
+        thirdsLinesLengthContainer.style.display = 'none';
+        thirdsLinesYContainer.style.display = 'none';
+      }
 
       updateCards();
     }
@@ -862,6 +1150,68 @@
 
       const genVal = parseFloat(genSlider.value);
       const flowVal = parseFloat(flowSlider.value);
+      
+      // Update Stats Row layout via CSS variables
+      const thirdsY = parseFloat(thirdsYSlider.value);
+      const thirdsX = parseFloat(thirdsXSlider.value);
+      const thirdsGap = parseFloat(thirdsGapSlider.value);
+      const thirdsSize = parseFloat(thirdsSizeSlider.value);
+
+      thirdsYBadge.textContent = `${thirdsY} px`;
+      thirdsXBadge.textContent = `${thirdsX} px`;
+      thirdsGapBadge.textContent = `${thirdsGap} px`;
+      thirdsSizeBadge.textContent = `${thirdsSize} px`;
+
+      // Update visibility of boxes config inputs
+      if (thirdsBoxesSwitch.checked) {
+        thirdsBoxWidthContainer.style.display = 'flex';
+        thirdsBoxHeightContainer.style.display = 'flex';
+      } else {
+        thirdsBoxWidthContainer.style.display = 'none';
+        thirdsBoxHeightContainer.style.display = 'none';
+      }
+
+      const thirdsBoxWidth = parseFloat(thirdsBoxWidthSlider.value);
+      const thirdsBoxHeight = parseFloat(thirdsBoxHeightSlider.value);
+      thirdsBoxWidthBadge.textContent = `${thirdsBoxWidth} px`;
+      thirdsBoxHeightBadge.textContent = `${thirdsBoxHeight} px`;
+
+      // Update visibility of separation lines config inputs
+      if (thirdsLinesSwitch.checked) {
+        thirdsLinesLengthContainer.style.display = 'flex';
+        thirdsLinesYContainer.style.display = 'flex';
+      } else {
+        thirdsLinesLengthContainer.style.display = 'none';
+        thirdsLinesYContainer.style.display = 'none';
+      }
+
+      const thirdsLinesLength = parseFloat(thirdsLinesLengthSlider.value);
+      const thirdsLinesY = parseFloat(thirdsLinesYSlider.value);
+      thirdsLinesLengthBadge.textContent = `${thirdsLinesLength} px`;
+      thirdsLinesYBadge.textContent = `${thirdsLinesY} px`;
+
+      const hasBoxes = thirdsBoxesSwitch.checked;
+
+      document.querySelectorAll('.stats-row').forEach(el => {
+        el.style.setProperty('--thirds-y', `${thirdsY}px`);
+        el.style.setProperty('--thirds-x', `${thirdsX}px`);
+        el.style.setProperty('--thirds-gap', `${thirdsGap}px`);
+        el.style.setProperty('--thirds-label-size', `${thirdsSize}px`);
+        el.style.setProperty('--thirds-value-size', `${thirdsSize * 1.2}px`);
+        
+        el.style.setProperty('--thirds-lines-length', `${thirdsLinesLength}px`);
+        el.style.setProperty('--thirds-lines-y', `${thirdsLinesY}px`);
+
+        if (hasBoxes) {
+          el.style.setProperty('--thirds-box-width', `${thirdsBoxWidth}px`);
+          el.style.setProperty('--thirds-box-height', `${thirdsBoxHeight}px`);
+          el.classList.add('has-boxes');
+        } else {
+          el.style.removeProperty('--thirds-box-width');
+          el.style.removeProperty('--thirds-box-height');
+          el.classList.remove('has-boxes');
+        }
+      });
       
       let turbinesActive = 0;
       if (plant.maxTurbines) {
@@ -941,7 +1291,7 @@
       // 4. Turbines
       if (plant.maxTurbines && turbineLayouts[plantKey]) {
         turbinesBadge.textContent = `${turbinesActive} / ${plant.maxTurbines}`;
-        document.querySelectorAll('.turbines-box').forEach(el => {
+        document.querySelectorAll('.turbines-col').forEach(el => {
           el.style.display = 'flex';
         });
         document.querySelectorAll('.turbines-active').forEach(el => {
@@ -951,15 +1301,27 @@
           el.textContent = plant.maxTurbines;
         });
       } else {
-        document.querySelectorAll('.turbines-box').forEach(el => {
+        document.querySelectorAll('.turbines-col').forEach(el => {
           el.style.display = 'none';
         });
       }
 
+      // 4b. Separation lines show/hide inside stats-row
+      const hasLines = thirdsLinesSwitch.checked;
+      document.querySelectorAll('.stats-row').forEach(row => {
+        const div1 = row.querySelector('.divider-1');
+        const div2 = row.querySelector('.divider-2');
+        const turbinesCol = row.querySelector('.turbines-col');
+        const isTurbinesVisible = turbinesCol && turbinesCol.style.display !== 'none';
+
+        if (div1) div1.style.display = hasLines ? 'block' : 'none';
+        if (div2) div2.style.display = (hasLines && isTurbinesVisible) ? 'block' : 'none';
+      });
+
       // 5. Flow (Caudal)
       flowBadge.textContent = `${flowVal.toFixed(2)} m³/s`;
-      document.querySelectorAll('.flow-label').forEach(el => {
-        el.textContent = `Caudal: ${flowVal.toFixed(2)}m³/s`;
+      document.querySelectorAll('.flow-value').forEach(el => {
+        el.textContent = `${flowVal.toFixed(2)} m³/s`;
       });
 
       // Flow status determination
@@ -1512,7 +1874,8 @@
         if (saved) {
           configs = JSON.parse(saved);
         }
-        configs[pKey] = {
+
+        const currentPlantConfig = {
           gen: genSlider.value,
           turbines: turbinesSlider.value,
           flow: flowSlider.value,
@@ -1530,9 +1893,39 @@
           embalseBg: embalseBgSwitch.checked,
           embalseSize: embalseSizeSlider.value,
           cotaMinX: cotaMinXSlider.value,
-          cotaMinSize: cotaMinSizeSlider.value
+          cotaMinSize: cotaMinSizeSlider.value,
+          thirdsY: thirdsYSlider.value
         };
+
+        if (pKey === 'cocaCodoSinclair') {
+          currentPlantConfig.thirdsX = thirdsXSlider.value;
+          currentPlantConfig.thirdsGap = thirdsGapSlider.value;
+          currentPlantConfig.thirdsSize = thirdsSizeSlider.value;
+          currentPlantConfig.thirdsBoxes = thirdsBoxesSwitch.checked;
+          currentPlantConfig.thirdsBoxWidth = thirdsBoxWidthSlider.value;
+          currentPlantConfig.thirdsBoxHeight = thirdsBoxHeightSlider.value;
+          currentPlantConfig.thirdsLines = thirdsLinesSwitch.checked;
+          currentPlantConfig.thirdsLinesLength = thirdsLinesLengthSlider.value;
+          currentPlantConfig.thirdsLinesY = thirdsLinesYSlider.value;
+        }
+
+        configs[pKey] = currentPlantConfig;
         localStorage.setItem('hydro_plant_configs', JSON.stringify(configs));
+
+        if (pKey !== 'cocaCodoSinclair') {
+          const globalThirds = {
+            thirdsX: thirdsXSlider.value,
+            thirdsGap: thirdsGapSlider.value,
+            thirdsSize: thirdsSizeSlider.value,
+            thirdsBoxes: thirdsBoxesSwitch.checked,
+            thirdsBoxWidth: thirdsBoxWidthSlider.value,
+            thirdsBoxHeight: thirdsBoxHeightSlider.value,
+            thirdsLines: thirdsLinesSwitch.checked,
+            thirdsLinesLength: thirdsLinesLengthSlider.value,
+            thirdsLinesY: thirdsLinesYSlider.value
+          };
+          localStorage.setItem('hydro_global_thirds', JSON.stringify(globalThirds));
+        }
       } catch (e) {
         console.error('Error saving config to localStorage:', e);
       }
@@ -1559,6 +1952,16 @@
     water3dSlider.addEventListener('input', updateCards);
     cotaMinXSlider.addEventListener('input', updateCards);
     cotaMinSizeSlider.addEventListener('input', updateCards);
+    thirdsYSlider.addEventListener('input', updateCards);
+    thirdsXSlider.addEventListener('input', updateCards);
+    thirdsGapSlider.addEventListener('input', updateCards);
+    thirdsSizeSlider.addEventListener('input', updateCards);
+    thirdsBoxesSwitch.addEventListener('change', updateCards);
+    thirdsBoxWidthSlider.addEventListener('input', updateCards);
+    thirdsBoxHeightSlider.addEventListener('input', updateCards);
+    thirdsLinesSwitch.addEventListener('change', updateCards);
+    thirdsLinesLengthSlider.addEventListener('input', updateCards);
+    thirdsLinesYSlider.addEventListener('input', updateCards);
     cotaXMinSlider.addEventListener('input', () => {
       const minVal = parseInt(cotaXMinSlider.value);
       const maxVal = parseInt(cotaXMaxSlider.value);

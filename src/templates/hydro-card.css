@@ -137,26 +137,75 @@ body {
   display: block;
 }
 
-/* Generación Section */
-.card-container .generation-section {
+/* Stats Row (Generación, Turbinas, Caudal in thirds) */
+.card-container .stats-row {
   position: absolute;
-  top: 125px;
-  left: 20px;
+  top: var(--thirds-y, 125px);
+  left: calc(50% + var(--thirds-x, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--thirds-gap, 16px);
+}
+
+.card-container .stats-col {
+  width: var(--thirds-box-width, 170px); /* Adjustable column/box width */
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Enclosed square component box style */
+.card-container .stats-row.has-boxes {
+  align-items: stretch;
+}
+
+.card-container .stats-row.has-boxes .stats-col {
+  border: 1.5px solid #1e293b;
+  background-color: #0c111c;
+  padding: 12px 14px;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  min-height: var(--thirds-box-height, 100px); /* Adjustable box height */
+}
+
+/* Vertical separation lines - absolutely positioned to not add any width to the flow */
+.card-container .thirds-divider {
+  position: absolute;
+  width: 1.5px;
+  background-color: #1e293b;
+  height: var(--thirds-lines-length, 40px);
+  top: calc(50% + var(--thirds-lines-y, 0px));
+  transform: translate(-50%, -50%);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.card-container .thirds-divider.divider-1 {
+  left: calc(var(--thirds-box-width, 170px) + var(--thirds-gap, 16px) / 2);
+}
+
+.card-container .thirds-divider.divider-2 {
+  left: calc(2 * var(--thirds-box-width, 170px) + 1.5 * var(--thirds-gap, 16px));
 }
 
 .card-container .section-label {
-  font-size: 20px;
+  font-size: var(--thirds-label-size, 20px);
   font-weight: bold;
   line-height: 1.1;
+  white-space: nowrap; /* Prevent line breaks */
 }
 
-.card-container .generation-value {
-  font-size: 24px;
+.card-container .generation-value,
+.card-container .turbines-value,
+.card-container .flow-value {
+  font-size: var(--thirds-value-size, 24px);
   font-weight: bold;
   margin-top: 2px;
   line-height: 1.1;
+  white-space: nowrap; /* Prevent line breaks */
 }
 
 /* Horizontal battery representation */
@@ -186,34 +235,19 @@ body {
 }
 
 .card-container .status-text {
-  font-size: 20px;
+  font-size: var(--thirds-label-size, 20px);
   font-weight: bold;
   margin-left: 10px;
   line-height: 1.0;
-}
-
-/* Caudal Section */
-.card-container .flow-section {
-  position: absolute;
-  top: 125px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-}
-
-.card-container .flow-label {
-  font-size: 20px;
-  font-weight: bold;
-  line-height: 1.1;
+  white-space: nowrap; /* Prevent line breaks */
 }
 
 .card-container .flow-status {
-  font-size: 20px;
+  font-size: var(--thirds-label-size, 20px);
   font-weight: bold;
-  margin-top: 4px;
-  line-height: 1.1;
+  margin-top: 6px;
+  line-height: 1.0;
+  white-space: nowrap; /* Prevent line breaks */
 }
 
 /* Visualizer Panel at the bottom */
