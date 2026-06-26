@@ -34,171 +34,269 @@
         </div>
       </div>
 
-      <!-- Sliders Grid (2 Columns) -->
+      <!-- Sliders Grid (Organized in Sections) -->
       <div class="panel-sliders-grid">
-        <!-- Generation Slider -->
-        <div class="form-group slider-container">
-          <label class="form-label">
-            Generación
-            <span id="gen-badge" class="badge">0 MW</span>
-          </label>
-          <input type="range" id="gen-slider" class="slider-range">
-          <div class="slider-limits">
-            <span>0 MW</span>
-            <span id="gen-max-label">0 MW</span>
-          </div>
-        </div>
-
-        <!-- Turbines Slider -->
-        <div class="form-group slider-container" id="turbines-container">
-          <label class="form-label">
-            Turbinas Activas
-            <span id="turbines-badge" class="badge">0 / 0</span>
-          </label>
-          <input type="range" id="turbines-slider" class="slider-range" step="1">
-          <div class="slider-limits">
-            <span>0</span>
-            <span id="turbines-max-label">0</span>
-          </div>
-        </div>
-
-        <!-- Flow Slider -->
-        <div class="form-group slider-container">
-          <label class="form-label">
-            Caudal de Ingreso
-            <span id="flow-badge" class="badge">0 m³/s</span>
-          </label>
-          <input type="range" id="flow-slider" class="slider-range">
-          <div class="slider-limits">
-            <span>0 m³/s</span>
-            <span id="flow-max-label">0 m³/s</span>
-          </div>
-        </div>
-
-        <!-- Cota Slider -->
-        <div class="form-group slider-container" id="cota-container">
-          <label class="form-label">
-            Embalse (Cota)
-            <span id="cota-badge" class="badge">0 msnm</span>
-          </label>
-          <input type="range" id="cota-slider" class="slider-range" step="0.01">
-          <div class="slider-limits">
-            <span id="cota-min-label">0 msnm</span>
-            <span id="cota-max-label">0 msnm</span>
-          </div>
-        </div>
-
-        <!-- Image X Coordinate Slider -->
-        <div class="form-group slider-container" id="img-x-container" style="display: none;">
-          <label class="form-label">
-            Imagen X
-            <span id="img-x-badge" class="badge">0 px</span>
-          </label>
-          <input type="range" id="img-x-slider" class="slider-range" min="-400" max="400" value="0">
-          <div class="slider-limits">
-            <span>-400 px</span>
-            <span>400 px</span>
-          </div>
-        </div>
-
-        <!-- Image Y Coordinate Slider -->
-        <div class="form-group slider-container" id="img-y-container" style="display: none;">
-          <label class="form-label">
-            Imagen Y
-            <span id="img-y-badge" class="badge">0 px</span>
-          </label>
-          <input type="range" id="img-y-slider" class="slider-range" min="-400" max="400" value="0">
-          <div class="slider-limits">
-            <span>-400 px</span>
-            <span>400 px</span>
-          </div>
-        </div>
-
-        <!-- Image Scale Slider -->
-        <div class="form-group slider-container" id="img-scale-container" style="display: none;">
-          <label class="form-label">
-            Tamaño Imagen
-            <span id="img-scale-badge" class="badge">100%</span>
-          </label>
-          <input type="range" id="img-scale-slider" class="slider-range" min="10" max="300" value="100">
-          <div class="slider-limits">
-            <span>10%</span>
-            <span>300%</span>
-          </div>
-        </div>
-
-
-
-        <!-- Cota Max Y Slider -->
-        <div class="form-group slider-container" id="cota-max-y-container" style="display: none;">
-          <label class="form-label">
-            Cota Máx Y
-            <span id="cota-max-y-badge" class="badge">320 px</span>
-          </label>
-          <input type="range" id="cota-max-y-slider" class="slider-range" min="0" max="420" value="320">
-          <div class="slider-limits">
-            <span>0 px</span>
-            <span>420 px</span>
-          </div>
-        </div>
-
-        <!-- Cota Min Y Slider -->
-        <div class="form-group slider-container" id="cota-min-y-container" style="display: none;">
-          <label class="form-label">
-            Cota Mín Y
-            <span id="cota-min-y-badge" class="badge">60 px</span>
-          </label>
-          <input type="range" id="cota-min-y-slider" class="slider-range" min="0" max="420" value="60">
-          <div class="slider-limits">
-            <span>0 px</span>
-            <span>420 px</span>
-          </div>
-        </div>
-
-        <!-- Cota X Double Slider Row -->
-        <div class="slider-row" id="cota-x-double-container" style="display: none;">
-          <!-- Cota X Min Slider -->
-          <div class="form-group slider-container" id="cota-x-min-container">
+        <!-- Sección: Datos de Operación -->
+        <div class="panel-section" id="section-operation">
+          <div class="panel-section-title">Datos de Operación</div>
+          
+          <!-- Generation Slider -->
+          <div class="form-group slider-container">
             <label class="form-label">
-              Límite X Mín
-              <span id="cota-x-min-badge" class="badge">0 px</span>
+              Generación
+              <span id="gen-badge" class="badge">0 MW</span>
             </label>
-            <input type="range" id="cota-x-min-slider" class="slider-range" min="0" max="600" value="0">
+            <input type="range" id="gen-slider" class="slider-range">
+            <div class="slider-limits">
+              <span>0 MW</span>
+              <span id="gen-max-label">0 MW</span>
+            </div>
+          </div>
+
+          <!-- Flow Slider -->
+          <div class="form-group slider-container">
+            <label class="form-label">
+              Caudal de Ingreso
+              <span id="flow-badge" class="badge">0 m³/s</span>
+            </label>
+            <input type="range" id="flow-slider" class="slider-range">
+            <div class="slider-limits">
+              <span>0 m³/s</span>
+              <span id="flow-max-label">0 m³/s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección: Operación de Turbinas -->
+        <div class="panel-section" id="turbines-section" style="display: none;">
+          <div class="panel-section-title">Operación de Turbinas</div>
+          
+          <!-- Turbines Slider -->
+          <div class="form-group slider-container" id="turbines-container">
+            <label class="form-label">
+              Turbinas Activas
+              <span id="turbines-badge" class="badge">0 / 0</span>
+            </label>
+            <input type="range" id="turbines-slider" class="slider-range" step="1">
+            <div class="slider-limits">
+              <span>0</span>
+              <span id="turbines-max-label">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección: Ajustes del Embalse (Cota) -->
+        <div class="panel-section" id="cota-section" style="display: none;">
+          <div class="panel-section-title">Ajustes del Embalse (Cota)</div>
+
+          <!-- Cota Slider -->
+          <div class="form-group slider-container" id="cota-container">
+            <label class="form-label">
+              Embalse (Cota)
+              <span id="cota-badge" class="badge">0 msnm</span>
+            </label>
+            <input type="range" id="cota-slider" class="slider-range" step="0.01">
+            <div class="slider-limits">
+              <span id="cota-min-label">0 msnm</span>
+              <span id="cota-max-label">0 msnm</span>
+            </div>
+          </div>
+
+          <!-- Cota Max Y Slider -->
+          <div class="form-group slider-container" id="cota-max-y-container" style="display: none;">
+            <label class="form-label">
+              Cota Máx Y
+              <span id="cota-max-y-badge" class="badge">320 px</span>
+            </label>
+            <input type="range" id="cota-max-y-slider" class="slider-range" min="0" max="420" value="320">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>420 px</span>
+            </div>
+          </div>
+
+          <!-- Cota Min Y Slider -->
+          <div class="form-group slider-container" id="cota-min-y-container" style="display: none;">
+            <label class="form-label">
+              Cota Mín Y
+              <span id="cota-min-y-badge" class="badge">60 px</span>
+            </label>
+            <input type="range" id="cota-min-y-slider" class="slider-range" min="0" max="420" value="60">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>420 px</span>
+            </div>
+          </div>
+
+          <!-- Cota X Double Slider Row -->
+          <div class="slider-row" id="cota-x-double-container" style="display: none;">
+            <!-- Cota X Min Slider -->
+            <div class="form-group slider-container" id="cota-x-min-container">
+              <label class="form-label">
+                Límite X Mín
+                <span id="cota-x-min-badge" class="badge">0 px</span>
+              </label>
+              <input type="range" id="cota-x-min-slider" class="slider-range" min="0" max="600" value="0">
+              <div class="slider-limits">
+                <span>0 px</span>
+                <span>600 px</span>
+              </div>
+            </div>
+            <!-- Cota X Max Slider -->
+            <div class="form-group slider-container" id="cota-x-max-container">
+              <label class="form-label">
+                Límite X Máx
+                <span id="cota-x-max-badge" class="badge">600 px</span>
+              </label>
+              <input type="range" id="cota-x-max-slider" class="slider-range" min="0" max="600" value="600">
+              <div class="slider-limits">
+                <span>0 px</span>
+                <span>600 px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3D Water Top Slider -->
+          <div class="form-group slider-container" id="water-3d-container" style="display: none;">
+            <label class="form-label">
+              Tapa 3D (Grosor)
+              <span id="water-3d-badge" class="badge">15 px</span>
+            </label>
+            <input type="range" id="water-3d-slider" class="slider-range" min="0" max="100" value="15">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>100 px</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección: Ajustes del Dibujo (Imagen) -->
+        <div class="panel-section" id="image-adjustments-section" style="display: none;">
+          <div class="panel-section-title">Ajustes del Dibujo</div>
+
+          <!-- Image X Coordinate Slider -->
+          <div class="form-group slider-container" id="img-x-container" style="display: none;">
+            <label class="form-label">
+              Imagen X
+              <span id="img-x-badge" class="badge">0 px</span>
+            </label>
+            <input type="range" id="img-x-slider" class="slider-range" min="-400" max="400" value="0">
+            <div class="slider-limits">
+              <span>-400 px</span>
+              <span>400 px</span>
+            </div>
+          </div>
+
+          <!-- Image Y Coordinate Slider -->
+          <div class="form-group slider-container" id="img-y-container" style="display: none;">
+            <label class="form-label">
+              Imagen Y
+              <span id="img-y-badge" class="badge">0 px</span>
+            </label>
+            <input type="range" id="img-y-slider" class="slider-range" min="-400" max="400" value="0">
+            <div class="slider-limits">
+              <span>-400 px</span>
+              <span>400 px</span>
+            </div>
+          </div>
+
+          <!-- Image Scale Slider -->
+          <div class="form-group slider-container" id="img-scale-container" style="display: none;">
+            <label class="form-label">
+              Tamaño Imagen
+              <span id="img-scale-badge" class="badge">100%</span>
+            </label>
+            <input type="range" id="img-scale-slider" class="slider-range" min="10" max="300" value="100">
+            <div class="slider-limits">
+              <span>10%</span>
+              <span>300%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección: Etiqueta Flotante de Cota -->
+        <div class="panel-section" id="embalse-text-container" style="display: none;">
+          <div class="panel-section-title">Etiqueta Flotante de Cota</div>
+          
+          <!-- Label X Coordinate Slider -->
+          <div class="form-group slider-container">
+            <label for="embalse-x-slider" class="form-label">
+              Posición X Texto
+              <span class="badge" id="embalse-x-badge">450 px</span>
+            </label>
+            <input type="range" id="embalse-x-slider" class="slider-range" min="0" max="600" value="450">
             <div class="slider-limits">
               <span>0 px</span>
               <span>600 px</span>
             </div>
           </div>
 
-          <!-- Cota X Max Slider -->
-          <div class="form-group slider-container" id="cota-x-max-container">
-            <label class="form-label">
-              Límite X Máx
-              <span id="cota-x-max-badge" class="badge">600 px</span>
+          <!-- Label Size Slider -->
+          <div class="form-group slider-container">
+            <label for="embalse-size-slider" class="form-label">
+              Tamaño Letra
+              <span class="badge" id="embalse-size-badge">14 px</span>
             </label>
-            <input type="range" id="cota-x-max-slider" class="slider-range" min="0" max="600" value="600">
+            <input type="range" id="embalse-size-slider" class="slider-range" min="10" max="30" value="14">
+            <div class="slider-limits">
+              <span>10 px</span>
+              <span>30 px</span>
+            </div>
+          </div>
+
+          <!-- Label Y Separation Slider -->
+          <div class="form-group slider-container">
+            <label for="embalse-y-slider" class="form-label">
+              Separación Y Texto
+              <span class="badge" id="embalse-y-badge">7 px</span>
+            </label>
+            <input type="range" id="embalse-y-slider" class="slider-range" min="0" max="40" value="7">
+            <div class="slider-limits">
+              <span>0 px</span>
+              <span>40 px</span>
+            </div>
+          </div>
+
+          <!-- Label Background Switch -->
+          <div class="switch-container">
+            <span class="switch-label">Fondo detrás del Texto</span>
+            <input type="checkbox" id="embalse-bg-switch" class="switch-input" checked>
+          </div>
+        </div>
+
+        <!-- Sección: Etiqueta Cota Mínima -->
+        <div class="panel-section" id="cota-min-text-container" style="display: none;">
+          <div class="panel-section-title">Etiqueta Cota Mínima</div>
+          
+          <!-- Cota Min Label X Coordinate Slider -->
+          <div class="form-group slider-container">
+            <label for="cota-min-x-slider" class="form-label">
+              Posición X Texto Mín
+              <span class="badge" id="cota-min-x-badge">150 px</span>
+            </label>
+            <input type="range" id="cota-min-x-slider" class="slider-range" min="0" max="600" value="150">
             <div class="slider-limits">
               <span>0 px</span>
               <span>600 px</span>
             </div>
           </div>
-        </div>
 
-        <!-- 3D Water Top Slider -->
-        <div class="form-group slider-container" id="water-3d-container" style="display: none;">
-          <label class="form-label">
-            Tapa 3D (Grosor)
-            <span id="water-3d-badge" class="badge">15 px</span>
-          </label>
-          <input type="range" id="water-3d-slider" class="slider-range" min="0" max="100" value="15">
-          <div class="slider-limits">
-            <span>0 px</span>
-            <span>100 px</span>
+          <!-- Cota Min Label Size Slider -->
+          <div class="form-group slider-container">
+            <label for="cota-min-size-slider" class="form-label">
+              Tamaño Letra Mín
+              <span class="badge" id="cota-min-size-badge">12 px</span>
+            </label>
+            <input type="range" id="cota-min-size-slider" class="slider-range" min="10" max="30" value="12">
+            <div class="slider-limits">
+              <span>10 px</span>
+              <span>30 px</span>
+            </div>
           </div>
         </div>
       </div>
       <!-- Generate PNG Button -->
-      <div style="margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="margin-top: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
         <button id="generate-png-btn" class="form-btn" style="width: 100%; padding: 10px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#2563eb'" onmouseout="this.style.backgroundColor='#3b82f6'">
           Guardar Reporte en Disco (PNG)
         </button>
@@ -278,13 +376,16 @@
                   <path d="M 0 2 L 6 5 L 0 8 z" fill="#00e5ff" />
                 </marker>
               </defs>
-              <rect class="water-body" x="290" y="120" width="310" height="300" fill="url(#water-gradient-obsidian-grotesk)" />
+              <rect class="water-body" x="290" y="120" width="315" height="300" fill="url(#water-gradient-obsidian-grotesk)" />
               <path class="water-body-coca" fill="url(#water-gradient-obsidian-grotesk)" style="display: none;" />
-              <rect class="water-top" x="290" y="120" width="310" height="15" />
+              <rect class="water-top" x="290" y="120" width="315" height="15" />
               <line class="water-ripple ripple-1" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="30, 25" />
-              <line class="water-ripple ripple-2" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="20, 20" />
               <line class="water-ripple ripple-3" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="40, 30" />
+              <line class="water-ripple ripple-4" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="25, 20" />
               
+              <!-- Horizontal red line at Cota Min Y (rendered behind plant-image but on top of water-body) -->
+              <line class="cota-min-horizontal-line" x1="0" y1="0" x2="0" y2="0" stroke="#f43f5e" stroke-width="2.5" style="display: none;" />
+
               <!-- Flow current lines specifically for Coca Codo Sinclair -->
               <g class="coca-flow-lines" style="display: none;">
                 <path class="flow-current line-1" fill="none" d="" marker-end="url(#flow-arrow)" />
@@ -338,6 +439,20 @@
               </g>
               
               <path class="dam-concrete" d="M 0 420 L 290 420 L 290 100 L 268 100 L 268 50 L 250 50 L 250 20 L 235 20 C 200 150 140 220 0 390 Z" />
+            </svg>
+
+            <!-- SVG Overlay for elements that must always render on top of the plant-image -->
+            <svg class="visualizer-svg-overlay" width="600" height="420" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none;">
+              <!-- Floating Cota Min Label (Rendered first, so it sits behind the main cota label) -->
+              <g class="cota-min-label-group" style="display: none;">
+                <text class="cota-min-label-text" fill="#f43f5e" font-family="'DejaVu Sans Mono', monospace" font-weight="bold" text-anchor="middle" dominant-baseline="hanging"></text>
+              </g>
+
+              <!-- Floating Cota Label (Rendered second, so it sits on top of the cota min label when they overlap) -->
+              <g class="embalse-label-group" style="display: none;">
+                <rect class="embalse-label-bg" fill="#080c14" opacity="0.8" rx="4" ry="4" />
+                <text class="embalse-label-text" fill="#ffffff" font-family="'DejaVu Sans Mono', monospace" font-weight="bold" text-anchor="middle" dominant-baseline="middle"></text>
+              </g>
             </svg>
 
             <div class="reference-levels">
@@ -510,6 +625,25 @@
 
     const turbinesOverlay = document.getElementById('turbines-overlay');
 
+    // New section containers & elements
+    const imageAdjustmentsSection = document.getElementById('image-adjustments-section');
+    const cotaSection = document.getElementById('cota-section');
+    const turbinesSection = document.getElementById('turbines-section');
+    const embalseTextContainer = document.getElementById('embalse-text-container');
+    const embalseXSlider = document.getElementById('embalse-x-slider');
+    const embalseXBadge = document.getElementById('embalse-x-badge');
+    const embalseYSlider = document.getElementById('embalse-y-slider');
+    const embalseYBadge = document.getElementById('embalse-y-badge');
+    const embalseSizeSlider = document.getElementById('embalse-size-slider');
+    const embalseSizeBadge = document.getElementById('embalse-size-badge');
+    const embalseBgSwitch = document.getElementById('embalse-bg-switch');
+
+    const cotaMinTextContainer = document.getElementById('cota-min-text-container');
+    const cotaMinXSlider = document.getElementById('cota-min-x-slider');
+    const cotaMinXBadge = document.getElementById('cota-min-x-badge');
+    const cotaMinSizeSlider = document.getElementById('cota-min-size-slider');
+    const cotaMinSizeBadge = document.getElementById('cota-min-size-badge');
+
     // Load last plant from localStorage
     const savedLastPlant = localStorage.getItem('hydro_last_plant');
 
@@ -567,7 +701,9 @@
       genMaxLabel.textContent = `${plant.maxEnergyMW} MW`;
 
       // Turbines Setup
+      const turbinesSection = document.getElementById('turbines-section');
       if (plant.maxTurbines && turbineLayouts[plantKey]) {
+        turbinesSection.style.display = 'flex';
         turbinesContainer.style.display = 'flex';
         turbinesSlider.min = 0;
         turbinesSlider.max = plant.maxTurbines;
@@ -578,6 +714,7 @@
         }
         turbinesMaxLabel.textContent = plant.maxTurbines;
       } else {
+        turbinesSection.style.display = 'none';
         turbinesContainer.style.display = 'none';
       }
 
@@ -593,7 +730,6 @@
 
       // Cota Setup
       if (plant.minLevelMasl && plant.maxLevelMasl) {
-        cotaContainer.style.display = 'flex';
         cotaSlider.min = plant.minLevelMasl;
         cotaSlider.max = plant.maxLevelMasl;
         if (savedConfig && savedConfig.cota !== undefined) {
@@ -603,12 +739,13 @@
         }
         cotaMinLabel.textContent = `${plant.minLevelMasl} msnm`;
         cotaMaxLabel.textContent = `${plant.maxLevelMasl} msnm`;
-      } else {
-        cotaContainer.style.display = 'none';
       }
 
-      // Image X/Y and Cota Min/Max Y Sliders Setup
+      // SECTION OVERRIDES
       if (plant.drawingImage) {
+        imageAdjustmentsSection.style.display = 'flex';
+        cotaSection.style.display = 'flex';
+        
         imgXContainer.style.display = 'flex';
         imgYContainer.style.display = 'flex';
         imgScaleContainer.style.display = 'flex';
@@ -616,6 +753,7 @@
         cotaMinYContainer.style.display = 'flex';
         cotaXDoubleContainer.style.display = 'flex';
         water3dContainer.style.display = 'flex';
+        
         if (savedConfig && savedConfig.imgX !== undefined) {
           imgXSlider.value = savedConfig.imgX;
         } else {
@@ -657,6 +795,9 @@
           water3dSlider.value = 15;
         }
       } else {
+        imageAdjustmentsSection.style.display = 'none';
+        cotaSection.style.display = 'none';
+        
         imgXContainer.style.display = 'none';
         imgYContainer.style.display = 'none';
         imgScaleContainer.style.display = 'none';
@@ -664,6 +805,50 @@
         cotaMinYContainer.style.display = 'none';
         cotaXDoubleContainer.style.display = 'none';
         water3dContainer.style.display = 'none';
+      }
+
+      const hasLevels = plant.minLevelMasl && plant.maxLevelMasl;
+      if (hasLevels) {
+        embalseTextContainer.style.display = 'flex';
+        cotaMinTextContainer.style.display = 'flex';
+        cotaContainer.style.display = 'flex';
+        
+        if (savedConfig && savedConfig.embalseX !== undefined) {
+          embalseXSlider.value = savedConfig.embalseX;
+        } else {
+          embalseXSlider.value = 450;
+        }
+        if (savedConfig && savedConfig.embalseY !== undefined) {
+          embalseYSlider.value = savedConfig.embalseY;
+        } else {
+          embalseYSlider.value = 7;
+        }
+        if (savedConfig && savedConfig.embalseSize !== undefined) {
+          embalseSizeSlider.value = savedConfig.embalseSize;
+        } else {
+          embalseSizeSlider.value = 14;
+        }
+        if (savedConfig && savedConfig.embalseBg !== undefined) {
+          embalseBgSwitch.checked = savedConfig.embalseBg;
+        } else {
+          embalseBgSwitch.checked = true;
+        }
+
+        // Load configurations for cota min label controls
+        if (savedConfig && savedConfig.cotaMinX !== undefined) {
+          cotaMinXSlider.value = savedConfig.cotaMinX;
+        } else {
+          cotaMinXSlider.value = 150;
+        }
+        if (savedConfig && savedConfig.cotaMinSize !== undefined) {
+          cotaMinSizeSlider.value = savedConfig.cotaMinSize;
+        } else {
+          cotaMinSizeSlider.value = 12;
+        }
+      } else {
+        embalseTextContainer.style.display = 'none';
+        cotaMinTextContainer.style.display = 'none';
+        cotaContainer.style.display = 'none';
       }
 
 
@@ -925,7 +1110,7 @@
 
         document.querySelectorAll('.water-body').forEach(el => {
           el.setAttribute('x', cotaXMinVal);
-          el.setAttribute('width', waterWidthVal);
+          el.setAttribute('width', waterWidthVal + 5);
         });
 
         // Calculate water height using custom min/max Y coordinates
@@ -997,7 +1182,7 @@
         document.querySelectorAll('.water-top').forEach(el => {
           el.setAttribute('x', cotaXMinVal);
           el.setAttribute('y', yPos - water3dVal);
-          el.setAttribute('width', waterWidthVal);
+          el.setAttribute('width', waterWidthVal + 5);
           el.setAttribute('height', water3dVal);
           el.style.display = (isCocaCodo || !hasLevels) ? 'none' : 'block';
         });
@@ -1010,18 +1195,20 @@
           el.setAttribute('y2', yPos - water3dVal * 0.35);
           el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
         });
-        document.querySelectorAll('.ripple-2').forEach(el => {
-          el.setAttribute('x1', cotaXMinVal + waterWidthVal * (150 / 600));
-          el.setAttribute('x2', cotaXMinVal + waterWidthVal * (450 / 600));
-          el.setAttribute('y1', yPos - water3dVal * 0.75);
-          el.setAttribute('y2', yPos - water3dVal * 0.75);
-          el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
-        });
+
         document.querySelectorAll('.ripple-3').forEach(el => {
           el.setAttribute('x1', cotaXMinVal + waterWidthVal * (80 / 600));
           el.setAttribute('x2', cotaXMinVal + waterWidthVal * (520 / 600));
           el.setAttribute('y1', yPos - water3dVal * 0.55);
           el.setAttribute('y2', yPos - water3dVal * 0.55);
+          el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
+        });
+
+        document.querySelectorAll('.ripple-4').forEach(el => {
+          el.setAttribute('x1', cotaXMinVal + waterWidthVal * (250 / 600));
+          el.setAttribute('x2', cotaXMinVal + waterWidthVal * (570 / 600));
+          el.setAttribute('y1', yPos - water3dVal * 0.82);
+          el.setAttribute('y2', yPos - water3dVal * 0.82);
           el.style.display = (!isCocaCodo && hasLevels && water3dVal > 5 && waterWidthVal > 20) ? 'block' : 'none';
         });
 
@@ -1113,7 +1300,7 @@
         document.querySelectorAll('.water-top').forEach(el => {
           el.style.display = 'none';
         });
-        document.querySelectorAll('.ripple-1, .ripple-2, .ripple-3, .coca-flow-lines').forEach(el => {
+        document.querySelectorAll('.ripple-1, .ripple-3, .ripple-4, .coca-flow-lines').forEach(el => {
           el.style.display = 'none';
         });
         // Show SVG and concrete dam
@@ -1127,11 +1314,11 @@
         // Reset default water body layout
         document.querySelectorAll('.water-body').forEach(el => {
           el.setAttribute('x', '290');
-          el.setAttribute('width', '310');
+          el.setAttribute('width', '315');
         });
 
-        // 7. Cota Level Readings
         const hasLevels = plant.minLevelMasl && plant.maxLevelMasl;
+
         if (hasLevels) {
           const cotaVal = parseFloat(cotaSlider.value);
           cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
@@ -1151,10 +1338,21 @@
             el.textContent = `Cota actual: ${cotaVal.toFixed(2)} msnm`;
           });
 
+          // Position cota lines dynamically based on custom min/max Y coordinates
+          const cotaMinYVal = parseFloat(cotaMinY);
+          const cotaMaxYVal = parseFloat(cotaMaxY);
+          
+          document.querySelectorAll('.cota-min').forEach(el => {
+            el.style.bottom = `${cotaMinYVal}px`;
+          });
+          document.querySelectorAll('.cota-max').forEach(el => {
+            el.style.bottom = `${cotaMaxYVal}px`;
+          });
+
           // Position current cota line and set water height
           const cotaRange = plant.maxLevelMasl - plant.minLevelMasl;
           const cotaPct = Math.max(0, Math.min(1, (cotaVal - plant.minLevelMasl) / cotaRange));
-          const bottomPos = 60 + cotaPct * 260; // range from bottom:60px to bottom:320px
+          const bottomPos = cotaMinYVal + cotaPct * (cotaMaxYVal - cotaMinYVal);
           
           document.querySelectorAll('.cota-current').forEach(el => {
             el.style.bottom = `${bottomPos}px`;
@@ -1181,6 +1379,101 @@
           });
         }
       }
+
+      // 7. Cota Level Readings & Floating Labels (Unified logic)
+      const hasLevels = plant.minLevelMasl && plant.maxLevelMasl;
+      
+      // Update Cota Min Y horizontal red line position
+      document.querySelectorAll('.cota-min-horizontal-line').forEach(el => {
+        if (hasLevels) {
+          const cotaMinYVal = parseFloat(cotaMinY);
+          const cotaXMinVal = plant.drawingImage ? parseFloat(cotaXMin) : 290;
+          const cotaXMaxVal = plant.drawingImage ? parseFloat(cotaXMax) : 605;
+          const yPos = 420 - cotaMinYVal;
+          el.setAttribute('x1', cotaXMinVal);
+          el.setAttribute('x2', cotaXMaxVal);
+          el.setAttribute('y1', yPos);
+          el.setAttribute('y2', yPos);
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+
+      // Update Floating Cota Min Label
+      document.querySelectorAll('.cota-min-label-group').forEach(el => {
+        if (hasLevels) {
+          const cotaMinX = parseFloat(cotaMinXSlider.value);
+          const cotaMinSize = parseFloat(cotaMinSizeSlider.value);
+          const cotaMinYVal = parseFloat(cotaMinY);
+          const lineY = 420 - cotaMinYVal;
+
+          cotaMinXBadge.textContent = `${cotaMinX} px`;
+          cotaMinSizeBadge.textContent = `${cotaMinSize} px`;
+
+          const textEl = el.querySelector('.cota-min-label-text');
+          textEl.textContent = `Cota mínima: ${plant.minLevelMasl} msnm`;
+          textEl.setAttribute('font-size', `${cotaMinSize}px`);
+
+          // Position text just below the line (lineY + 4px)
+          el.setAttribute('transform', `translate(${cotaMinX}, ${lineY + 4})`);
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+
+      // Update Floating Embalse Label
+      document.querySelectorAll('.embalse-label-group').forEach(el => {
+        if (hasLevels) {
+          const cotaVal = parseFloat(cotaSlider.value);
+          const embalseX = parseFloat(embalseXSlider.value);
+          const embalseY = parseFloat(embalseYSlider.value);
+          const embalseSize = parseFloat(embalseSizeSlider.value);
+          const embalseBg = embalseBgSwitch.checked;
+
+          embalseXBadge.textContent = `${embalseX} px`;
+          embalseYBadge.textContent = `${embalseY} px`;
+          embalseSizeBadge.textContent = `${embalseSize} px`;
+
+          const textEl = el.querySelector('.embalse-label-text');
+          const bgEl = el.querySelector('.embalse-label-bg');
+
+          textEl.textContent = `Cota: ${cotaVal.toFixed(2)} msnm`;
+          textEl.setAttribute('font-size', `${embalseSize}px`);
+
+          // Compute current water top height
+          const cotaMinYVal = parseFloat(cotaMinY);
+          const cotaMaxYVal = parseFloat(cotaMaxY);
+          const cotaRange = plant.maxLevelMasl - plant.minLevelMasl;
+          const cotaPct = Math.max(0, Math.min(1, (cotaVal - plant.minLevelMasl) / cotaRange));
+          const bottomPos = cotaMinYVal + cotaPct * (cotaMaxYVal - cotaMinYVal);
+          const labelY = 420 - bottomPos;
+
+          textEl.setAttribute('x', 0);
+          textEl.setAttribute('y', 0);
+          el.setAttribute('transform', `translate(${embalseX}, ${labelY - embalseY})`);
+
+          // Math approximation for background box to ensure 100% reliable sizing
+          const charCount = textEl.textContent.length;
+          const approxWidth = charCount * (embalseSize * 0.6);
+          const approxHeight = embalseSize * 1.1;
+
+          if (embalseBg) {
+            bgEl.style.display = 'block';
+            bgEl.setAttribute('x', -approxWidth / 2 - 5);
+            bgEl.setAttribute('y', -approxHeight / 2 - 2);
+            bgEl.setAttribute('width', approxWidth + 10);
+            bgEl.setAttribute('height', approxHeight + 4);
+          } else {
+            bgEl.style.display = 'none';
+          }
+
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
 
       // 8. Turbines Overlay Rendering
       const layout = turbineLayouts[plantKey];
@@ -1231,7 +1524,13 @@
           cotaMinY: cotaMinYSlider.value,
           cotaXMin: cotaXMinSlider.value,
           cotaXMax: cotaXMaxSlider.value,
-          water3d: water3dSlider.value
+          water3d: water3dSlider.value,
+          embalseX: embalseXSlider.value,
+          embalseY: embalseYSlider.value,
+          embalseBg: embalseBgSwitch.checked,
+          embalseSize: embalseSizeSlider.value,
+          cotaMinX: cotaMinXSlider.value,
+          cotaMinSize: cotaMinSizeSlider.value
         };
         localStorage.setItem('hydro_plant_configs', JSON.stringify(configs));
       } catch (e) {
@@ -1253,6 +1552,13 @@
     imgScaleSlider.addEventListener('input', updateCards);
     cotaMaxYSlider.addEventListener('input', updateCards);
     cotaMinYSlider.addEventListener('input', updateCards);
+    embalseXSlider.addEventListener('input', updateCards);
+    embalseYSlider.addEventListener('input', updateCards);
+    embalseSizeSlider.addEventListener('input', updateCards);
+    embalseBgSwitch.addEventListener('change', updateCards);
+    water3dSlider.addEventListener('input', updateCards);
+    cotaMinXSlider.addEventListener('input', updateCards);
+    cotaMinSizeSlider.addEventListener('input', updateCards);
     cotaXMinSlider.addEventListener('input', () => {
       const minVal = parseInt(cotaXMinSlider.value);
       const maxVal = parseInt(cotaXMaxSlider.value);

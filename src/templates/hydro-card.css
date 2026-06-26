@@ -28,7 +28,7 @@ body {
   justify-content: center;
   align-items: center;
   gap: 80px;
-  padding: 60px;
+  padding: 20px;
   min-height: 100vh;
 }
 
@@ -360,7 +360,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 50px;
+  gap: 20px;
   max-width: 1100px;
   width: 100%;
   justify-content: center;
@@ -375,12 +375,15 @@ body {
 
 .control-panel {
   width: 400px;
+  height: 600px;
+  margin-top: 36px; /* Align with the top of the card container, skipping the title header */
+  box-sizing: border-box;
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 24px;
+  padding: 0;
   color: #f3f4f6;
   font-family: 'Space Grotesk', sans-serif;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
@@ -388,6 +391,28 @@ body {
   flex-direction: column;
   gap: 20px;
   order: 2; /* Menu displays on the right */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for the entire control panel */
+.control-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.control-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 3px;
+  margin: 12px 0; /* don't overlap rounded border-radius */
+}
+
+.control-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.control-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .panel-header-compact {
@@ -395,7 +420,7 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 12px;
+  padding: 16px 16px 12px 16px;
 }
 
 .panel-title {
@@ -414,12 +439,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 0 16px;
 }
 
 .panel-sliders-grid {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 0 16px;
 }
 
 .form-group {
@@ -594,3 +621,74 @@ body {
   opacity: 0.22;
   filter: grayscale(1) brightness(0.6);
 }
+
+/* Slider Menu Sections */
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.4);
+  margin-bottom: 8px;
+}
+
+.panel-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #3b82f6; /* Accent blue */
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+/* Switch toggle switch styling */
+.switch-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.switch-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.switch-input {
+  appearance: none;
+  width: 44px;
+  height: 22px;
+  background-color: #334155;
+  border-radius: 9999px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.25s ease;
+}
+
+.switch-input:checked {
+  background-color: #3b82f6;
+}
+
+.switch-input::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  background-color: #ffffff;
+  transition: transform 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.switch-input:checked::before {
+  transform: translateX(22px);
+}
+
