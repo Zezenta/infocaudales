@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hydroelectric Plant Cards (Square Iterations)</title>
-  <link rel="stylesheet" href="/hydro-card.css">
+  <link rel="stylesheet" href="hydro-card.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -46,7 +46,7 @@
               Generación
               <span id="gen-badge" class="badge">0 MW</span>
             </label>
-            <input type="range" id="gen-slider" class="slider-range">
+            <input type="range" id="gen-slider" class="slider-range" step="0.01">
             <div class="slider-limits">
               <span>0 MW</span>
               <span id="gen-max-label">0 MW</span>
@@ -59,7 +59,7 @@
               Caudal de Ingreso
               <span id="flow-badge" class="badge">0 m³/s</span>
             </label>
-            <input type="range" id="flow-slider" class="slider-range">
+            <input type="range" id="flow-slider" class="slider-range" step="0.01">
             <div class="slider-limits">
               <span>0 m³/s</span>
               <span id="flow-max-label">0 m³/s</span>
@@ -753,6 +753,7 @@
       // Generation Slider Setup
       genSlider.min = 0;
       genSlider.max = plant.maxEnergyMW;
+      genSlider.step = '0.01';
       if (savedConfig && savedConfig.gen !== undefined) {
         genSlider.value = savedConfig.gen;
       } else {
@@ -781,6 +782,7 @@
       // Flow Slider Setup
       flowSlider.min = 0;
       flowSlider.max = plant.maxFlowM3s;
+      flowSlider.step = '0.01';
       if (savedConfig && savedConfig.flow !== undefined) {
         flowSlider.value = savedConfig.flow;
       } else {
@@ -792,6 +794,7 @@
       if (plant.minLevelMasl && plant.maxLevelMasl) {
         cotaSlider.min = plant.minLevelMasl;
         cotaSlider.max = plant.maxLevelMasl;
+        cotaSlider.step = '0.01';
         if (savedConfig && savedConfig.cota !== undefined) {
           cotaSlider.value = savedConfig.cota;
         } else {
@@ -1747,9 +1750,10 @@
         turbinesOverlay.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
         turbinesOverlay.style.gridTemplateColumns = `repeat(${layout.cols}, 1fr)`;
 
+        const basePath = window.location.protocol === 'file:' ? '../hydroelectric-drawings/' : '/hydroelectric-drawings/';
         const iconPath = layout.type === 'Pelton' 
-          ? '/hydroelectric-drawings/Turbina_Pelton.png' 
-          : '/hydroelectric-drawings/Turbina_Francis.png';
+          ? `${basePath}Turbina_Pelton.png` 
+          : `${basePath}Turbina_Francis.png`;
 
         let html = '';
         const totalTurbines = plant.maxTurbines;
@@ -2187,8 +2191,27 @@
       }
     });
 
-    // Initial Load
-    loadPlantControls();
+    // Initial Load: Auto-load saved configs from disk if available
+    (async function initConfig() {
+      try {
+        const res = await fetch('/api/load-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            if (data.data.plantConfigs) {
+              localStorage.setItem('hydro_plant_configs', JSON.stringify(data.data.plantConfigs));
+            }
+            if (data.data.globalThirds) {
+              localStorage.setItem('hydro_global_thirds', JSON.stringify(data.data.globalThirds));
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Auto-load config failed:', e);
+      } finally {
+        loadPlantControls();
+      }
+    })();
   </script>
 
   <!-- Small hot reload client -->
