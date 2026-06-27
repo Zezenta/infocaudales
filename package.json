@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/Zezenta/infocaudales#readme",
   "dependencies": {
+    "@xdevplatform/xdk": "^0.5.0",
     "axios": "^1.7.7",
     "cron": "^3.1.7",
     "dotenv": "^16.4.5",
