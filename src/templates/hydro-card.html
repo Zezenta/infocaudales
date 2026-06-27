@@ -424,6 +424,12 @@
         <button id="generate-all-btn" class="form-btn" style="width: 100%; padding: 10px; background-color: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#059669'" onmouseout="this.style.backgroundColor='#10b981'">
           Guardar Todos los Reportes (PNG)
         </button>
+        <button id="save-config-btn" class="form-btn" style="width: 100%; padding: 10px; background-color: #6366f1; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#4f46e5'" onmouseout="this.style.backgroundColor='#6366f1'">
+          Guardar configuración
+        </button>
+        <button id="load-config-btn" class="form-btn" style="width: 100%; padding: 10px; background-color: #8b5cf6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#7c3aed'" onmouseout="this.style.backgroundColor='#8b5cf6'">
+          Cargar configuración
+        </button>
         <div id="generation-status" style="font-size: 13px; text-align: center; font-weight: 500; min-height: 18px;"></div>
       </div>
     </div>
@@ -2200,6 +2206,89 @@
         loadPlantControls();
         generateBtn.disabled = false;
         generateAllBtn.disabled = false;
+      }
+    });
+
+    // Save/Load Configuration Click Handlers
+    const saveConfigBtn = document.getElementById('save-config-btn');
+    const loadConfigBtn = document.getElementById('load-config-btn');
+
+    saveConfigBtn.addEventListener('click', async () => {
+      statusMsg.style.color = '#e2e8f0';
+      statusMsg.textContent = 'Guardando configuración en disco...';
+      saveConfigBtn.disabled = true;
+      loadConfigBtn.disabled = true;
+
+      try {
+        const plantConfigs = JSON.parse(localStorage.getItem('hydro_plant_configs') || '{}');
+        const globalThirds = JSON.parse(localStorage.getItem('hydro_global_thirds') || '{}');
+        const payload = { plantConfigs, globalThirds };
+
+        const res = await fetch('/api/save-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          statusMsg.style.color = '#10b981';
+          statusMsg.textContent = '¡Configuración guardada en hydro-configs.json!';
+          setTimeout(() => {
+            statusMsg.textContent = '';
+          }, 5000);
+        } else {
+          throw new Error(data.error || 'Error desconocido');
+        }
+      } catch (err) {
+        statusMsg.style.color = '#ef4444';
+        statusMsg.textContent = `Error al guardar: ${err.message}`;
+      } finally {
+        saveConfigBtn.disabled = false;
+        loadConfigBtn.disabled = false;
+      }
+    });
+
+    loadConfigBtn.addEventListener('click', async () => {
+      statusMsg.style.color = '#e2e8f0';
+      statusMsg.textContent = 'Cargando configuración desde disco...';
+      saveConfigBtn.disabled = true;
+      loadConfigBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/load-config');
+        if (res.status === 404) {
+          throw new Error('No se encontró ningún archivo de configuración guardado.');
+        }
+        const data = await res.json();
+        if (data.success && data.data) {
+          const configData = data.data;
+          if (configData.plantConfigs) {
+            localStorage.setItem('hydro_plant_configs', JSON.stringify(configData.plantConfigs));
+          }
+          if (configData.globalThirds) {
+            localStorage.setItem('hydro_global_thirds', JSON.stringify(configData.globalThirds));
+          }
+          
+          // Reload the plant controls to reflect the loaded config
+          loadPlantControls();
+
+          statusMsg.style.color = '#10b981';
+          statusMsg.textContent = '¡Configuración cargada correctamente!';
+          setTimeout(() => {
+            statusMsg.textContent = '';
+          }, 5000);
+        } else {
+          throw new Error(data.error || 'Error al procesar los datos de configuración.');
+        }
+      } catch (err) {
+        statusMsg.style.color = '#ef4444';
+        statusMsg.textContent = `Error al cargar: ${err.message}`;
+      } finally {
+        saveConfigBtn.disabled = false;
+        loadConfigBtn.disabled = false;
       }
     });
 

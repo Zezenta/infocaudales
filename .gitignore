@@ -7,3 +7,4 @@ infos.txt
 nohup.out
 *.log
 generated/
+dist/

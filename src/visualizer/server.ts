@@ -69,6 +69,56 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+
+  // Handle Save Configuration endpoint
+  if (req.method === 'POST' && req.url === '/api/save-config') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body);
+        const configPath = path.join(__dirname, '..', '..', 'hydro-configs.json');
+        
+        fs.writeFile(configPath, JSON.stringify(payload, null, 2), 'utf8', (err) => {
+          if (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: err.message }));
+            return;
+          }
+          console.log(`[Visualizer] Saved configs to: ${configPath}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        });
+      } catch (error: any) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: error.message }));
+      }
+    });
+    return;
+  }
+
+  // Handle Load Configuration endpoint
+  if (req.method === 'GET' && req.url === '/api/load-config') {
+    const configPath = path.join(__dirname, '..', '..', 'hydro-configs.json');
+    if (!fs.existsSync(configPath)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Configuration file not found' }));
+      return;
+    }
+
+    fs.readFile(configPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, data: JSON.parse(data) }));
+    });
+    return;
+  }
   
   // Serve the HTML file
   if (req.url === '/' || req.url === '/index.html') {
