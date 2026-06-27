@@ -36,4 +36,19 @@ export interface HydroelectricPlant {
 
   // Which prediction model is mapped to this plant
   forecastSource: ForecastSource;
+
+  // Visualizer and report card rendering specifications
+  visualData?: {
+    drawingImage?: string;
+    defaultGen?: number;
+    defaultTurbines?: number;
+    defaultFlow?: number;
+    defaultCota?: number;
+    turbineGrid?: {
+      rows: number;
+      cols: number;
+      width: number;
+      height: number;
+    };
+  };
 }

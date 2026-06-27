@@ -612,114 +612,9 @@
     </div>
   </div>
 
+  <script src="/api/plants-config.js"></script>
   <script>
     const imageDimensionsCache = {};
-    const plantsData = {
-      mazar: {
-        name: 'Mazar',
-        maxEnergyMW: 170,
-        maxTurbines: 2,
-        maxFlowM3s: 150,
-        minLevelMasl: 2098,
-        maxLevelMasl: 2153,
-        defaultGen: 136,
-        defaultTurbines: 2,
-        defaultFlow: 85,
-        defaultCota: 2135.2,
-        drawingImage: '/hydroelectric-drawings/Mazar.png',
-        defaultTurbinesX: 150,
-        defaultTurbinesY: 250,
-        defaultTurbinesW: 80,
-        defaultTurbinesH: 45
-      },
-      molino: {
-        name: 'Molino',
-        maxEnergyMW: 1100,
-        maxTurbines: 10,
-        maxFlowM3s: 150,
-        minLevelMasl: 1975,
-        maxLevelMasl: 1991,
-        defaultGen: 913.23,
-        defaultTurbines: 8,
-        defaultFlow: 154.43,
-        defaultCota: 1987.74,
-        drawingImage: '/hydroelectric-drawings/Molino.png',
-        defaultTurbinesX: 200,
-        defaultTurbinesY: 280,
-        defaultTurbinesW: 180,
-        defaultTurbinesH: 70
-      },
-      sopladora: {
-        name: 'Sopladora',
-        maxEnergyMW: 487,
-        maxTurbines: 3,
-        maxFlowM3s: 100,
-        defaultGen: 350,
-        defaultTurbines: 2,
-        defaultFlow: 65,
-        drawingImage: '/hydroelectric-drawings/Sopladora.png',
-        defaultTurbinesX: 220,
-        defaultTurbinesY: 240,
-        defaultTurbinesW: 120,
-        defaultTurbinesH: 50
-      },
-      minasSanFrancisco: {
-        name: 'Minas San Francisco',
-        maxEnergyMW: 270,
-        maxTurbines: 3,
-        maxFlowM3s: 80,
-        minLevelMasl: 783,
-        maxLevelMasl: 792,
-        defaultGen: 180,
-        defaultTurbines: 2,
-        defaultFlow: 45,
-        defaultCota: 788.4,
-        drawingImage: '/hydroelectric-drawings/Minas_San_Francisco.png',
-        defaultTurbinesX: 250,
-        defaultTurbinesY: 260,
-        defaultTurbinesW: 120,
-        defaultTurbinesH: 50
-      },
-      cocaCodoSinclair: {
-        name: 'Coca Codo Sinclair',
-        maxEnergyMW: 1500,
-        maxTurbines: 8,
-        maxFlowM3s: 3000,
-        defaultGen: 1120,
-        defaultTurbines: 6,
-        defaultFlow: 620,
-        drawingImage: '/hydroelectric-drawings/Coca_Codo_Sinclair.png',
-        defaultTurbinesX: 220,
-        defaultTurbinesY: 280,
-        defaultTurbinesW: 160,
-        defaultTurbinesH: 75
-      },
-      agoyan: {
-        name: 'Agoyán',
-        maxEnergyMW: 120,
-        maxTurbines: 2,
-        maxFlowM3s: 120,
-        minLevelMasl: 1645,
-        maxLevelMasl: 1651,
-        defaultGen: 95,
-        defaultTurbines: 2,
-        defaultFlow: 80,
-        defaultCota: 1648.5,
-        drawingImage: '/hydroelectric-drawings/Agoyan.png',
-        defaultTurbinesX: 230,
-        defaultTurbinesY: 270,
-        defaultTurbinesW: 80,
-        defaultTurbinesH: 45
-      }
-    };
-
-    const turbineLayouts = {
-      molino: { rows: 2, cols: 5, type: 'Pelton', width: 160, height: 68 },
-      sopladora: { rows: 1, cols: 3, type: 'Francis', width: 110, height: 44 },
-      minasSanFrancisco: { rows: 1, cols: 3, type: 'Pelton', width: 110, height: 44 },
-      mazar: { rows: 1, cols: 2, type: 'Francis', width: 80, height: 44 },
-      agoyan: { rows: 1, cols: 2, type: 'Francis', width: 80, height: 44 }
-    };
 
     // DOM Elements
     const plantSelect = document.getElementById('plant-select');
@@ -867,7 +762,7 @@
 
       // Turbines Setup
       const turbinesSection = document.getElementById('turbines-section');
-      if (plant.maxTurbines && turbineLayouts[plantKey]) {
+      if (plant.maxTurbines && turbineLayouts[plantKey] && plantKey !== 'cocaCodoSinclair') {
         turbinesSection.style.display = 'flex';
         turbinesContainer.style.display = 'flex';
         turbinesSlider.min = 0;
@@ -1295,7 +1190,7 @@
       }
 
       // 4. Turbines
-      if (plant.maxTurbines && turbineLayouts[plantKey]) {
+      if (plant.maxTurbines && turbineLayouts[plantKey] && plantKey !== 'cocaCodoSinclair') {
         turbinesBadge.textContent = `${turbinesActive} / ${plant.maxTurbines}`;
         document.querySelectorAll('.turbines-col').forEach(el => {
           el.style.display = 'flex';

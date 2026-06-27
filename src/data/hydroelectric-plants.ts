@@ -13,6 +13,14 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxLevelMasl: 2153,
       turbineType: 'Francis',
     },
+    visualData: {
+      drawingImage: '/hydroelectric-drawings/Mazar.png',
+      defaultGen: 136,
+      defaultTurbines: 2,
+      defaultFlow: 85,
+      defaultCota: 2135.2,
+      turbineGrid: { rows: 1, cols: 2, width: 80, height: 44 }
+    },
     celec: {
       prefix: 'maz',
       flowId: '30538',
@@ -40,6 +48,14 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxLevelMasl: 1991,
       turbineType: 'Pelton',
     },
+    visualData: {
+      drawingImage: '/hydroelectric-drawings/Molino.png',
+      defaultGen: 913.23,
+      defaultTurbines: 8,
+      defaultFlow: 154.43,
+      defaultCota: 1987.74,
+      turbineGrid: { rows: 2, cols: 5, width: 160, height: 68 }
+    },
     celec: {
       prefix: 'mol',
       flowId: '24811',
@@ -64,6 +80,13 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxFlowM3s: 100,
       turbineType: 'Francis',
     },
+    visualData: {
+      drawingImage: '/hydroelectric-drawings/Sopladora.png',
+      defaultGen: 350,
+      defaultTurbines: 2,
+      defaultFlow: 65,
+      turbineGrid: { rows: 1, cols: 3, width: 110, height: 44 }
+    },
     celec: {
       prefix: 'sop',
       flowId: '90537',
@@ -87,6 +110,14 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxLevelMasl: 792,
       turbineType: 'Pelton',
     },
+    visualData: {
+      drawingImage: '/hydroelectric-drawings/Minas_San_Francisco.png',
+      defaultGen: 180,
+      defaultTurbines: 2,
+      defaultFlow: 45,
+      defaultCota: 788.4,
+      turbineGrid: { rows: 1, cols: 3, width: 110, height: 44 }
+    },
     celec: {
       prefix: 'msf',
       flowId: '650538',
@@ -107,6 +138,13 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxTurbines: 8,
       maxFlowM3s: 3000,
       turbineType: 'Pelton',
+    },
+    visualData: {
+      drawingImage: '/hydroelectric-drawings/Coca_Codo_Sinclair.png',
+      defaultGen: 1120,
+      defaultTurbines: 6,
+      defaultFlow: 620,
+      turbineGrid: { rows: 2, cols: 4, width: 160, height: 68 }
     },
     celec: {
       prefix: 'ccs',
@@ -129,8 +167,19 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
     forecastSource: 'hydropowers',
     physicalData: {
       maxEnergyMW: 120,
+      maxTurbines: 2,
       maxFlowM3s: 120,
+      minLevelMasl: 1645,
+      maxLevelMasl: 1651,
       turbineType: 'Francis',
+    },
+    visualData: {
+      drawingImage: '/hydroelectric-drawings/Agoyan.png',
+      defaultGen: 95,
+      defaultTurbines: 2,
+      defaultFlow: 80,
+      defaultCota: 1648.5,
+      turbineGrid: { rows: 1, cols: 2, width: 80, height: 44 }
     },
     celec: {
       prefix: 'ago',

@@ -1,6 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 
 const PORT = 3000;
 const TEMPLATE_DIR = path.join(__dirname, '..', 'templates');
@@ -10,7 +11,50 @@ const CSS_FILE = path.join(TEMPLATE_DIR, 'hydro-card.css');
 // Keep track of active SSE connections
 const clients: Set<http.ServerResponse> = new Set();
 
+function generatePlantsConfigScript() {
+  const plantsData: Record<string, any> = {};
+  const turbineLayouts: Record<string, any> = {};
+
+  for (const [key, plant] of Object.entries(hydroelectricPlants)) {
+    if (!plant.visualData) continue;
+    const phys = plant.physicalData || {};
+    const vis = plant.visualData;
+
+    plantsData[key] = {
+      name: plant.name,
+      maxEnergyMW: phys.maxEnergyMW,
+      maxTurbines: phys.maxTurbines,
+      maxFlowM3s: phys.maxFlowM3s,
+      minLevelMasl: phys.minLevelMasl,
+      maxLevelMasl: phys.maxLevelMasl,
+      defaultGen: vis.defaultGen,
+      defaultTurbines: vis.defaultTurbines,
+      defaultFlow: vis.defaultFlow,
+      defaultCota: vis.defaultCota,
+      drawingImage: vis.drawingImage,
+    };
+
+    if (vis.turbineGrid) {
+      turbineLayouts[key] = {
+        rows: vis.turbineGrid.rows,
+        cols: vis.turbineGrid.cols,
+        type: phys.turbineType || 'Francis',
+        width: vis.turbineGrid.width,
+        height: vis.turbineGrid.height
+      };
+    }
+  }
+
+  return `window.plantsData = ${JSON.stringify(plantsData, null, 2)};\nwindow.turbineLayouts = ${JSON.stringify(turbineLayouts, null, 2)};`;
+}
+
 const server = http.createServer((req, res) => {
+  // Serve dynamic plants configuration script
+  if (req.url === '/api/plants-config.js') {
+    res.writeHead(200, { 'Content-Type': 'application/javascript' });
+    res.end(generatePlantsConfigScript());
+    return;
+  }
   // Handle SSE endpoint
   if (req.url === '/sse') {
     res.writeHead(200, {
