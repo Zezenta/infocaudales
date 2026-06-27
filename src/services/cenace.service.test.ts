@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { CenaceService } from './cenace.service.js';
 
-describe('CenaceService - decodePlotlyArray', () => {
-  const service = new (CenaceService as any)(); // Cast as any to access private/protected helper methods
+describe('CenaceService - decodePlotlyArray & Helpers', () => {
+  const service = new (CenaceService as any)();
 
   it('should return the same array if a normal array of numbers is provided', () => {
     const input = [10.5, 20, 30.2, null];
@@ -41,5 +41,12 @@ describe('CenaceService - decodePlotlyArray', () => {
     expect(service.decodePlotlyArray(null)).toEqual([]);
     expect(service.decodePlotlyArray('not-an-object')).toEqual([]);
     expect(service.decodePlotlyArray({ dtype: 'f4' })).toEqual([]); // Unsupported float32
+  });
+
+  it('should resolve plant keys correctly from strings and objects', () => {
+    expect(service.resolvePlantKey('molino')).toBe('molino');
+    expect(service.resolvePlantKey({ name: 'Coca Codo Sinclair' })).toBe('cocaCodoSinclair');
+    expect(service.resolvePlantKey({ name: 'Sopladora' })).toBe('sopladora');
+    expect(service.resolvePlantKey({ name: 'Agoyán' })).toBe('agoyan');
   });
 });

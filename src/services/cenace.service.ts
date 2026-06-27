@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as https from 'https';
+import { HydroelectricPlant } from '../types/hydroelectric.js';
 
 // Type definitions for output values
 export interface SystemCurvePoint {
@@ -14,7 +15,7 @@ export interface SystemCurvePoint {
 
 export interface LiveProductionData {
   compositionMWh: Record<string, number>;      // Matrix share (e.g. { HYDRO: 22488, THERMAL: 2847 })
-  plantsAccumulatedMWh: Record<string, number>; // e.g. { cocaCodo: 6468, paute: 5402 }
+  plantsAccumulatedMWh: Record<string, number>; // e.g. { cocaCodoSinclair: 6468, molino: 5402 }
   generationCurve: SystemCurvePoint[];         // 30-min intervals of power curves (MW)
 }
 
@@ -46,13 +47,27 @@ export class CenaceService {
   private readonly agent = new https.Agent({ rejectUnauthorized: false });
 
   /**
+   * Request wrapper with automatic retries and exponential backoff
+   */
+  private async requestWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      if (retries <= 0) throw error;
+      console.warn(`[CenaceService] Request failed, retrying in ${delay}ms... (${retries} attempts left)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return this.requestWithRetry(fn, retries - 1, delay * 2);
+    }
+  }
+
+  /**
    * Main method to scrape the CENACE page and extract all Plotly datasets in order.
    */
   private async fetchPlotlyDatasets(): Promise<any[]> {
-    try {
+    return this.requestWithRetry(async () => {
       const response = await axios.get(this.url, {
         httpsAgent: this.agent,
-        timeout: 20000,
+        timeout: 25000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
@@ -71,15 +86,11 @@ export class CenaceService {
         }
       }
       return datasets;
-    } catch (error) {
-      console.error('[CenaceService] Failed to fetch CENACE HTML:', error);
-      throw error;
-    }
+    });
   }
 
   /**
    * Decodes Plotly base64-encoded float64 arrays into standard numeric arrays.
-   * Also maps float64 NaN/null representations to JS null.
    */
   private decodePlotlyArray(val: any): (number | null)[] {
     if (Array.isArray(val)) {
@@ -102,7 +113,6 @@ export class CenaceService {
 
     for (const trace of dataset) {
       if (trace.name && trace.y && trace.y.length > 0) {
-        // Normalizing names to camelCase for our domain config
         const rawName = trace.name.toLowerCase().trim();
         let key = rawName;
         if (rawName.includes('coca codo')) key = 'cocaCodoSinclair';
@@ -145,11 +155,9 @@ export class CenaceService {
     const curvePoints: SystemCurvePoint[] = [];
     if (!dataset || dataset.length === 0) return curvePoints;
 
-    // We take X values from the first trace to construct timestamps
     const times = dataset[0].x || [];
     if (times.length === 0) return curvePoints;
 
-    // Pre-extract and decode all traces
     const dataMap: Record<string, (number | null)[]> = {};
     for (const trace of dataset) {
       if (trace.name) {
@@ -172,6 +180,64 @@ export class CenaceService {
 
     return curvePoints;
   }
+
+  /**
+   * Resolves a plant argument (HydroelectricPlant object or string key) into a normalized string key.
+   */
+  private resolvePlantKey(plant: HydroelectricPlant | string): string {
+    if (typeof plant === 'string') return plant;
+    if (plant && plant.name) {
+      const name = plant.name.toLowerCase();
+      if (name.includes('coca codo')) return 'cocaCodoSinclair';
+      if (name.includes('molino') || name.includes('paute')) return 'molino';
+      if (name.includes('sopladora')) return 'sopladora';
+      if (name.includes('mazar')) return 'mazar';
+      if (name.includes('agoyán') || name.includes('agoyan')) return 'agoyan';
+      if (name.includes('minas')) return 'minasSanFrancisco';
+      return name;
+    }
+    return String(plant);
+  }
+
+  // --- PLANT SPECIFIC TARGETED METHODS (Celec-style API) ---
+
+  /**
+   * Fetches real-time accumulated energy output (MWh) for a specific hydroelectric plant.
+   */
+  public async fetchPlantProduction(plant: HydroelectricPlant | string): Promise<number | null> {
+    const key = this.resolvePlantKey(plant);
+    const live = await this.fetchRealTimeProduction();
+    return live.plantsAccumulatedMWh[key] ?? null;
+  }
+
+  /**
+   * Fetches yesterday's total energy output (MWh) for a specific hydroelectric plant.
+   */
+  public async fetchPlantYesterdayProduction(plant: HydroelectricPlant | string): Promise<number | null> {
+    const key = this.resolvePlantKey(plant);
+    const yesterday = await this.fetchYesterdayOperationalData();
+    return yesterday.plantsDailyTotalMWh[key] ?? null;
+  }
+
+  /**
+   * Fetches current monthly total energy output (MWh) for a specific hydroelectric plant.
+   */
+  public async fetchPlantMonthlyProduction(plant: HydroelectricPlant | string): Promise<number | null> {
+    const key = this.resolvePlantKey(plant);
+    const monthly = await this.fetchMonthlyAccumulatedData();
+    return monthly.plantsMonthlyTotalMWh[key] ?? null;
+  }
+
+  /**
+   * Fetches current yearly total energy output (GWh) for a specific hydroelectric plant.
+   */
+  public async fetchPlantYearlyProduction(plant: HydroelectricPlant | string): Promise<number | null> {
+    const key = this.resolvePlantKey(plant);
+    const yearly = await this.fetchYearlyAccumulatedData();
+    return yearly.plantsYearlyTotalGWh[key] ?? null;
+  }
+
+  // --- GLOBAL GRID SYSTEM METHODS ---
 
   /**
    * Tab 0: Scrapes real-time energy production and the 30-min system generation curves.
@@ -200,11 +266,10 @@ export class CenaceService {
 
     const cnelVsOthers = this.parseCompositionPieChart(datasets[4]);
     
-    // Parse demands by distributors
     const distributors: Record<string, number> = {};
     const trace = datasets[5]?.[0];
     if (trace && trace.x && trace.y) {
-      const decodedX = this.decodePlotlyArray(trace.x); // bar chart has MW on X axis
+      const decodedX = this.decodePlotlyArray(trace.x);
       for (let i = 0; i < trace.y.length; i++) {
         distributors[trace.y[i]] = decodedX[i] || 0;
       }
