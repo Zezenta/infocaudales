@@ -180,6 +180,7 @@ export async function generateReportCard(
 
       const flowSlider = document.getElementById('flow-slider') as HTMLInputElement;
       if (flowSlider && data.flow !== undefined) {
+        flowSlider.max = '10000';
         flowSlider.step = '0.01';
         flowSlider.value = String(data.flow);
       }

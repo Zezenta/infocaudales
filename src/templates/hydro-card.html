@@ -781,7 +781,7 @@
 
       // Flow Slider Setup
       flowSlider.min = 0;
-      flowSlider.max = plant.maxFlowM3s;
+      flowSlider.max = 10000;
       flowSlider.step = '0.01';
       if (savedConfig && savedConfig.flow !== undefined) {
         flowSlider.value = savedConfig.flow;

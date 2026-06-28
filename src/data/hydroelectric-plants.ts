@@ -166,7 +166,7 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
     isPauteComplex: false,
     forecastSource: 'hydropowers',
     physicalData: {
-      maxEnergyMW: 120,
+      maxEnergyMW: 156,
       maxTurbines: 2,
       maxFlowM3s: 120,
       minLevelMasl: 1645,

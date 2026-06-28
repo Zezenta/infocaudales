@@ -3,7 +3,7 @@ import * as https from 'https';
 import { HydroelectricPlant } from '../types/hydroelectric.js';
 
 export interface CelecPointValue {
-  timestamp: string; // ISO string
+  timestamp: string; // ISO string or loctimestamp
   value: number | null;
 }
 
@@ -12,14 +12,15 @@ export class CelecService {
   private readonly agent = new https.Agent({ rejectUnauthorized: false });
 
   /**
-   * Helper to format a Date into Ecuador (GMT-5) components
+   * Helper to format a Date into Ecuador (GMT-5) components and current local hour
    */
-  private getEcuadorDateParts(date: Date) {
+  public getEcuadorDateParts(date: Date = new Date()) {
     const ecDate = new Date(date.getTime() - 5 * 60 * 60 * 1000);
     const year = ecDate.getUTCFullYear().toString();
     const month = (ecDate.getUTCMonth() + 1).toString().padStart(2, '0');
     const day = ecDate.getUTCDate().toString().padStart(2, '0');
-    return { year, month, day };
+    const hora = ecDate.getUTCHours();
+    return { year, month, day, hora };
   }
 
   /**
@@ -38,12 +39,12 @@ export class CelecService {
 
   /**
    * Private low-level helper to query pointValues endpoint by raw mrid.
+   * CELEC returns items array ordered such that index (24 - hora) corresponds to the current local hour.
    */
   private async fetchPointValuesRaw(mrid: string, date: Date): Promise<CelecPointValue[]> {
     const { year, month, day } = this.getEcuadorDateParts(date);
     const fechaInicio = `${year}-${month}-${day}T06:00:00.000Z`;
     
-    // fechaFin is 23 hours later
     const startDateObj = new Date(fechaInicio);
     const endDateObj = new Date(startDateObj.getTime() + 23 * 60 * 60 * 1000);
     const fechaFin = endDateObj.toISOString();
@@ -63,7 +64,7 @@ export class CelecService {
       });
 
       const items = response.data?.items || [];
-      return items.slice().reverse().map((item: any) => ({
+      return items.map((item: any) => ({
         timestamp: item.loctimestamp,
         value: item.valueedit === null ? null : Number(item.valueedit)
       }));
@@ -101,7 +102,7 @@ export class CelecService {
   }
 
   /**
-   * Fetches daily energy generated (MWh) for a specific hydroelectric plant.
+   * Fetches daily energy generated (MW) for a specific hydroelectric plant.
    */
   public async fetchDailyEnergy(plant: HydroelectricPlant, date: Date = new Date()): Promise<CelecPointValue[]> {
     if (!plant.celec || !plant.celec.prefix) {
@@ -122,7 +123,7 @@ export class CelecService {
       });
 
       const items = response.data?.items || [];
-      return items.slice().reverse().map((item: any) => ({
+      return items.map((item: any) => ({
         timestamp: item.loctimestamp,
         value: item.valueedit === null ? null : Number(item.valueedit)
       }));
