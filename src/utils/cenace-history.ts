@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { CenaceService } from '../services/cenace.service.js';
 
 export interface CenaceHistoryRecord {
   timestamp: number;
@@ -35,5 +36,21 @@ export function saveCenaceHistory(record: CenaceHistoryRecord): void {
     fs.writeFileSync(HISTORY_FILE_PATH, JSON.stringify(trimmed, null, 2));
   } catch (err) {
     console.warn('[CenaceHistory] Failed to save CENACE history cache:', err);
+  }
+}
+
+/**
+ * Samples Coca Codo Sinclair's current accumulated MWh from CENACE and saves it to history.
+ */
+export async function recordCenaceBaseline(cenaceService: CenaceService): Promise<void> {
+  try {
+    const currentMWh = await cenaceService.fetchPlantProduction('cocaCodoSinclair');
+    if (currentMWh !== null && currentMWh > 0) {
+      const nowMs = Date.now();
+      saveCenaceHistory({ timestamp: nowMs, cocaCodoMWh: currentMWh });
+      console.log(`[CenaceHistory] Baseline recorded: ${currentMWh} MWh at ${new Date().toLocaleTimeString()}`);
+    }
+  } catch (err) {
+    console.warn(`[CenaceHistory] Failed to record CENACE baseline:`, err);
   }
 }

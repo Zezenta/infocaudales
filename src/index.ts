@@ -6,7 +6,7 @@ import { CenaceService } from './services/cenace.service.js';
 import { generateReportCard, TelemetryData } from './services/report-generator.service.js';
 import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
-import { readCenaceHistory, saveCenaceHistory } from './utils/cenace-history.js';
+import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline } from './utils/cenace-history.js';
 
 dotenv.config();
 
@@ -279,8 +279,20 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
 
 console.log('--------------------------------------------------');
 console.log('🤖 Infocaudales Bot Started');
-console.log('Schedule: 7:15 AM, 1:15 PM, 7:15 PM (America/Guayaquil)');
+console.log('CENACE Pre-Sampling Schedule: 6:15 AM, 12:15 PM, 6:15 PM');
+console.log('Publishing Schedule: 7:15 AM, 1:15 PM, 7:15 PM (America/Guayaquil)');
 console.log('--------------------------------------------------');
+
+const cenaceSamplingJob = new CronJob(
+  '15 6,12,18 * * *',
+  async () => {
+    console.log('\n[CronJob] Running pre-publication CENACE baseline sampling...');
+    await recordCenaceBaseline(cenaceService);
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
 
 const mainCronJob = new CronJob(
   '15 7,13,19 * * *',
@@ -292,6 +304,7 @@ const mainCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+cenaceSamplingJob.start();
 mainCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
