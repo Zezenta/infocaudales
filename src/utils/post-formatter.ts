@@ -1,5 +1,5 @@
 import { HydroelectricPlant } from '../types/hydroelectric.js';
-import { PlantTelemetryData } from '../index.js';
+import { TelemetryData } from '../services/report-generator.service.js';
 
 /**
  * Builds the exact social media text payload based on plant type and rules.
@@ -7,20 +7,21 @@ import { PlantTelemetryData } from '../index.js';
 export function buildMessageText(
   plant: HydroelectricPlant,
   plantKey: string,
-  telemetry: PlantTelemetryData,
+  telemetry: TelemetryData,
   nationalDemandMW?: number
 ): string {
   const maxEnergyMW = plant.physicalData?.maxEnergyMW ?? 100;
   const maxTurbines = plant.physicalData?.maxTurbines ?? 1;
   const minLevelMasl = plant.physicalData?.minLevelMasl;
 
+  const flow3hAgo = telemetry.flow3hAgo ?? telemetry.flow;
   let deltaCaudal = 0;
-  if (telemetry.flow3hAgo === 0) {
+  if (flow3hAgo === 0) {
     deltaCaudal = telemetry.flow > 0 ? 100 : 0;
   } else {
-    deltaCaudal = ((telemetry.flow - telemetry.flow3hAgo) / telemetry.flow3hAgo) * 100;
+    deltaCaudal = ((telemetry.flow - flow3hAgo) / flow3hAgo) * 100;
   }
-  const signoCaudal = telemetry.flow >= telemetry.flow3hAgo ? '+' : '-';
+  const signoCaudal = telemetry.flow >= flow3hAgo ? '+' : '-';
   const caudalStr = `🌊Caudal: ${telemetry.flow.toFixed(2)} m³/s\n${signoCaudal}${Math.abs(deltaCaudal).toFixed(2)}% desde hace 3h`;
 
   const trabajoEnergia = (telemetry.gen / maxEnergyMW) * 100;

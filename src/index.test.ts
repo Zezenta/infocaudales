@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
-import { TARGET_PLANT_KEYS, fetchTelemetry, buildMessageText } from './index.js';
+import { TARGET_PLANT_KEYS, fetchTelemetry } from './index.js';
+import { buildMessageText } from './utils/post-formatter.js';
 import { generateReportCard } from './services/report-generator.service.js';
 
 describe('Main Bot Pipeline (Dry Run Integration Test)', () => {

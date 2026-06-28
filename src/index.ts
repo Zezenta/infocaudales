@@ -3,7 +3,7 @@ import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
 import { CelecService, CelecPointValue } from './services/celec.service.js';
 import { CenaceService } from './services/cenace.service.js';
-import { generateReportCard } from './services/report-generator.service.js';
+import { generateReportCard, TelemetryData } from './services/report-generator.service.js';
 import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
 import { readCenaceHistory, saveCenaceHistory } from './utils/cenace-history.js';
@@ -14,7 +14,7 @@ const celecService = new CelecService();
 const cenaceService = new CenaceService();
 const xService = new XService();
 
-export class DataPendingError extends Error {
+class DataPendingError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'DataPendingError';
@@ -30,15 +30,6 @@ export const TARGET_PLANT_KEYS = [
   'minasSanFrancisco',
   'agoyan'
 ];
-
-export interface PlantTelemetryData {
-  gen: number;
-  flow: number;
-  flow3hAgo: number;
-  cota?: number;
-  turbines?: number;
-  timestamp: Date;
-}
 
 /**
  * Helper to safely extract point value and timestamp from CELEC arrays.
@@ -73,7 +64,7 @@ function extractCelecPoint(
  * Fetches real-time telemetry data for a specific plant.
  * Supports retry validation when requireTargetHour is true.
  */
-export async function fetchTelemetry(plantKey: string, requireTargetHour: boolean = false): Promise<PlantTelemetryData> {
+export async function fetchTelemetry(plantKey: string, requireTargetHour: boolean = false): Promise<TelemetryData> {
   const plant = hydroelectricPlants[plantKey];
   if (!plant) throw new Error(`Plant ${plantKey} not found in configuration`);
 
@@ -204,8 +195,6 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
   };
 }
 
-export { buildMessageText } from './utils/post-formatter.js';
-
 /**
  * Runs the reporting publishing cycle for specified target plants with pending retries.
  */
@@ -243,7 +232,7 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
 
     console.log(`[Bot] Processing ${i + 1}/${targetPlantKeys.length}: ${plant.name}...`);
     
-    let telemetry: PlantTelemetryData | null = null;
+    let telemetry: TelemetryData | null = null;
     const maxRetries = isForcePublish ? 1 : 6;
     const retryDelayMs = 5 * 60 * 1000;
 
@@ -268,7 +257,8 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
         const messageText = buildMessageText(plant, plantKey, telemetry, nationalDemandMW);
         const imageBuffer = await generateReportCard(plantKey, telemetry);
 
-        console.log(`[Bot] Publishing report card for ${plant.name} to X (Data Timestamp: ${telemetry.timestamp.toLocaleTimeString()})...`);
+        const timeStr = (telemetry.timestamp ?? new Date()).toLocaleTimeString();
+        console.log(`[Bot] Publishing report card for ${plant.name} to X (Data Timestamp: ${timeStr})...`);
         await xService.postTweet(messageText, imageBuffer);
         console.log(`[Bot] Successfully published ${plant.name}!`);
       } catch (error) {

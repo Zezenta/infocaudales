@@ -7,6 +7,7 @@ export interface TelemetryData {
   gen: number;
   turbines?: number;
   flow: number;
+  flow3hAgo?: number;
   cota?: number;
   timestamp?: Date;
 }

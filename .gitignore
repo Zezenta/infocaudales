@@ -8,3 +8,4 @@ nohup.out
 *.log
 generated/
 dist/
+*cenace-history.json
