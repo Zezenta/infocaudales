@@ -22,7 +22,7 @@ jobs:
             echo "🚀 Starting Infocaudales deployment..."
             
             # Navigate to project directory (update path if different on VPS)
-            cd /var/www/infocaudales
+            cd /home/Projects/infocaudales
             
             # Fetch latest changes and reset working directory
             git fetch origin master
