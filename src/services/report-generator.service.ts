@@ -23,7 +23,7 @@ async function getBrowser(): Promise<Browser> {
   if (!browserInstance || !browserInstance.connected) {
     browserInstance = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--allow-file-access-from-files', '--enable-local-file-accesses']
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--allow-file-access-from-files', '--enable-local-file-accesses']
     });
   }
   return browserInstance;
