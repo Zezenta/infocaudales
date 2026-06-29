@@ -3,6 +3,7 @@ node_modules
 test.js
 index.html
 *.png
+!src/hydroelectric-drawings/**
 infos.txt
 nohup.out
 *.log
