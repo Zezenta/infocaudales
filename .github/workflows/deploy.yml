@@ -1,0 +1,39 @@
+name: Deploy Infocaudales Bot to VPS
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH & Reload PM2
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            echo "🚀 Starting Infocaudales deployment..."
+            
+            # Navigate to project directory (update path if different on VPS)
+            cd /var/www/infocaudales
+            
+            # Fetch latest changes and reset working directory
+            git fetch origin master
+            git reset --hard origin/master
+            
+            # Install production dependencies and compile TypeScript
+            npm ci
+            npm run build
+            
+            # Atomically start or reload PM2 process using ecosystem config
+            pm2 startOrReload ecosystem.config.js --env production
+            pm2 save
+            
+            echo "✅ Infocaudales Bot successfully deployed & PM2 reloaded on $(date)"
