@@ -32,8 +32,8 @@ jobs:
             npm ci
             npm run build
             
-            # Atomically start or reload PM2 process using ecosystem config
-            pm2 startOrReload ecosystem.config.js --env production
+            # Start or reload PM2 process using ecosystem config
+            pm2 startOrReload ecosystem.config.js --env production || pm2 restart ecosystem.config.js --env production
             pm2 save
             
             echo "✅ Infocaudales Bot successfully deployed & PM2 reloaded on $(date)"
