@@ -89,6 +89,19 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
       if (flowResult.timestamp) telemetryTimestamp = flowResult.timestamp;
     }
 
+    // Contingency for Coca Codo Sinclair: if read flow is 0 m³/s, fallback to current day's latest non-zero flow
+    if (plantKey === 'cocaCodoSinclair' && flow === 0) {
+      console.warn(`[Index] Coca Codo Sinclair flow is 0 m³/s. Searching current day for latest non-zero flow...`);
+      for (let i = targetIdx; i < flowPointsToday.length; i++) {
+        const pVal = flowPointsToday[i]?.value;
+        if (pVal !== null && pVal !== undefined && pVal > 0) {
+          flow = pVal;
+          console.log(`[Index] Contingency applied: using current day's non-zero flow (${flow} m³/s) for Coca Codo Sinclair.`);
+          break;
+        }
+      }
+    }
+
     // Extract 3h ago flow
     if (hora >= 4) {
       const idx3h = 24 - hora + 3;
