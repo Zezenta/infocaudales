@@ -1,0 +1,440 @@
+/* Font face registrations for DejaVu Sans Mono */
+@font-face {
+  font-family: 'DejaVu Sans Mono';
+  src: url('/fonts/DejaVuSansMono.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'DejaVu Sans Mono';
+  src: url('/fonts/DejaVuSansMono-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+/* Global Reset & Page background */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0c0f17;
+  color: #f3f4f6;
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 0;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  min-height: 100vh;
+}
+
+.page-title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-badge {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.page-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   DAILY REPORT CARD CANVAS CONTAINER (FixedWidth 900px for high-res export)
+   ========================================================================== */
+.daily-report-card {
+  width: 900px;
+  background-color: #080c14;
+  border: 3px solid #1e293b;
+  border-radius: 16px;
+  padding: 28px 32px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header Section */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #1e293b;
+  padding-bottom: 20px;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-subtitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.report-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.report-date {
+  font-size: 18px;
+  font-weight: 600;
+  color: #00b0ff;
+  font-family: 'Space Grotesk', sans-serif;
+  margin-top: 2px;
+}
+
+.report-watermark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.x-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+}
+
+/* Column Header Titles for the Grid */
+.grid-header-row {
+  display: grid;
+  grid-template-columns: 210px 220px 130px 204px;
+  gap: 12px;
+  align-items: center;
+  padding: 0 16px 8px 16px;
+  border-bottom: 1px dashed #1e293b;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.col-center {
+  text-align: center;
+}
+
+/* Plant Leaderboard Rows Container */
+.plants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plant-row-card {
+  display: grid;
+  grid-template-columns: 210px 220px 130px 204px;
+  gap: 12px;
+  align-items: center;
+  background: #0c111c;
+  border: 1.5px solid #1e293b;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s;
+}
+
+.plant-row-card:hover {
+  border-color: #3b82f6;
+}
+
+/* Column 1: Plant Identity & Rank */
+.plant-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plant-name-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rank-number {
+  font-family: 'DejaVu Sans Mono', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.05);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-top {
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.1);
+}
+
+.plant-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.1;
+}
+
+.plant-metrics-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-text {
+  font-size: 13px;
+  color: #94a3b8;
+  font-family: 'DejaVu Sans Mono', monospace;
+}
+
+.metric-highlight {
+  color: #00e676;
+  font-weight: bold;
+}
+
+/* Column 2 & 4: Sparkline Chart Containers */
+.chart-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #64748b;
+  font-family: 'DejaVu Sans Mono', monospace;
+}
+
+.chart-title-tag {
+  font-weight: bold;
+}
+
+.chart-val-current {
+  font-weight: bold;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 54px;
+  overflow: visible;
+}
+
+.spark-grid-line {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.spark-line-gen {
+  fill: none;
+  stroke: #00e676;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spark-area-gen {
+  fill: url(#gen-gradient);
+  opacity: 0.15;
+}
+
+.spark-line-cota {
+  fill: none;
+  stroke: #00b0ff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spark-area-cota {
+  fill: url(#cota-gradient);
+  opacity: 0.15;
+}
+
+.spark-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #475569;
+  font-family: 'DejaVu Sans Mono', monospace;
+  margin-top: 2px;
+}
+
+/* Column 3: Capacity Battery Status */
+.battery-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cap-percent-text {
+  font-size: 16px;
+  font-weight: bold;
+  font-family: 'DejaVu Sans Mono', monospace;
+  color: #00e676;
+}
+
+.vert-battery-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vert-battery-cap {
+  width: 14px;
+  height: 4px;
+  background-color: #475569;
+  border-radius: 2px 2px 0 0;
+}
+
+.vert-battery-body {
+  width: 32px;
+  height: 64px;
+  border: 2.5px solid #475569;
+  background: #080c14;
+  border-radius: 4px;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.vert-battery-fill {
+  width: 100%;
+  background: #00e676;
+  border-radius: 1px;
+  transition: height 0.3s ease;
+}
+
+/* Summary Footer Bar */
+.report-footer-summary {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 2px solid #334155;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.summary-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summary-main-val {
+  font-size: 26px;
+  font-weight: 700;
+  font-family: 'DejaVu Sans Mono', monospace;
+  color: #ffffff;
+}
+
+.summary-highlight {
+  color: #00e676;
+}
+
+.summary-sub-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+  font-family: 'Space Grotesk', sans-serif;
+  margin-top: 2px;
+}
+
+.summary-sub-text .summary-highlight {
+  font-family: 'DejaVu Sans Mono', monospace;
+  font-weight: bold;
+}
+
+.summary-battery-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.horiz-battery-body {
+  width: 220px;
+  height: 32px;
+  border: 3px solid #475569;
+  background: #080c14;
+  border-radius: 6px;
+  padding: 3px;
+  display: flex;
+}
+
+.horiz-battery-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00b0ff 0%, #00e676 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
+}
+
+.horiz-battery-cap {
+  width: 8px;
+  height: 16px;
+  background-color: #475569;
+  border-radius: 0 3px 3px 0;
+}

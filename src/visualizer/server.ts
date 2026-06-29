@@ -177,13 +177,42 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  
-  // Serve the CSS file
+
+  // Serve Daily Report HTML
+  if (req.url === '/daily' || req.url === '/daily-report.html') {
+    const dailyHtmlPath = path.join(TEMPLATE_DIR, 'daily-report.html');
+    fs.readFile(dailyHtmlPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading daily report HTML');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+  }
+
+  // Serve the CSS files
   if (req.url === '/hydro-card.css') {
     fs.readFile(CSS_FILE, 'utf8', (err, data) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('Error loading template CSS');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/css' });
+      res.end(data);
+    });
+    return;
+  }
+
+  if (req.url === '/daily-report.css') {
+    const dailyCssPath = path.join(TEMPLATE_DIR, 'daily-report.css');
+    fs.readFile(dailyCssPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading daily report CSS');
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/css' });
@@ -235,7 +264,7 @@ fs.watch(TEMPLATE_DIR, (eventType, filename) => {
   if (!filename) return;
   
   // Only trigger for the actual template files
-  if (filename !== 'hydro-card.html' && filename !== 'hydro-card.css') {
+  if (filename !== 'hydro-card.html' && filename !== 'hydro-card.css' && filename !== 'daily-report.html' && filename !== 'daily-report.css') {
     return;
   }
   

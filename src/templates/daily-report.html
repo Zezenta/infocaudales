@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte Diario Hidroeléctrico - Visualizador</title>
+  <link rel="stylesheet" href="/daily-report.css">
+</head>
+<body>
+
+  <div class="page-title-container">
+    <div class="page-badge">PROTOTIPO VISUALIZADOR</div>
+    <div class="page-heading">Reporte Diario Consolidado</div>
+  </div>
+
+  <!-- SVG Gradients Definition for Sparklines -->
+  <svg style="height: 0; width: 0; position: absolute;" aria-hidden="true">
+    <defs>
+      <linearGradient id="gen-gradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#00e676" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#00e676" stop-opacity="0.0"/>
+      </linearGradient>
+      <linearGradient id="cota-gradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#00b0ff" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#00b0ff" stop-opacity="0.0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- DAILY REPORT CARD CONTAINER (900px width for high quality screenshot) -->
+  <div class="daily-report-card" id="daily-report-card">
+    
+    <!-- HEADER -->
+    <div class="report-header">
+      <div class="header-titles">
+        <div class="report-subtitle">REPORTE DIARIO DE GENERACIÓN</div>
+        <div class="report-title">Complejo Hidroeléctrico Nacional</div>
+        <div class="report-date" id="report-date-str">Lunes, 29 de junio del 2026</div>
+      </div>
+      <div class="report-watermark">
+        <div class="x-icon-box">
+          <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </div>
+        <span>@Hidro_Info_Bot</span>
+      </div>
+    </div>
+
+    <!-- GRID HEADERS -->
+    <div class="grid-header-row">
+      <div>Planta / Capacidad</div>
+      <div class="col-center">Generación 24h (MW)</div>
+      <div class="col-center">Factor Carga</div>
+      <div class="col-center">Cota / Caudal 24h</div>
+    </div>
+
+    <!-- PLANTS LIST CONTAINER -->
+    <div class="plants-list" id="plants-list">
+      <!-- Dynamic Rows inserted via JavaScript mock data -->
+    </div>
+
+    <!-- SUMMARY FOOTER -->
+    <div class="report-footer-summary">
+      <div class="summary-text-group">
+        <div class="summary-label">Producción Nacional Acumulada Hoy</div>
+        <div class="summary-main-val">
+          <span id="total-mwh-val">42,850.50</span> MWh 
+          <span class="summary-highlight">(<span id="total-percent-val">68.4%</span> del máximo)</span>
+        </div>
+        <div class="summary-sub-text">
+          Produjeron <span class="summary-highlight" id="national-share-val">65.31%</span> de la energía utilizada a nivel nacional
+        </div>
+      </div>
+      <div class="summary-battery-wrapper">
+        <div class="horiz-battery-body">
+          <div class="horiz-battery-fill" id="total-battery-fill" style="width: 68.4%;"></div>
+        </div>
+        <div class="horiz-battery-cap"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Live reloading via SSE
+    const evtSource = new EventSource('/sse');
+    evtSource.onmessage = function(e) {
+      if (e.data === 'reload') {
+        location.reload();
+      }
+    };
+
+    // Mock Data for the 6 Hydroelectric Plants
+    const MOCK_PLANTS = [
+      {
+        key: 'cocaCodoSinclair',
+        name: 'Coca Codo Sinclair',
+        maxMW: 1500,
+        todayMWh: 18450,
+        factor: 78.5,
+        cotaUnit: 'm³/s',
+        cotaName: 'Caudal',
+        genHistory: [620, 680, 750, 810, 950, 1100, 1250, 1300, 1280, 1200, 1150, 1100, 1050, 1120, 1200, 1280, 1350, 1380, 1310, 1200, 1100, 950, 800, 720],
+        cotaHistory: [280, 290, 310, 340, 380, 420, 450, 460, 440, 410, 390, 380, 370, 390, 410, 430, 460, 470, 450, 420, 390, 350, 320, 300]
+      },
+      {
+        key: 'molino',
+        name: 'Paute Molino',
+        maxMW: 1100,
+        todayMWh: 14200,
+        factor: 71.2,
+        cotaUnit: 'msnm',
+        cotaName: 'Cota',
+        genHistory: [500, 450, 380, 350, 420, 580, 720, 850, 900, 880, 850, 820, 800, 840, 890, 920, 950, 940, 900, 850, 780, 700, 620, 550],
+        cotaHistory: [1981.5, 1981.8, 1982.1, 1982.4, 1982.8, 1983.1, 1983.5, 1983.9, 1984.2, 1984.4, 1984.6, 1984.8, 1985.1, 1985.3, 1985.5, 1985.8, 1986.0, 1986.2, 1986.3, 1986.4, 1986.5, 1986.5, 1986.6, 1986.7]
+      },
+      {
+        key: 'sopladora',
+        name: 'Sopladora',
+        maxMW: 487,
+        todayMWh: 6120,
+        factor: 69.8,
+        cotaUnit: 'm³/s',
+        cotaName: 'Caudal',
+        genHistory: [220, 200, 180, 170, 210, 290, 360, 410, 430, 420, 400, 390, 380, 400, 420, 440, 450, 440, 420, 390, 350, 310, 270, 240],
+        cotaHistory: [140, 135, 130, 128, 145, 175, 190, 205, 210, 205, 195, 190, 185, 195, 205, 215, 220, 215, 205, 190, 175, 160, 150, 142]
+      },
+      {
+        key: 'mazar',
+        name: 'Mazar',
+        maxMW: 170,
+        todayMWh: 2180,
+        factor: 53.4,
+        cotaUnit: 'msnm',
+        cotaName: 'Cota',
+        genHistory: [80, 60, 40, 30, 50, 90, 120, 140, 150, 145, 140, 135, 130, 135, 145, 150, 155, 150, 140, 130, 110, 95, 85, 75],
+        cotaHistory: [2138.2, 2138.3, 2138.4, 2138.5, 2138.6, 2138.7, 2138.9, 2139.1, 2139.3, 2139.5, 2139.7, 2139.8, 2140.0, 2140.1, 2140.3, 2140.5, 2140.7, 2140.8, 2140.9, 2141.0, 2141.1, 2141.2, 2141.2, 2141.3]
+      },
+      {
+        key: 'minasSanFrancisco',
+        name: 'Minas San Francisco',
+        maxMW: 270,
+        todayMWh: 3410,
+        factor: 52.6,
+        cotaUnit: 'msnm',
+        cotaName: 'Cota',
+        genHistory: [110, 90, 70, 60, 80, 130, 180, 210, 230, 220, 210, 200, 190, 200, 220, 235, 240, 230, 210, 190, 160, 140, 125, 115],
+        cotaHistory: [782.1, 782.2, 782.3, 782.4, 782.5, 782.7, 782.9, 783.1, 783.3, 783.5, 783.6, 783.7, 783.8, 783.9, 784.0, 784.1, 784.2, 784.3, 784.3, 784.4, 784.4, 784.5, 784.5, 784.5]
+      },
+      {
+        key: 'agoyan',
+        name: 'Agoyán',
+        maxMW: 156,
+        todayMWh: 2120,
+        factor: 56.6,
+        cotaUnit: 'msnm',
+        cotaName: 'Cota',
+        genHistory: [70, 60, 50, 45, 55, 85, 110, 130, 135, 130, 125, 120, 115, 120, 130, 135, 140, 135, 125, 115, 100, 90, 80, 75],
+        cotaHistory: [1648.2, 1648.3, 1648.4, 1648.5, 1648.6, 1648.7, 1648.9, 1649.1, 1649.2, 1649.3, 1649.4, 1649.5, 1649.6, 1649.7, 1649.8, 1649.9, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0]
+      }
+    ];
+
+    function createSparkline(dataArray, strokeClass, areaGradientId) {
+      const min = Math.min(...dataArray);
+      const max = Math.max(...dataArray);
+      const range = (max - min) || 1;
+      
+      const width = 190;
+      const height = 44;
+      const padding = 4;
+
+      const points = dataArray.map((val, idx) => {
+        const x = padding + (idx / (dataArray.length - 1)) * (width - 2 * padding);
+        const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+
+      const pathD = 'M ' + points.join(' L ');
+      const firstX = padding;
+      const lastX = width - padding;
+      const areaD = `${pathD} L ${lastX},${height} L ${firstX},${height} Z`;
+
+      return `
+        <svg class="chart-svg" viewBox="0 0 ${width} ${height}">
+          <line x1="0" y1="11" x2="${width}" y2="11" class="spark-grid-line" />
+          <line x1="0" y1="22" x2="${width}" y2="22" class="spark-grid-line" />
+          <line x1="0" y1="33" x2="${width}" y2="33" class="spark-grid-line" />
+          <path d="${areaD}" fill="url(#${areaGradientId})" opacity="0.2" />
+          <path d="${pathD}" class="${strokeClass}" />
+        </svg>
+      `;
+    }
+
+    function renderPlants() {
+      const container = document.getElementById('plants-list');
+      container.innerHTML = '';
+
+      let totalMWhSum = 0;
+      let totalMaxMWhSum = 0;
+
+      MOCK_PLANTS.forEach((plant, idx) => {
+        totalMWhSum += plant.todayMWh;
+        totalMaxMWhSum += (plant.maxMW * 24);
+
+        const currentGen = plant.genHistory[plant.genHistory.length - 1];
+        const currentCota = plant.cotaHistory[plant.cotaHistory.length - 1];
+
+        const genChartSvg = createSparkline(plant.genHistory, 'spark-line-gen', 'gen-gradient');
+        const cotaChartSvg = createSparkline(plant.cotaHistory, 'spark-line-cota', 'cota-gradient');
+
+        const cardHtml = `
+          <div class="plant-row-card">
+            
+            <!-- COL 1: PLANT INFO -->
+            <div class="plant-info-col">
+              <div class="plant-name-badge">
+                <span class="rank-number ${idx === 0 ? 'rank-top' : ''}">#${idx + 1}</span>
+                <span class="plant-title">${plant.name}</span>
+              </div>
+              <div class="plant-metrics-meta">
+                <div class="metric-text">Max: <strong>${plant.maxMW} MW</strong></div>
+                <div class="metric-text">Hoy: <span class="metric-highlight">${plant.todayMWh.toLocaleString()} MWh</span></div>
+              </div>
+            </div>
+
+            <!-- COL 2: GENERACIÓN CHART -->
+            <div class="chart-box">
+              <div class="chart-header">
+                <span class="chart-title-tag">GENERACIÓN (24H)</span>
+                <span class="chart-val-current" style="color: #00e676;">${currentGen} MW</span>
+              </div>
+              ${genChartSvg}
+              <div class="spark-axis-labels">
+                <span>00:00</span>
+                <span>12:00</span>
+                <span>24:00</span>
+              </div>
+            </div>
+
+            <!-- COL 3: BATTERY CAP -->
+            <div class="battery-col">
+              <span class="cap-percent-text">${plant.factor.toFixed(1)}%</span>
+              <div class="vert-battery-container">
+                <div class="vert-battery-cap"></div>
+                <div class="vert-battery-body">
+                  <div class="vert-battery-fill" style="height: ${plant.factor}%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COL 4: COTA / CAUDAL CHART -->
+            <div class="chart-box">
+              <div class="chart-header">
+                <span class="chart-title-tag">${plant.cotaName.toUpperCase()} (${plant.cotaUnit})</span>
+                <span class="chart-val-current" style="color: #00b0ff;">${currentCota} ${plant.cotaUnit}</span>
+              </div>
+              ${cotaChartSvg}
+              <div class="spark-axis-labels">
+                <span>00:00</span>
+                <span>12:00</span>
+                <span>24:00</span>
+              </div>
+            </div>
+
+          </div>
+        `;
+        container.innerHTML += cardHtml;
+      });
+
+      // Update Summary Totals
+      const overallPercent = (totalMWhSum / totalMaxMWhSum) * 100;
+      const nationalShare = 65.31; // Mock percentage of total national demand supplied by hydro
+      document.getElementById('total-mwh-val').innerText = totalMWhSum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('total-percent-val').innerText = overallPercent.toFixed(1) + '%';
+      document.getElementById('national-share-val').innerText = nationalShare.toFixed(2) + '%';
+      document.getElementById('total-battery-fill').style.width = overallPercent.toFixed(1) + '%';
+    }
+
+    renderPlants();
+  </script>
+</body>
+</html>
