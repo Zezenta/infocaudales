@@ -726,8 +726,9 @@
       dateInput.value = savedLastDate;
     } else {
       const now = new Date();
-      const tzOffset = now.getTimezoneOffset() * 60000;
-      const localISOTime = (new Date(now - tzOffset)).toISOString().slice(0, 16);
+      // Ecuador is always UTC-5 (+300 minutes offset from UTC)
+      const tzOffset = 300 * 60000;
+      const localISOTime = (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
       dateInput.value = localISOTime;
     }
 

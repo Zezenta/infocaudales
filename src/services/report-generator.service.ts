@@ -196,7 +196,8 @@ export async function generateReportCard(
         const dateInput = document.getElementById('date-input') as HTMLInputElement;
         if (dateInput) {
           const dt = new Date(data.timestamp);
-          const tzOffset = dt.getTimezoneOffset() * 60000;
+          // Ecuador is always UTC-5 (+300 minutes offset from UTC)
+          const tzOffset = 300 * 60000;
           const localISO = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16);
           dateInput.value = localISO;
         }
