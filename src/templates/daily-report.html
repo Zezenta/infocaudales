@@ -27,66 +27,159 @@
     </defs>
   </svg>
 
-  <!-- DAILY REPORT CARD CONTAINER (900px width for high quality screenshot) -->
-  <div class="daily-report-card" id="daily-report-card">
+  <div class="main-layout">
     
-    <!-- HEADER -->
-    <div class="report-header">
-      <div class="header-titles">
-        <div class="report-subtitle">REPORTE DIARIO DE GENERACIÓN</div>
-        <div class="report-title">Complejo Hidroeléctrico Nacional</div>
-        <div class="report-date" id="report-date-str">Lunes, 29 de junio del 2026</div>
-      </div>
-      <div class="report-watermark">
-        <div class="x-icon-box">
-          <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
+    <!-- LEFT COLUMN: The Report Card -->
+    <div class="cards-column">
+      <!-- DAILY REPORT CARD CONTAINER (900px width for high quality screenshot) -->
+      <div class="daily-report-card" id="daily-report-card">
+        
+        <!-- HEADER -->
+        <div class="report-header">
+          <div class="header-titles">
+            <div class="report-subtitle">REPORTE DIARIO DE GENERACIÓN</div>
+            <div class="report-title">Complejo Hidroeléctrico Nacional</div>
+            <div class="report-date" id="report-date-str">Lunes, 29 de junio del 2026</div>
+          </div>
+          <div class="report-watermark">
+            <div class="x-icon-box">
+              <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </div>
+            <span>@Hidro_Info_Bot</span>
+          </div>
         </div>
-        <span>@Hidro_Info_Bot</span>
+
+        <!-- GRID HEADERS -->
+        <div class="grid-header-row">
+          <div>Planta / Capacidad</div>
+          <div class="col-center">Generación 24h (MW)</div>
+          <div class="col-center">% de su máximo</div>
+          <div class="col-center">Caudal 24h</div>
+        </div>
+
+        <!-- PLANTS LIST CONTAINER -->
+        <div class="plants-list" id="plants-list">
+          <!-- Dynamic Rows inserted via JavaScript mock data -->
+        </div>
+
+        <!-- SUMMARY FOOTER -->
+        <div class="report-footer-summary">
+          <div class="summary-text-group">
+            <div class="summary-label">Producción Nacional Acumulada Hoy</div>
+            <div class="summary-main-val">
+              <span id="total-mwh-val">46,480.00</span> MWh 
+              <span class="summary-highlight">(<span id="total-percent-val">52.6%</span> de su máximo)</span>
+            </div>
+          </div>
+          <div class="summary-battery-wrapper">
+            <div class="horiz-battery-body">
+              <div class="horiz-battery-fill" id="total-battery-fill" style="width: 52.6%;"></div>
+            </div>
+            <div class="horiz-battery-cap"></div>
+          </div>
+          
+          <!-- Bottom Row spanning both grid columns: text + empty/fill map -->
+          <div style="grid-column: 1 / span 2; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px; margin-top: 4px;">
+            <div class="summary-sub-text" style="margin-top: 0; flex: 1;">
+              Produjeron <span class="summary-highlight" id="national-share-val">65.31%</span> de la energía utilizada a nivel nacional
+            </div>
+            <div class="ecuador-map-widget">
+              <div class="ecuador-map-bg"></div>
+              <div class="ecuador-map-fill" id="ecuador-map-fill-bar"></div>
+              <svg class="lightning-icon" viewBox="0 0 24 24" width="40" height="40" style="position: absolute; top: 46%; left: 47%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; filter: drop-shadow(0 0 5px rgba(0,0,0,0.9));">
+                <path d="M7 2v11h3v9l7-12h-4l4-8z" fill="#ffffff" stroke="#080c14" stroke-width="1.8" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- GRID HEADERS -->
-    <div class="grid-header-row">
-      <div>Planta / Capacidad</div>
-      <div class="col-center">Generación 24h (MW)</div>
-      <div class="col-center">% del máximo</div>
-      <div class="col-center">Cota / Caudal 24h</div>
-    </div>
+    <!-- RIGHT COLUMN: Control Panel -->
+    <div class="control-panel">
+      <div class="panel-header-compact">
+        <h3 class="panel-title">Filtros & Telemetría</h3>
+        <p class="panel-subtitle">Modifica datos del Reporte Diario</p>
+      </div>
 
-    <!-- PLANTS LIST CONTAINER -->
-    <div class="plants-list" id="plants-list">
-      <!-- Dynamic Rows inserted via JavaScript mock data -->
-    </div>
+      <div class="panel-top-row">
+        <!-- Central Select -->
+        <div class="form-group">
+          <label class="form-label" for="plant-select">Central</label>
+          <select id="plant-select" class="form-select">
+            <option value="cocaCodoSinclair">Coca Codo Sinclair</option>
+            <option value="molino">Paute Molino</option>
+            <option value="sopladora">Sopladora</option>
+            <option value="mazar">Mazar</option>
+            <option value="minasSanFrancisco">Minas San Francisco</option>
+            <option value="agoyan">Agoyán</option>
+          </select>
+        </div>
 
-    <!-- SUMMARY FOOTER -->
-    <div class="report-footer-summary">
-      <div class="summary-text-group">
-        <div class="summary-label">Producción Nacional Acumulada Hoy</div>
-        <div class="summary-main-val">
-          <span id="total-mwh-val">46,480.00</span> MWh 
-          <span class="summary-highlight">(<span id="total-percent-val">52.6%</span> del máximo)</span>
+        <!-- Date Input -->
+        <div class="form-group">
+          <label class="form-label" for="date-input">Fecha del Reporte</label>
+          <input type="text" id="date-input" class="form-input" placeholder="Lunes, 29 de junio del 2026">
         </div>
       </div>
-      <div class="summary-battery-wrapper">
-        <div class="horiz-battery-body">
-          <div class="horiz-battery-fill" id="total-battery-fill" style="width: 52.6%;"></div>
+
+      <div class="panel-sliders-grid">
+        <!-- Operational Data for selected plant -->
+        <div class="panel-section">
+          <div class="panel-section-title">Datos de la Central Seleccionada</div>
+          
+          <!-- Today MWh -->
+          <div class="form-group slider-container">
+            <label class="form-label">
+              MWh Hoy
+              <span id="mwh-badge" class="badge">0 MWh</span>
+            </label>
+            <input type="range" id="mwh-slider" class="slider-range" min="0" max="40000" step="10">
+          </div>
+
+          <!-- Factor de carga -->
+          <div class="form-group slider-container">
+            <label class="form-label">
+              Factor de Carga
+              <span id="factor-badge" class="badge">0%</span>
+            </label>
+            <input type="range" id="factor-slider" class="slider-range" min="0" max="100" step="0.1">
+          </div>
+
+          <!-- Caudal actual -->
+          <div class="form-group slider-container">
+            <label class="form-label">
+              Caudal Actual
+              <span id="caudal-badge" class="badge">0 m³/s</span>
+            </label>
+            <input type="range" id="caudal-slider" class="slider-range" min="0" max="1500" step="1">
+          </div>
+
+          <!-- Cota actual (shown only if plant has cotaHistory) -->
+          <div class="form-group slider-container" id="cota-slider-group" style="display: none;">
+            <label class="form-label">
+              Cota Actual
+              <span id="cota-badge" class="badge">0 msnm</span>
+            </label>
+            <input type="range" id="cota-slider" class="slider-range" min="0" max="3000" step="0.1">
+          </div>
         </div>
-        <div class="horiz-battery-cap"></div>
-      </div>
-      
-      <!-- Bottom Row spanning both grid columns: text + empty/fill map -->
-      <div style="grid-column: 1 / span 2; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px; margin-top: 4px;">
-        <div class="summary-sub-text" style="margin-top: 0; flex: 1;">
-          Produjeron <span class="summary-highlight" id="national-share-val">65.31%</span> de la energía utilizada a nivel nacional
-        </div>
-        <div class="ecuador-map-widget">
-          <div class="ecuador-map-bg"></div>
-          <div class="ecuador-map-fill" id="ecuador-map-fill-bar"></div>
-          <svg class="lightning-icon" viewBox="0 0 24 24" width="40" height="40" style="position: absolute; top: 46%; left: 47%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; filter: drop-shadow(0 0 5px rgba(0,0,0,0.9));">
-            <path d="M7 2v11h3v9l7-12h-4l4-8z" fill="#ffffff" stroke="#080c14" stroke-width="1.8" stroke-linejoin="round" />
-          </svg>
+
+        <!-- Global Parameters -->
+        <div class="panel-section">
+          <div class="panel-section-title">Parámetros Globales</div>
+          
+          <!-- National Share -->
+          <div class="form-group slider-container">
+            <label class="form-label">
+              Participación Nacional
+              <span id="share-badge" class="badge">0%</span>
+            </label>
+            <input type="range" id="share-slider" class="slider-range" min="0" max="100" step="0.1" value="65.31">
+          </div>
         </div>
       </div>
     </div>
@@ -106,14 +199,12 @@
     const MOCK_PLANTS = [
       {
         key: 'cocaCodoSinclair',
-        name: 'Coca Codo Sinclair',
+        name: 'Coca Codo <br> Sinclair',
         maxMW: 1500,
         todayMWh: 18450,
         factor: 78.5,
-        cotaUnit: 'm³/s',
-        cotaName: 'Caudal',
         genHistory: [620, 680, 750, 810, 950, 1100, 1250, 1300, 1280, 1200, 1150, 1100, 1050, 1120, 1200, 1280, 1350, 1380, 1310, 1200, 1100, 950, 800, 720],
-        cotaHistory: [280, 290, 310, 340, 380, 420, 450, 460, 440, 410, 390, 380, 370, 390, 410, 430, 460, 470, 450, 420, 390, 350, 320, 300]
+        caudalHistory: [280, 290, 310, 340, 380, 420, 450, 460, 440, 410, 390, 380, 370, 390, 410, 430, 460, 470, 450, 420, 390, 350, 320, 300]
       },
       {
         key: 'molino',
@@ -121,9 +212,8 @@
         maxMW: 1100,
         todayMWh: 14200,
         factor: 71.2,
-        cotaUnit: 'msnm',
-        cotaName: 'Cota',
         genHistory: [500, 450, 380, 350, 420, 580, 720, 850, 900, 880, 850, 820, 800, 840, 890, 920, 950, 940, 900, 850, 780, 700, 620, 550],
+        caudalHistory: [120, 118, 122, 124, 128, 131, 135, 139, 142, 144, 146, 148, 151, 153, 155, 158, 160, 162, 163, 164, 165, 165, 166, 167],
         cotaHistory: [1981.5, 1981.8, 1982.1, 1982.4, 1982.8, 1983.1, 1983.5, 1983.9, 1984.2, 1984.4, 1984.6, 1984.8, 1985.1, 1985.3, 1985.5, 1985.8, 1986.0, 1986.2, 1986.3, 1986.4, 1986.5, 1986.5, 1986.6, 1986.7]
       },
       {
@@ -132,10 +222,8 @@
         maxMW: 487,
         todayMWh: 6120,
         factor: 69.8,
-        cotaUnit: 'm³/s',
-        cotaName: 'Caudal',
         genHistory: [220, 200, 180, 170, 210, 290, 360, 410, 430, 420, 400, 390, 380, 400, 420, 440, 450, 440, 420, 390, 350, 310, 270, 240],
-        cotaHistory: [140, 135, 130, 128, 145, 175, 190, 205, 210, 205, 195, 190, 185, 195, 205, 215, 220, 215, 205, 190, 175, 160, 150, 142]
+        caudalHistory: [140, 135, 130, 128, 145, 175, 190, 205, 210, 205, 195, 190, 185, 195, 205, 215, 220, 215, 205, 190, 175, 160, 150, 142]
       },
       {
         key: 'mazar',
@@ -143,9 +231,8 @@
         maxMW: 170,
         todayMWh: 2180,
         factor: 53.4,
-        cotaUnit: 'msnm',
-        cotaName: 'Cota',
         genHistory: [80, 60, 40, 30, 50, 90, 120, 140, 150, 145, 140, 135, 130, 135, 145, 150, 155, 150, 140, 130, 110, 95, 85, 75],
+        caudalHistory: [65, 68, 72, 75, 78, 82, 85, 89, 92, 94, 96, 98, 101, 103, 105, 108, 110, 112, 113, 114, 115, 115, 116, 117],
         cotaHistory: [2138.2, 2138.3, 2138.4, 2138.5, 2138.6, 2138.7, 2138.9, 2139.1, 2139.3, 2139.5, 2139.7, 2139.8, 2140.0, 2140.1, 2140.3, 2140.5, 2140.7, 2140.8, 2140.9, 2141.0, 2141.1, 2141.2, 2141.2, 2141.3]
       },
       {
@@ -154,9 +241,8 @@
         maxMW: 270,
         todayMWh: 3410,
         factor: 52.6,
-        cotaUnit: 'msnm',
-        cotaName: 'Cota',
         genHistory: [110, 90, 70, 60, 80, 130, 180, 210, 230, 220, 210, 200, 190, 200, 220, 235, 240, 230, 210, 190, 160, 140, 125, 115],
+        caudalHistory: [35, 38, 42, 45, 48, 52, 55, 59, 62, 64, 66, 68, 71, 73, 75, 78, 80, 82, 83, 84, 85, 85, 86, 87],
         cotaHistory: [782.1, 782.2, 782.3, 782.4, 782.5, 782.7, 782.9, 783.1, 783.3, 783.5, 783.6, 783.7, 783.8, 783.9, 784.0, 784.1, 784.2, 784.3, 784.3, 784.4, 784.4, 784.5, 784.5, 784.5]
       },
       {
@@ -165,25 +251,26 @@
         maxMW: 156,
         todayMWh: 2120,
         factor: 56.6,
-        cotaUnit: 'msnm',
-        cotaName: 'Cota',
         genHistory: [70, 60, 50, 45, 55, 85, 110, 130, 135, 130, 125, 120, 115, 120, 130, 135, 140, 135, 125, 115, 100, 90, 80, 75],
+        caudalHistory: [110, 105, 98, 90, 105, 115, 120, 125, 130, 125, 115, 110, 105, 110, 120, 125, 130, 125, 115, 110, 100, 95, 90, 85],
         cotaHistory: [1648.2, 1648.3, 1648.4, 1648.5, 1648.6, 1648.7, 1648.9, 1649.1, 1649.2, 1649.3, 1649.4, 1649.5, 1649.6, 1649.7, 1649.8, 1649.9, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0, 1650.0]
       }
     ];
 
-    function createSparkline(dataArray, strokeClass, areaGradientId, minLimit = null, maxLimit = null, showAxis = false) {
+    function createSparkline(dataArray, strokeClass, areaGradientId, minLimit = null, maxLimit = null, showLeftAxis = false, secondaryDataArray = null, secondaryStrokeClass = null) {
       const min = minLimit !== null ? minLimit : Math.min(...dataArray);
       const max = maxLimit !== null ? maxLimit : Math.max(...dataArray);
       const range = (max - min) || 1;
       
-      const width = 190;
+      const width = 230;
       const height = 44;
       const padding = 2;
 
-      // If showAxis is true, reserve 20px on the left for the Y-axis labels and line
-      const chartLeft = showAxis ? 20 : padding;
-      const chartRight = width - padding;
+      const hasRightAxis = (secondaryDataArray && secondaryDataArray.length > 0);
+
+      // Reserve space for left and right axes labels
+      const chartLeft = showLeftAxis ? 25 : padding;
+      const chartRight = hasRightAxis ? (width - 28) : (width - padding);
       const chartWidth = chartRight - chartLeft;
       const chartBottom = height - padding;
       const chartTop = padding;
@@ -206,20 +293,50 @@
         gridLines.push(`<line x1="${chartLeft}" y1="${yVal}" x2="${chartRight}" y2="${yVal}" class="spark-grid-line" />`);
       }
 
-      let axisElements = '';
-      if (showAxis) {
-        // Vertical Y-axis line
-        axisElements += `<line x1="${chartLeft}" y1="${chartTop}" x2="${chartLeft}" y2="${chartBottom}" class="spark-axis-line" />`;
-        // Horizontal X-axis line
-        axisElements += `<line x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}" class="spark-axis-line" />`;
+      let secondaryPath = '';
+      let rightAxisElements = '';
+      if (hasRightAxis) {
+        const sMin = Math.min(...secondaryDataArray);
+        const sMax = Math.max(...secondaryDataArray);
+        const sRange = (sMax - sMin) || 1;
+
+        const sPoints = secondaryDataArray.map((val, idx) => {
+          const x = chartLeft + (idx / (secondaryDataArray.length - 1)) * chartWidth;
+          const y = chartBottom - ((val - sMin) / sRange) * chartHeight;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        });
+        const sPathD = 'M ' + sPoints.join(' L ');
+        secondaryPath = `<path d="${sPathD}" class="${secondaryStrokeClass}" />`;
+
+        // Right Y-axis line
+        rightAxisElements += `<line x1="${chartRight}" y1="${chartTop}" x2="${chartRight}" y2="${chartBottom}" class="spark-axis-line" style="stroke: var(--accent-cota-secondary, #ff7043);" />`;
+        // Right axis labels (Cota)
+        const topSLabel = Math.round(sMax);
+        const bottomSLabel = Math.round(sMin);
+        rightAxisElements += `
+          <text x="${chartRight + 4}" y="${chartTop + 7}" class="spark-axis-text" style="fill: var(--accent-cota-secondary, #ff7043);" text-anchor="start">${topSLabel}</text>
+          <text x="${chartRight + 4}" y="${chartBottom}" class="spark-axis-text" style="fill: var(--accent-cota-secondary, #ff7043);" text-anchor="start">${bottomSLabel}</text>
+        `;
+      }
+
+      let leftAxisElements = '';
+      if (showLeftAxis) {
+        // Left Y-axis line
+        leftAxisElements += `<line x1="${chartLeft}" y1="${chartTop}" x2="${chartLeft}" y2="${chartBottom}" class="spark-axis-line" style="stroke: var(--accent-cota, #00b0ff);" />`;
         
-        // Y-axis labels
+        // Left axis labels (Caudal)
         const topLabel = Math.round(max);
         const bottomLabel = Math.round(min);
-        axisElements += `
-          <text x="${chartLeft - 4}" y="${chartTop + 7}" class="spark-axis-text" text-anchor="end">${topLabel}</text>
-          <text x="${chartLeft - 4}" y="${chartBottom}" class="spark-axis-text" text-anchor="end">${bottomLabel}</text>
+        leftAxisElements += `
+          <text x="${chartLeft - 4}" y="${chartTop + 7}" class="spark-axis-text" style="fill: var(--accent-cota, #00b0ff);" text-anchor="end">${topLabel}</text>
+          <text x="${chartLeft - 4}" y="${chartBottom}" class="spark-axis-text" style="fill: var(--accent-cota, #00b0ff);" text-anchor="end">${bottomLabel}</text>
         `;
+      }
+
+      // X-axis horizontal line (rendered if left or right axis is present)
+      let xAxisElement = '';
+      if (showLeftAxis || hasRightAxis) {
+        xAxisElement = `<line x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}" class="spark-axis-line" />`;
       }
 
       return `
@@ -227,7 +344,10 @@
           ${gridLines.join('\n')}
           <path d="${areaD}" fill="url(#${areaGradientId})" opacity="0.15" />
           <path d="${pathD}" class="${strokeClass}" />
-          ${axisElements}
+          ${secondaryPath}
+          ${leftAxisElements}
+          ${rightAxisElements}
+          ${xAxisElement}
         </svg>
       `;
     }
@@ -244,10 +364,20 @@
         totalMaxMWhSum += (plant.maxMW * 24);
 
         const currentGen = plant.genHistory[plant.genHistory.length - 1];
-        const currentCota = plant.cotaHistory[plant.cotaHistory.length - 1];
+        const currentCaudal = plant.caudalHistory[plant.caudalHistory.length - 1];
+        const currentCota = plant.cotaHistory ? plant.cotaHistory[plant.cotaHistory.length - 1] : null;
 
         const genChartSvg = createSparkline(plant.genHistory, 'spark-line-gen', 'gen-gradient', 0, plant.maxMW, true);
-        const cotaChartSvg = createSparkline(plant.cotaHistory, 'spark-line-cota', 'cota-gradient');
+        const caudalChartSvg = createSparkline(
+          plant.caudalHistory, 
+          'spark-line-cota', 
+          'cota-gradient',
+          null,
+          null,
+          true,
+          plant.cotaHistory,
+          'spark-line-secondary-cota'
+        );
 
         const cardHtml = `
           <div class="plant-row-card">
@@ -288,13 +418,16 @@
               </div>
             </div>
 
-            <!-- COL 4: COTA / CAUDAL CHART -->
+            <!-- COL 4: CAUDAL & COTA CHART -->
             <div class="chart-box">
               <div class="chart-header">
-                <span class="chart-title-tag">${plant.cotaName.toUpperCase()} (${plant.cotaUnit})</span>
-                <span class="chart-val-current spark-line-cota-text">${currentCota} ${plant.cotaUnit}</span>
+                <span class="chart-title-tag">CAUDAL ${currentCota ? '& COTA' : ''}</span>
+                <div style="display: flex; gap: 8px;">
+                  <span class="chart-val-current spark-line-cota-text">${currentCaudal} m³/s</span>
+                  ${currentCota ? `<span class="chart-val-current spark-line-secondary-cota-text">${currentCota} msnm</span>` : ''}
+                </div>
               </div>
-              ${cotaChartSvg}
+              ${caudalChartSvg}
               <div class="spark-axis-labels">
                 <span>00:00</span>
                 <span>12:00</span>
@@ -322,6 +455,121 @@
     // Expose renderPlants globally
     window.renderPlants = renderPlants;
     renderPlants();
+
+    // Slider controls synchronization
+    const plantSelect = document.getElementById('plant-select');
+    const dateInput = document.getElementById('date-input');
+    const mwhSlider = document.getElementById('mwh-slider');
+    const factorSlider = document.getElementById('factor-slider');
+    const caudalSlider = document.getElementById('caudal-slider');
+    const cotaSlider = document.getElementById('cota-slider');
+    const cotaSliderGroup = document.getElementById('cota-slider-group');
+    const shareSlider = document.getElementById('share-slider');
+
+    const mwhBadge = document.getElementById('mwh-badge');
+    const factorBadge = document.getElementById('factor-badge');
+    const caudalBadge = document.getElementById('caudal-badge');
+    const cotaBadge = document.getElementById('cota-badge');
+    const shareBadge = document.getElementById('share-badge');
+
+    // Initialize Date string from card
+    dateInput.value = document.getElementById('report-date-str').innerText;
+    dateInput.addEventListener('input', () => {
+      document.getElementById('report-date-str').innerText = dateInput.value;
+    });
+
+    function getSelectedPlant() {
+      const key = plantSelect.value;
+      return MOCK_PLANTS.find(p => p.key === key);
+    }
+
+    function syncSliders() {
+      const plant = getSelectedPlant();
+      if (!plant) return;
+
+      // MWh Slider
+      mwhSlider.max = String(plant.maxMW * 24 * 1.2);
+      mwhSlider.value = String(plant.todayMWh);
+      mwhBadge.innerText = `${plant.todayMWh.toLocaleString()} MWh`;
+
+      // Factor Slider
+      factorSlider.value = String(plant.factor);
+      factorBadge.innerText = `${plant.factor.toFixed(1)}%`;
+
+      // Caudal Slider
+      const currentCaudal = plant.caudalHistory[plant.caudalHistory.length - 1];
+      caudalSlider.max = String(Math.max(...plant.caudalHistory) * 2.0 || 1000);
+      caudalSlider.value = String(currentCaudal);
+      caudalBadge.innerText = `${currentCaudal} m³/s`;
+
+      // Cota Slider
+      if (plant.cotaHistory) {
+        cotaSliderGroup.style.display = 'flex';
+        const currentCota = plant.cotaHistory[plant.cotaHistory.length - 1];
+        const minCota = Math.min(...plant.cotaHistory);
+        const maxCota = Math.max(...plant.cotaHistory);
+        const margin = Math.max(maxCota - minCota, 10);
+        
+        cotaSlider.min = String(minCota - margin);
+        cotaSlider.max = String(maxCota + margin);
+        cotaSlider.value = String(currentCota);
+        cotaBadge.innerText = `${currentCota.toFixed(2)} msnm`;
+      } else {
+        cotaSliderGroup.style.display = 'none';
+      }
+    }
+
+    plantSelect.addEventListener('change', syncSliders);
+
+    mwhSlider.addEventListener('input', () => {
+      const plant = getSelectedPlant();
+      if (plant) {
+        plant.todayMWh = parseFloat(mwhSlider.value);
+        mwhBadge.innerText = `${plant.todayMWh.toLocaleString()} MWh`;
+        renderPlants();
+      }
+    });
+
+    factorSlider.addEventListener('input', () => {
+      const plant = getSelectedPlant();
+      if (plant) {
+        plant.factor = parseFloat(factorSlider.value);
+        factorBadge.innerText = `${plant.factor.toFixed(1)}%`;
+        renderPlants();
+      }
+    });
+
+    caudalSlider.addEventListener('input', () => {
+      const plant = getSelectedPlant();
+      if (plant) {
+        const val = parseFloat(caudalSlider.value);
+        plant.caudalHistory[plant.caudalHistory.length - 1] = val;
+        caudalBadge.innerText = `${val} m³/s`;
+        renderPlants();
+      }
+    });
+
+    cotaSlider.addEventListener('input', () => {
+      const plant = getSelectedPlant();
+      if (plant && plant.cotaHistory) {
+        const val = parseFloat(cotaSlider.value);
+        plant.cotaHistory[plant.cotaHistory.length - 1] = val;
+        cotaBadge.innerText = `${val.toFixed(2)} msnm`;
+        renderPlants();
+      }
+    });
+
+    // Global share slider
+    window.NATIONAL_SHARE = parseFloat(shareSlider.value);
+    shareBadge.innerText = `${window.NATIONAL_SHARE.toFixed(2)}%`;
+    shareSlider.addEventListener('input', () => {
+      window.NATIONAL_SHARE = parseFloat(shareSlider.value);
+      shareBadge.innerText = `${window.NATIONAL_SHARE.toFixed(2)}%`;
+      renderPlants();
+    });
+
+    // Run initial sync
+    syncSliders();
   </script>
 </body>
 </html>
