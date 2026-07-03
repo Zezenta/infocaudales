@@ -66,16 +66,40 @@ body {
    DAILY REPORT CARD CANVAS CONTAINER (FixedWidth 900px for high-res export)
    ========================================================================== */
 .daily-report-card {
+  /* Default CSS variables (Obsidian Grotesk Base) */
+  --card-bg: #080c14;
+  --card-border: 3px solid #1e293b;
+  --row-bg: #0c111c;
+  --row-border: 1.5px solid #1e293b;
+  --text-main: #f1f5f9;
+  --text-muted: #64748b;
+  --accent-gen: #00e676;
+  --accent-cota: #00b0ff;
+  --box-bg: rgba(15, 23, 42, 0.6);
+  --box-border: rgba(255, 255, 255, 0.05);
+  --footer-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --footer-border: 2px solid #334155;
+  --battery-border: #475569;
+  --battery-bg: #080c14;
+  --title-color: #f8fafc;
+  --date-color: #00b0ff;
+  --watermark-color: #4b5563;
+  --grid-line-color: rgba(255, 255, 255, 0.06);
+  --text-muted-dark: #475569;
+  --text-main-muted: #cbd5e1;
+  --battery-glow: rgba(0, 230, 118, 0.4);
+
   width: 900px;
-  background-color: #080c14;
-  border: 3px solid #1e293b;
-  border-radius: 16px;
+  background-color: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 0;
   padding: 28px 32px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  color: var(--text-main);
 }
 
 /* Header Section */
@@ -83,7 +107,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid #1e293b;
+  border-bottom: 2px solid var(--row-border-color, #1e293b);
   padding-bottom: 20px;
 }
 
@@ -94,17 +118,18 @@ body {
 }
 
 .report-subtitle {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .report-title {
   font-size: 32px;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--title-color);
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
@@ -112,7 +137,7 @@ body {
 .report-date {
   font-size: 18px;
   font-weight: 600;
-  color: #00b0ff;
+  color: var(--date-color);
   font-family: 'Space Grotesk', sans-serif;
   margin-top: 2px;
 }
@@ -121,9 +146,10 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #4b5563;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--watermark-color);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .x-icon-box {
@@ -134,7 +160,11 @@ body {
   height: 24px;
   background-color: #000000;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 5px;
+  border-radius: 4.5px;
+}
+
+.x-logo {
+  display: block;
 }
 
 /* Column Header Titles for the Grid */
@@ -144,8 +174,8 @@ body {
   gap: 12px;
   align-items: center;
   padding: 0 16px 8px 16px;
-  border-bottom: 1px dashed #1e293b;
-  color: #64748b;
+  border-bottom: 1px dashed var(--row-border-color, #1e293b);
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
@@ -168,16 +198,11 @@ body {
   grid-template-columns: 210px 220px 130px 204px;
   gap: 12px;
   align-items: center;
-  background: #0c111c;
-  border: 1.5px solid #1e293b;
-  border-radius: 12px;
+  background: var(--row-bg);
+  border: var(--row-border);
+  border-radius: 0;
   padding: 14px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  transition: border-color 0.2s;
-}
-
-.plant-row-card:hover {
-  border-color: #3b82f6;
 }
 
 /* Column 1: Plant Identity & Rank */
@@ -197,25 +222,25 @@ body {
   font-family: 'DejaVu Sans Mono', monospace;
   font-size: 14px;
   font-weight: bold;
-  color: #64748b;
+  color: var(--text-muted);
   background: rgba(255, 255, 255, 0.05);
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .rank-top {
-  color: #00e676;
+  color: var(--accent-gen);
   background: rgba(0, 230, 118, 0.1);
 }
 
 .plant-title {
   font-size: 19px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--text-main);
   line-height: 1.1;
 }
 
@@ -227,24 +252,35 @@ body {
 
 .metric-text {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-family: 'DejaVu Sans Mono', monospace;
 }
 
 .metric-highlight {
-  color: #00e676;
+  color: var(--accent-gen);
   font-weight: bold;
 }
 
-/* Column 2 & 4: Sparkline Chart Containers */
 .chart-box {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 8px 10px;
+  background: var(--box-bg);
+  border: 1px solid var(--box-border);
+  border-radius: 0;
+  padding: 8px 10px 8px 6px;
+}
+
+.spark-axis-line {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.spark-axis-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 7px;
+  fill: var(--text-muted);
+  font-weight: 700;
 }
 
 .chart-header {
@@ -252,7 +288,7 @@ body {
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-muted);
   font-family: 'DejaVu Sans Mono', monospace;
 }
 
@@ -264,6 +300,14 @@ body {
   font-weight: bold;
 }
 
+.spark-line-gen-text {
+  color: var(--accent-gen);
+}
+
+.spark-line-cota-text {
+  color: var(--accent-cota);
+}
+
 .chart-svg {
   width: 100%;
   height: 54px;
@@ -271,42 +315,32 @@ body {
 }
 
 .spark-grid-line {
-  stroke: rgba(255, 255, 255, 0.06);
+  stroke: var(--grid-line-color);
   stroke-width: 1;
   stroke-dasharray: 2 2;
 }
 
 .spark-line-gen {
   fill: none;
-  stroke: #00e676;
+  stroke: var(--accent-gen);
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.spark-area-gen {
-  fill: url(#gen-gradient);
-  opacity: 0.15;
 }
 
 .spark-line-cota {
   fill: none;
-  stroke: #00b0ff;
+  stroke: var(--accent-cota);
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.spark-area-cota {
-  fill: url(#cota-gradient);
-  opacity: 0.15;
 }
 
 .spark-axis-labels {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: #475569;
+  color: var(--text-muted-dark);
   font-family: 'DejaVu Sans Mono', monospace;
   margin-top: 2px;
 }
@@ -324,7 +358,7 @@ body {
   font-size: 16px;
   font-weight: bold;
   font-family: 'DejaVu Sans Mono', monospace;
-  color: #00e676;
+  color: var(--accent-gen);
 }
 
 .vert-battery-container {
@@ -336,16 +370,16 @@ body {
 .vert-battery-cap {
   width: 14px;
   height: 4px;
-  background-color: #475569;
-  border-radius: 2px 2px 0 0;
+  background-color: var(--battery-border);
+  border-radius: 0;
 }
 
 .vert-battery-body {
   width: 32px;
   height: 64px;
-  border: 2.5px solid #475569;
-  background: #080c14;
-  border-radius: 4px;
+  border: 2.5px solid var(--battery-border);
+  background: var(--battery-bg);
+  border-radius: 0;
   padding: 2px;
   display: flex;
   flex-direction: column;
@@ -354,20 +388,19 @@ body {
 
 .vert-battery-fill {
   width: 100%;
-  background: #00e676;
-  border-radius: 1px;
-  transition: height 0.3s ease;
+  background: var(--accent-gen);
+  border-radius: 0;
 }
 
 /* Summary Footer Bar */
 .report-footer-summary {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border: 2px solid #334155;
-  border-radius: 12px;
+  background: var(--footer-bg);
+  border: var(--footer-border);
+  border-radius: 0;
   padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
@@ -380,7 +413,7 @@ body {
 .summary-label {
   font-size: 14px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -389,19 +422,19 @@ body {
   font-size: 26px;
   font-weight: 700;
   font-family: 'DejaVu Sans Mono', monospace;
-  color: #ffffff;
+  color: var(--text-main);
 }
 
 .summary-highlight {
-  color: #00e676;
+  color: var(--accent-gen);
 }
 
 .summary-sub-text {
-  font-size: 14px;
+  font-size: 22px;
   font-weight: 600;
-  color: #cbd5e1;
+  color: var(--text-main-muted);
   font-family: 'Space Grotesk', sans-serif;
-  margin-top: 2px;
+  margin-top: 6px;
 }
 
 .summary-sub-text .summary-highlight {
@@ -412,29 +445,75 @@ body {
 .summary-battery-wrapper {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 0;
 }
 
 .horiz-battery-body {
   width: 220px;
   height: 32px;
-  border: 3px solid #475569;
-  background: #080c14;
-  border-radius: 6px;
+  border: 3px solid var(--battery-border, #475569);
+  background: var(--battery-bg, #080c14);
+  border-radius: 0;
   padding: 3px;
   display: flex;
 }
 
 .horiz-battery-fill {
   height: 100%;
-  background: linear-gradient(90deg, #00b0ff 0%, #00e676 100%);
-  border-radius: 2px;
-  box-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
+  background: linear-gradient(90deg, var(--accent-cota, #00b0ff) 0%, var(--accent-gen, #00e676) 100%);
+  border-radius: 0;
+  box-shadow: 0 0 12px var(--battery-glow, rgba(0, 230, 118, 0.4));
 }
 
 .horiz-battery-cap {
   width: 8px;
   height: 16px;
-  background-color: #475569;
-  border-radius: 0 3px 3px 0;
+  background-color: var(--battery-border, #475569);
+  border-radius: 0;
 }
+
+/* Ecuador Map Widget */
+.ecuador-map-widget {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  filter: drop-shadow(1px 0 0 #475569) drop-shadow(-1px 0 0 #475569) drop-shadow(0 1px 0 #475569) drop-shadow(0 -1px 0 #475569);
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+
+.ecuador-map-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--card-bg); /* Match the card background color */
+  -webkit-mask-image: url('../hydroelectric-drawings/Ecuador_Icon_png.webp');
+  mask-image: url('../hydroelectric-drawings/Ecuador_Icon_png.webp');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.ecuador-map-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-image: url('../hydroelectric-drawings/Ecuador_Icon_png.webp');
+  mask-image: url('../hydroelectric-drawings/Ecuador_Icon_png.webp');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+
+
