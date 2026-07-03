@@ -1,3 +1,18 @@
+/*
+ * There is a special bond between a man and his work
+ * Such closeness
+ * The calluses on my wrists are the witness of my consistency
+ * The bags under my eyes carry the weight of a thousand nights
+ * The world and the people i know may forget my name
+ * But my work will remember the hands that shaped it
+ * With no reward, and no way to explain this passion
+ * This is my joy
+ * A special kind that only a few will ever understand
+ * How lucky am i
+ * To live by doing what i love
+*/
+
+
 import dotenv from 'dotenv';
 import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
