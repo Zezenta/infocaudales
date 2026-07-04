@@ -136,11 +136,11 @@ body {
 }
 
 .report-date {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--date-color);
   font-family: 'Space Grotesk', sans-serif;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .report-watermark {
@@ -171,16 +171,31 @@ body {
 /* Column Header Titles for the Grid */
 .grid-header-row {
   display: grid;
-  grid-template-columns: 210px 220px 130px 204px;
+  grid-template-columns: 170px 1fr 90px 1fr;
   gap: 12px;
   align-items: center;
-  padding: 0 16px 8px 16px;
-  border-bottom: 1px dashed var(--row-border-color, #1e293b);
+  padding: 0 16px 0 16px;
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.grid-header-row > div {
+  position: relative;
+}
+
+.grid-header-row > div:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: -6px; /* Centered in the 12px grid gap */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 12px;
+  background-color: var(--row-border-color, #1e293b);
+  opacity: 0.8;
 }
 
 .col-center {
@@ -196,7 +211,7 @@ body {
 
 .plant-row-card {
   display: grid;
-  grid-template-columns: 170px 220px 130px 244px;
+  grid-template-columns: 170px 1fr 90px 1fr;
   gap: 12px;
   align-items: center;
   background: var(--row-bg);
@@ -311,7 +326,7 @@ body {
 
 .chart-svg {
   width: 100%;
-  height: 54px;
+  height: 60px;
   overflow: visible;
 }
 

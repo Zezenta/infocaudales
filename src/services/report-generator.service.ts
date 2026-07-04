@@ -264,3 +264,44 @@ export async function generateReportCard(
     await page.close();
   }
 }
+
+export async function generateDailyReport(outputPath: string): Promise<void> {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+
+  try {
+    await page.setViewport({
+      width: 1200,
+      height: 1800,
+      deviceScaleFactor: 2
+    });
+
+    const projectRoot = getProjectRoot();
+    const htmlPath = path.join(projectRoot, 'src', 'templates', 'daily-report.html');
+    const fileUrl = `file://${htmlPath}`;
+
+    const { plantsData } = getVisualizerPlantsData();
+    await page.evaluateOnNewDocument((plantsObj) => {
+      // @ts-ignore
+      window.plantsData = plantsObj;
+    }, plantsData);
+
+    await page.goto(fileUrl, { waitUntil: 'networkidle0' });
+
+    // Wait a brief period for fonts, styles and SVG rendering loop to settle
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
+
+    const cardElement = await page.$('#daily-report-card');
+    if (!cardElement) {
+      throw new Error('Daily report card element #daily-report-card not found');
+    }
+
+    await cardElement.screenshot({
+      path: outputPath,
+      type: 'png',
+      omitBackground: true
+    });
+  } finally {
+    await page.close();
+  }
+}

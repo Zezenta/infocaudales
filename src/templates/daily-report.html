@@ -5,6 +5,7 @@
   <title>Reporte Diario Hidroeléctrico - Visualizador</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="daily-report.css">
+  <script src="/api/plants-config.js"></script>
 </head>
 <body>
 
@@ -199,8 +200,6 @@
     const MOCK_PLANTS = [
       {
         key: 'cocaCodoSinclair',
-        name: 'Coca Codo <br> Sinclair',
-        maxMW: 1500,
         todayMWh: 18450,
         factor: 78.5,
         genHistory: [620, 680, 750, 810, 950, 1100, 1250, 1300, 1280, 1200, 1150, 1100, 1050, 1120, 1200, 1280, 1350, 1380, 1310, 1200, 1100, 950, 800, 720],
@@ -208,8 +207,6 @@
       },
       {
         key: 'molino',
-        name: 'Paute Molino',
-        maxMW: 1100,
         todayMWh: 14200,
         factor: 71.2,
         genHistory: [500, 450, 380, 350, 420, 580, 720, 850, 900, 880, 850, 820, 800, 840, 890, 920, 950, 940, 900, 850, 780, 700, 620, 550],
@@ -218,8 +215,6 @@
       },
       {
         key: 'sopladora',
-        name: 'Sopladora',
-        maxMW: 487,
         todayMWh: 6120,
         factor: 69.8,
         genHistory: [220, 200, 180, 170, 210, 290, 360, 410, 430, 420, 400, 390, 380, 400, 420, 440, 450, 440, 420, 390, 350, 310, 270, 240],
@@ -227,8 +222,6 @@
       },
       {
         key: 'mazar',
-        name: 'Mazar',
-        maxMW: 170,
         todayMWh: 2180,
         factor: 53.4,
         genHistory: [80, 60, 40, 30, 50, 90, 120, 140, 150, 145, 140, 135, 130, 135, 145, 150, 155, 150, 140, 130, 110, 95, 85, 75],
@@ -237,8 +230,6 @@
       },
       {
         key: 'minasSanFrancisco',
-        name: 'Minas San Francisco',
-        maxMW: 270,
         todayMWh: 3410,
         factor: 52.6,
         genHistory: [110, 90, 70, 60, 80, 130, 180, 210, 230, 220, 210, 200, 190, 200, 220, 235, 240, 230, 210, 190, 160, 140, 125, 115],
@@ -247,8 +238,6 @@
       },
       {
         key: 'agoyan',
-        name: 'Agoyán',
-        maxMW: 156,
         todayMWh: 2120,
         factor: 56.6,
         genHistory: [70, 60, 50, 45, 55, 85, 110, 130, 135, 130, 125, 120, 115, 120, 130, 135, 140, 135, 125, 115, 100, 90, 80, 75],
@@ -257,22 +246,58 @@
       }
     ];
 
+    // Dynamic config injection from backend script context
+    MOCK_PLANTS.forEach(plant => {
+      const config = (window.plantsData && window.plantsData[plant.key]) || {};
+      
+      if (plant.key === 'cocaCodoSinclair') {
+        plant.name = 'Coca Codo <br> Sinclair';
+      } else {
+        plant.name = config.name || getDefaultName(plant.key);
+      }
+      
+      plant.maxMW = config.maxEnergyMW || getDefaultMaxMW(plant.key);
+    });
+
+    function getDefaultName(key) {
+      const names = {
+        molino: 'Paute Molino',
+        sopladora: 'Sopladora',
+        mazar: 'Mazar',
+        minasSanFrancisco: 'Minas San Francisco',
+        agoyan: 'Agoyán'
+      };
+      return names[key] || key;
+    }
+
+    function getDefaultMaxMW(key) {
+      const maxs = {
+        cocaCodoSinclair: 1500,
+        molino: 1100,
+        sopladora: 487,
+        mazar: 170,
+        minasSanFrancisco: 270,
+        agoyan: 156
+      };
+      return maxs[key] || 0;
+    }
+
     function createSparkline(dataArray, strokeClass, areaGradientId, minLimit = null, maxLimit = null, showLeftAxis = false, secondaryDataArray = null, secondaryStrokeClass = null) {
       const min = minLimit !== null ? minLimit : Math.min(...dataArray);
       const max = maxLimit !== null ? maxLimit : Math.max(...dataArray);
       const range = (max - min) || 1;
       
       const width = 230;
-      const height = 44;
+      const height = 60;
       const padding = 2;
 
       const hasRightAxis = (secondaryDataArray && secondaryDataArray.length > 0);
 
       // Reserve space for left and right axes labels
       const chartLeft = showLeftAxis ? 25 : padding;
-      const chartRight = hasRightAxis ? (width - 28) : (width - padding);
+      const chartRight = hasRightAxis ? (width - 20) : (width - 15);
       const chartWidth = chartRight - chartLeft;
-      const chartBottom = height - padding;
+      const chartBottom = height - 16 - padding;
       const chartTop = padding;
       const chartHeight = chartBottom - chartTop;
 
@@ -321,15 +346,16 @@
 
       let leftAxisElements = '';
       if (showLeftAxis) {
+        const leftAxisColor = strokeClass === 'spark-line-gen' ? 'var(--accent-gen, #00e676)' : 'var(--accent-cota, #00b0ff)';
         // Left Y-axis line
-        leftAxisElements += `<line x1="${chartLeft}" y1="${chartTop}" x2="${chartLeft}" y2="${chartBottom}" class="spark-axis-line" style="stroke: var(--accent-cota, #00b0ff);" />`;
+        leftAxisElements += `<line x1="${chartLeft}" y1="${chartTop}" x2="${chartLeft}" y2="${chartBottom}" class="spark-axis-line" style="stroke: ${leftAxisColor};" />`;
         
-        // Left axis labels (Caudal)
+        // Left axis labels (Caudal/Gen)
         const topLabel = Math.round(max);
         const bottomLabel = Math.round(min);
         leftAxisElements += `
-          <text x="${chartLeft - 4}" y="${chartTop + 7}" class="spark-axis-text" style="fill: var(--accent-cota, #00b0ff);" text-anchor="end">${topLabel}</text>
-          <text x="${chartLeft - 4}" y="${chartBottom}" class="spark-axis-text" style="fill: var(--accent-cota, #00b0ff);" text-anchor="end">${bottomLabel}</text>
+          <text x="${chartLeft - 4}" y="${chartTop + 7}" class="spark-axis-text" style="fill: ${leftAxisColor};" text-anchor="end">${topLabel}</text>
+          <text x="${chartLeft - 4}" y="${chartBottom}" class="spark-axis-text" style="fill: ${leftAxisColor};" text-anchor="end">${bottomLabel}</text>
         `;
       }
 
@@ -338,6 +364,13 @@
       if (showLeftAxis || hasRightAxis) {
         xAxisElement = `<line x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}" class="spark-axis-line" />`;
       }
+
+      // Time X-axis labels aligned perfectly to points
+      let xAxisLabels = `
+        <text x="${chartLeft}" y="${height - 4}" class="spark-axis-text" style="font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; font-weight: bold; fill: var(--text-muted);" text-anchor="middle">00:00</text>
+        <text x="${chartLeft + chartWidth / 2}" y="${height - 4}" class="spark-axis-text" style="font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; font-weight: bold; fill: var(--text-muted);" text-anchor="middle">12:00</text>
+        <text x="${chartRight}" y="${height - 4}" class="spark-axis-text" style="font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; font-weight: bold; fill: var(--text-muted);" text-anchor="middle">24:00</text>
+      `;
 
       return `
         <svg class="chart-svg" viewBox="0 0 ${width} ${height}">
@@ -348,6 +381,7 @@
           ${leftAxisElements}
           ${rightAxisElements}
           ${xAxisElement}
+          ${xAxisLabels}
         </svg>
       `;
     }
@@ -400,11 +434,6 @@
                 <span class="chart-title-tag">GENERACIÓN (24H)</span>
               </div>
               ${genChartSvg}
-              <div class="spark-axis-labels" style="padding-left: 20px;">
-                <span>00:00</span>
-                <span>12:00</span>
-                <span>24:00</span>
-              </div>
             </div>
 
             <!-- COL 3: BATTERY CAP -->
@@ -420,19 +449,15 @@
 
             <!-- COL 4: CAUDAL & COTA CHART -->
             <div class="chart-box">
-              <div class="chart-header">
-                <span class="chart-title-tag">CAUDAL ${currentCota ? '& COTA' : ''}</span>
-                <div style="display: flex; gap: 8px;">
-                  <span class="chart-val-current spark-line-cota-text">${currentCaudal} m³/s</span>
-                  ${currentCota ? `<span class="chart-val-current spark-line-secondary-cota-text">${currentCota} msnm</span>` : ''}
-                </div>
+              <div class="chart-header" style="justify-content: flex-start; gap: 6px; white-space: nowrap;">
+                <span class="chart-title-tag">CAUDAL</span>
+                <span class="chart-val-current spark-line-cota-text" style="margin-right: 10px;">${currentCaudal} m³/s</span>
+                ${currentCota ? `
+                  <span class="chart-title-tag">COTA</span>
+                  <span class="chart-val-current spark-line-secondary-cota-text">${currentCota} msnm</span>
+                ` : ''}
               </div>
               ${caudalChartSvg}
-              <div class="spark-axis-labels">
-                <span>00:00</span>
-                <span>12:00</span>
-                <span>24:00</span>
-              </div>
             </div>
 
           </div>
