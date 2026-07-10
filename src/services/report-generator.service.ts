@@ -265,7 +265,7 @@ export async function generateReportCard(
   }
 }
 
-export async function generateDailyReport(outputPath: string): Promise<void> {
+export async function generateDailyReport(outputPath: string, liveData?: any): Promise<void> {
   const browser = await getBrowser();
   const page = await browser.newPage();
 
@@ -287,6 +287,32 @@ export async function generateDailyReport(outputPath: string): Promise<void> {
     }, plantsData);
 
     await page.goto(fileUrl, { waitUntil: 'networkidle0' });
+
+    if (liveData) {
+      await page.evaluate((data) => {
+        // @ts-ignore
+        if (data.plants) {
+          // @ts-ignore
+          window.MOCK_PLANTS = data.plants;
+        }
+        // @ts-ignore
+        if (data.dateStr) {
+          const dateEl = document.getElementById('report-date-str');
+          // @ts-ignore
+          if (dateEl) dateEl.innerText = data.dateStr;
+        }
+        // @ts-ignore
+        if (data.nationalShare !== undefined) {
+          // @ts-ignore
+          window.NATIONAL_SHARE = data.nationalShare;
+        }
+        // @ts-ignore
+        if (window.renderPlants) {
+          // @ts-ignore
+          window.renderPlants();
+        }
+      }, liveData);
+    }
 
     // Wait a brief period for fonts, styles and SVG rendering loop to settle
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));

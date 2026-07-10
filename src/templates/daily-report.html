@@ -17,13 +17,49 @@
   <!-- SVG Gradients Definition for Sparklines -->
   <svg style="height: 0; width: 0; position: absolute;" aria-hidden="true">
     <defs>
-      <linearGradient id="gen-gradient" x1="0" y1="0" x2="0" y2="1">
+      <!-- 1. Classic Fade Gradients -->
+      <linearGradient id="gen-classic-fade" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#00e676" stop-opacity="0.8"/>
         <stop offset="100%" stop-color="#00e676" stop-opacity="0.0"/>
       </linearGradient>
-      <linearGradient id="cota-gradient" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="cota-classic-fade" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#00b0ff" stop-opacity="0.8"/>
         <stop offset="100%" stop-color="#00b0ff" stop-opacity="0.0"/>
+      </linearGradient>
+
+      <!-- 2. Cyberpunk Neon Gradients -->
+      <!-- Purple/Magenta to Neon Green for Generation -->
+      <linearGradient id="gen-neon-cyber" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#d500f9" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#00e676" stop-opacity="0.0"/>
+      </linearGradient>
+      <!-- Pink/Violet to Electric Blue for Caudal -->
+      <linearGradient id="cota-neon-cyber" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ff1744" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#00b0ff" stop-opacity="0.0"/>
+      </linearGradient>
+
+      <!-- 3. Sunset Glow Gradients -->
+      <!-- Coral to Gold Yellow for Gen -->
+      <linearGradient id="gen-sunset" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ff3d00" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#ffea00" stop-opacity="0.0"/>
+      </linearGradient>
+      <!-- Deep Blue to Warm Orange for Caudal -->
+      <linearGradient id="cota-sunset" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2979ff" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#ff9100" stop-opacity="0.0"/>
+      </linearGradient>
+
+      <!-- 4. Warm Gold & Amber Gradients -->
+      <!-- Gold/Amber to dark -->
+      <linearGradient id="gen-warm-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffab00" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#ffab00" stop-opacity="0.0"/>
+      </linearGradient>
+      <linearGradient id="cota-warm-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffd600" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#ffd600" stop-opacity="0.0"/>
       </linearGradient>
     </defs>
   </svg>
@@ -52,11 +88,10 @@
           </div>
         </div>
 
-        <!-- GRID HEADERS -->
         <div class="grid-header-row">
           <div>Planta / Capacidad</div>
           <div class="col-center">Generación 24h (MW)</div>
-          <div class="col-center">% de su máximo</div>
+          <div class="col-center" style="transform: translateX(6px);">% Máx</div>
           <div class="col-center">Caudal 24h</div>
         </div>
 
@@ -181,6 +216,18 @@
             </label>
             <input type="range" id="share-slider" class="slider-range" min="0" max="100" step="0.1" value="65.31">
           </div>
+
+          <!-- Fill Style Selection -->
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="form-label" for="fill-style-select">Estilo de Relleno</label>
+            <select id="fill-style-select" class="form-select">
+              <option value="classic-fade" selected>Degradado Clásico (Classic)</option>
+              <option value="solid">Color Sólido (Solid)</option>
+              <option value="neon-cyber">Neón Cyberpunk</option>
+              <option value="sunset">Atardecer (Sunset)</option>
+              <option value="warm-gold">Oro Cálido (Gold)</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -188,6 +235,9 @@
   </div>
 
   <script>
+    // Initialize fill style from local storage or default to classic-fade
+    window.FILL_STYLE = localStorage.getItem('FILL_STYLE') || 'classic-fade';
+
     // Live reloading via SSE
     const evtSource = new EventSource('/sse');
     evtSource.onmessage = function(e) {
@@ -197,7 +247,7 @@
     };
 
     // Mock Data for the 6 Hydroelectric Plants
-    const MOCK_PLANTS = [
+    let MOCK_PLANTS = [
       {
         key: 'cocaCodoSinclair',
         todayMWh: 18450,
@@ -259,6 +309,8 @@
       plant.maxMW = config.maxEnergyMW || getDefaultMaxMW(plant.key);
     });
 
+    window.MOCK_PLANTS = MOCK_PLANTS;
+
     function getDefaultName(key) {
       const names = {
         molino: 'Paute Molino',
@@ -287,17 +339,17 @@
       const max = maxLimit !== null ? maxLimit : Math.max(...dataArray);
       const range = (max - min) || 1;
       
-      const width = 230;
-      const height = 60;
+      const width = 280;
+      const height = 75;
       const padding = 2;
 
       const hasRightAxis = (secondaryDataArray && secondaryDataArray.length > 0);
 
       // Reserve space for left and right axes labels
-      const chartLeft = showLeftAxis ? 25 : padding;
-      const chartRight = hasRightAxis ? (width - 20) : (width - 15);
+      const chartLeft = showLeftAxis ? 20 : padding;
+      const chartRight = (strokeClass === 'spark-line-cota') ? (width - 12) : (width - padding);
       const chartWidth = chartRight - chartLeft;
-      const chartBottom = height - 16 - padding;
+      const chartBottom = height - padding;
       const chartTop = padding;
       const chartHeight = chartBottom - chartTop;
 
@@ -365,23 +417,28 @@
         xAxisElement = `<line x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}" class="spark-axis-line" />`;
       }
 
-      // Time X-axis labels aligned perfectly to points
-      let xAxisLabels = `
-        <text x="${chartLeft}" y="${height - 4}" class="spark-axis-text" style="font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; font-weight: bold; fill: var(--text-muted);" text-anchor="middle">00:00</text>
-        <text x="${chartLeft + chartWidth / 2}" y="${height - 4}" class="spark-axis-text" style="font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; font-weight: bold; fill: var(--text-muted);" text-anchor="middle">12:00</text>
-        <text x="${chartRight}" y="${height - 4}" class="spark-axis-text" style="font-family: 'DejaVu Sans Mono', monospace; font-size: 12px; font-weight: bold; fill: var(--text-muted);" text-anchor="middle">24:00</text>
-      `;
+      const fillColor = strokeClass === 'spark-line-gen' ? 'var(--accent-gen, #00e676)' : 'var(--accent-cota, #00b0ff)';
+      const fillStyle = window.FILL_STYLE || 'solid';
+
+      let fillAttr = `fill="${fillColor}"`;
+      let opacityAttr = ``;
+
+      if (fillStyle !== 'solid') {
+        const prefix = strokeClass === 'spark-line-gen' ? 'gen' : 'cota';
+        const gradId = `${prefix}-${fillStyle}`;
+        fillAttr = `fill="url(#${gradId})"`;
+        opacityAttr = (fillStyle === 'neon-cyber' || fillStyle === 'sunset') ? `opacity="0.32"` : `opacity="0.16"`;
+      }
 
       return `
-        <svg class="chart-svg" viewBox="0 0 ${width} ${height}">
+        <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+          <path d="${areaD}" ${fillAttr} ${opacityAttr} />
           ${gridLines.join('\n')}
-          <path d="${areaD}" fill="url(#${areaGradientId})" opacity="0.15" />
           <path d="${pathD}" class="${strokeClass}" />
           ${secondaryPath}
           ${leftAxisElements}
           ${rightAxisElements}
           ${xAxisElement}
-          ${xAxisLabels}
         </svg>
       `;
     }
@@ -393,13 +450,28 @@
       let totalMWhSum = 0;
       let totalMaxMWhSum = 0;
 
-      MOCK_PLANTS.forEach((plant, idx) => {
+      (window.MOCK_PLANTS || MOCK_PLANTS).forEach((plant, idx) => {
+        // Dynamic config enrichment if name or maxMW are not present
+        if (!plant.name || !plant.maxMW) {
+          const config = (window.plantsData && window.plantsData[plant.key]) || {};
+          if (!plant.name) {
+            plant.name = plant.key === 'cocaCodoSinclair' ? 'Coca Codo <br> Sinclair' : (config.name || getDefaultName(plant.key));
+          }
+          if (!plant.maxMW) {
+            plant.maxMW = config.maxEnergyMW || getDefaultMaxMW(plant.key);
+          }
+        }
+
         totalMWhSum += plant.todayMWh;
         totalMaxMWhSum += (plant.maxMW * 24);
 
         const currentGen = plant.genHistory[plant.genHistory.length - 1];
-        const currentCaudal = plant.caudalHistory[plant.caudalHistory.length - 1];
-        const currentCota = plant.cotaHistory ? plant.cotaHistory[plant.cotaHistory.length - 1] : null;
+        
+        const rawCaudal = plant.caudalHistory[plant.caudalHistory.length - 1];
+        const currentCaudal = typeof rawCaudal === 'number' ? rawCaudal.toFixed(2) : rawCaudal;
+        
+        const rawCota = plant.cotaHistory ? plant.cotaHistory[plant.cotaHistory.length - 1] : null;
+        const currentCota = typeof rawCota === 'number' ? rawCota.toFixed(2) : rawCota;
 
         const genChartSvg = createSparkline(plant.genHistory, 'spark-line-gen', 'gen-gradient', 0, plant.maxMW, true);
         const caudalChartSvg = createSparkline(
@@ -430,10 +502,12 @@
 
             <!-- COL 2: GENERACIÓN CHART -->
             <div class="chart-box">
-              <div class="chart-header">
-                <span class="chart-title-tag">GENERACIÓN (24H)</span>
-              </div>
               ${genChartSvg}
+              <div class="spark-time-row">
+                <span style="position: absolute; left: 7.14%; transform: translateX(-50%);">00:00</span>
+                <span style="position: absolute; left: 53.21%; transform: translateX(-50%);">12:00</span>
+                <span style="position: absolute; left: 99.28%; transform: translateX(-50%);">24:00</span>
+              </div>
             </div>
 
             <!-- COL 3: BATTERY CAP -->
@@ -449,7 +523,7 @@
 
             <!-- COL 4: CAUDAL & COTA CHART -->
             <div class="chart-box">
-              <div class="chart-header" style="justify-content: flex-start; gap: 6px; white-space: nowrap;">
+              <div class="chart-header" style="justify-content: flex-start; gap: 6px; white-space: nowrap; padding-left: 20px;">
                 <span class="chart-title-tag">CAUDAL</span>
                 <span class="chart-val-current spark-line-cota-text" style="margin-right: 10px;">${currentCaudal} m³/s</span>
                 ${currentCota ? `
@@ -458,6 +532,11 @@
                 ` : ''}
               </div>
               ${caudalChartSvg}
+              <div class="spark-time-row">
+                <span style="position: absolute; left: 7.14%; transform: translateX(-50%);">00:00</span>
+                <span style="position: absolute; left: 51.43%; transform: translateX(-50%);">12:00</span>
+                <span style="position: absolute; left: 95.71%; transform: translateX(-50%);">24:00</span>
+              </div>
             </div>
 
           </div>
@@ -505,7 +584,7 @@
 
     function getSelectedPlant() {
       const key = plantSelect.value;
-      return MOCK_PLANTS.find(p => p.key === key);
+      return (window.MOCK_PLANTS || MOCK_PLANTS).find(p => p.key === key);
     }
 
     function syncSliders() {
@@ -590,6 +669,16 @@
     shareSlider.addEventListener('input', () => {
       window.NATIONAL_SHARE = parseFloat(shareSlider.value);
       shareBadge.innerText = `${window.NATIONAL_SHARE.toFixed(2)}%`;
+      renderPlants();
+    });
+
+    // Gradient fill style selection control
+    const fillStyleSelect = document.getElementById('fill-style-select');
+    fillStyleSelect.value = window.FILL_STYLE;
+
+    fillStyleSelect.addEventListener('change', () => {
+      window.FILL_STYLE = fillStyleSelect.value;
+      localStorage.setItem('FILL_STYLE', window.FILL_STYLE);
       renderPlants();
     });
 

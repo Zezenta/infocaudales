@@ -10,3 +10,5 @@ nohup.out
 generated/
 dist/
 *cenace-history.json
+temp
+*coca-codo-hourly-log.csv

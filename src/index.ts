@@ -308,6 +308,7 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
 console.log('--------------------------------------------------');
 console.log('🤖 Infocaudales Bot Started');
 console.log('CENACE Pre-Sampling Schedule: 6:15 AM, 12:15 PM, 6:15 PM');
+console.log('CENACE Hourly Logging: Every hour on the hour');
 console.log('Publishing Schedule: 7:15 AM, 1:15 PM, 7:15 PM (America/Guayaquil)');
 console.log('--------------------------------------------------');
 
@@ -332,8 +333,20 @@ const mainCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+const hourlyCenaceLogJob = new CronJob(
+  '0 * * * *',
+  async () => {
+    console.log('\n[CronJob] Running hourly Coca Codo Sinclair baseline recording...');
+    await recordCenaceBaseline(cenaceService);
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
 cenaceSamplingJob.start();
 mainCronJob.start();
+hourlyCenaceLogJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
