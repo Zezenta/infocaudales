@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { describe, it, expect } from 'vitest';
 import { XService } from './x.service.js';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -42,4 +43,28 @@ describe('XService (X SDK API Integration)', () => {
     const result = await xService.postTweet(postMessage, imageBuffer);
     expect(result).toBeDefined();
   }, 40000);
+
+  it('should successfully verify the bearer token against a read-only endpoint', async () => {
+    const token = process.env.BEARER_TOKEN || process.env.X_BEARER_TOKEN;
+    
+    if (!token) {
+      console.warn('[X Connection Test] Skipping test: No BEARER_TOKEN or X_BEARER_TOKEN found in environment variables.');
+      return;
+    }
+
+    console.log('[X Connection Test] Querying xdevelopers profile to verify Bearer Token connection...');
+    
+    const response = await axios.get('https://api.x.com/2/users/by/username/xdevelopers', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.data).toBeDefined();
+    expect(response.data.data).toBeDefined();
+    expect(response.data.data.username.toLowerCase()).toBe('xdevelopers');
+    
+    console.log('[X Connection Test] Bearer token verified successfully! Account ID:', response.data.data.id);
+  });
 });
