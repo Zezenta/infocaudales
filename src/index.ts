@@ -24,11 +24,11 @@ class DataPendingError extends Error {
 // The 6 hydroelectric plants to publish
 export const TARGET_PLANT_KEYS = [
   'molino',
-  'cocaCodoSinclair',
   'sopladora',
   'mazar',
   'minasSanFrancisco',
-  'agoyan'
+  'agoyan',
+  'cocaCodoSinclair'
 ];
 
 /**
@@ -307,10 +307,39 @@ const cenaceSamplingJob = new CronJob(
   'America/Guayaquil'
 );
 
-const mainCronJob = new CronJob(
-  '15 7,13,19 * * *',
+// 7:15 AM (Morning Run - 4 plants)
+const morningCronJob = new CronJob(
+  '15 7 * * *',
   async () => {
-    await runPublishingCycle(TARGET_PLANT_KEYS, false);
+    const morningPlants = ['mazar', 'minasSanFrancisco', 'agoyan', 'cocaCodoSinclair'];
+    console.log('[CronJob] Running Morning Publishing Cycle...');
+    await runPublishingCycle(morningPlants, false);
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
+// 1:15 PM (Afternoon Run - 4 plants including Molino)
+const afternoonCronJob = new CronJob(
+  '15 13 * * *',
+  async () => {
+    const afternoonPlants = ['molino', 'mazar', 'minasSanFrancisco', 'agoyan'];
+    console.log('[CronJob] Running Afternoon Publishing Cycle...');
+    await runPublishingCycle(afternoonPlants, false);
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
+// 7:15 PM (Evening Run - 4 plants including Sopladora)
+const eveningCronJob = new CronJob(
+  '15 19 * * *',
+  async () => {
+    const eveningPlants = ['sopladora', 'minasSanFrancisco', 'agoyan', 'cocaCodoSinclair'];
+    console.log('[CronJob] Running Evening Publishing Cycle...');
+    await runPublishingCycle(eveningPlants, false);
   },
   null,
   true,
@@ -318,7 +347,9 @@ const mainCronJob = new CronJob(
 );
 
 cenaceSamplingJob.start();
-mainCronJob.start();
+morningCronJob.start();
+afternoonCronJob.start();
+eveningCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
