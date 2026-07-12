@@ -384,6 +384,22 @@ async function publishDailyConsolidatedReport() {
 
   console.log(`\n[CronJob] [Daily Report] Starting daily publication cycle for target date: ${dateStr}...`);
 
+  // Local helper to fetch, slice last 24 values, and assert non-null numbers
+  const fetchAndVerifyTelemetry = async (
+    fetchFn: () => Promise<CelecPointValue[] | null>,
+    fieldName: string
+  ): Promise<number[]> => {
+    const points = await fetchFn();
+    if (!points || points.length < 24) {
+      throw new Error(`${fieldName} telemetry is incomplete or offline in CELEC.`);
+    }
+    const sliced = [...points].reverse().slice(0, 24);
+    if (sliced.some(p => !p || p.value === null || p.value === undefined)) {
+      throw new Error(`${fieldName} telemetry contains invalid or null values.`);
+    }
+    return sliced.map(p => p.value!);
+  };
+
   try {
     // 1. Fetch CENACE yesterday operational data
     const cenaceData = await cenaceService.fetchYesterdayOperationalData();
@@ -398,7 +414,7 @@ async function publishDailyConsolidatedReport() {
     if (!cenaceData.compositionMWh || Object.keys(cenaceData.compositionMWh).length === 0) {
       throw new Error("Yesterday matrix composition is missing in CENACE data.");
     }
-    const totalNationalMWh = Object.values(cenaceData.compositionMWh).reduce((a: any, b: any) => a + b, 0);
+    const totalNationalMWh = Object.values(cenaceData.compositionMWh).reduce((a: number, b: number) => a + b, 0);
     if (totalNationalMWh <= 0) {
       throw new Error("Total national MWh is zero or invalid in CENACE composition data.");
     }
@@ -415,15 +431,10 @@ async function publishDailyConsolidatedReport() {
     }
 
     // 3. Fetch CCS Flow history (Caudal) from CELEC
-    const ccsFlowPointsRaw = await celecService.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday);
-    if (!ccsFlowPointsRaw || ccsFlowPointsRaw.length < 24) {
-      throw new Error("Coca Codo Sinclair flow (caudal) telemetry is incomplete or offline in CELEC.");
-    }
-    const reversedCcsFlow = [...ccsFlowPointsRaw].reverse().slice(0, 24);
-    if (reversedCcsFlow.some(p => !p || p.value === null || p.value === undefined)) {
-      throw new Error("Coca Codo Sinclair flow telemetry contains invalid or null values.");
-    }
-    const ccsFlowHistory = reversedCcsFlow.map(p => p.value as number);
+    const ccsFlowHistory = await fetchAndVerifyTelemetry(
+      () => celecService.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday),
+      "Coca Codo Sinclair flow (caudal)"
+    );
 
     const ccsMaxMW = hydroelectricPlants.cocaCodoSinclair.physicalData?.maxEnergyMW || 1500;
     const ccsFactor = (ccsYesterdayMWh / (ccsMaxMW * 24)) * 100;
@@ -450,39 +461,24 @@ async function publishDailyConsolidatedReport() {
       const maxMW = plant.physicalData?.maxEnergyMW || 100;
 
       // Gen History validation
-      const genPointsRaw = await celecService.fetchDailyEnergy(plant, yesterday);
-      if (!genPointsRaw || genPointsRaw.length < 24) {
-        throw new Error(`Plant ${item.key} daily energy telemetry is incomplete or offline in CELEC.`);
-      }
-      const reversedGen = [...genPointsRaw].reverse().slice(0, 24);
-      if (reversedGen.some(p => !p || p.value === null || p.value === undefined)) {
-        throw new Error(`Plant ${item.key} daily energy telemetry contains invalid or null values.`);
-      }
-      const genHistory = reversedGen.map(p => p.value as number);
+      const genHistory = await fetchAndVerifyTelemetry(
+        () => celecService.fetchDailyEnergy(plant, yesterday),
+        `Plant ${item.key} daily energy`
+      );
 
       // Flow (Caudal) History validation
-      const flowPointsRaw = await celecService.fetchFlow(plant, yesterday);
-      if (!flowPointsRaw || flowPointsRaw.length < 24) {
-        throw new Error(`Plant ${item.key} flow (caudal) telemetry is incomplete or offline in CELEC.`);
-      }
-      const reversedFlow = [...flowPointsRaw].reverse().slice(0, 24);
-      if (reversedFlow.some(p => !p || p.value === null || p.value === undefined)) {
-        throw new Error(`Plant ${item.key} flow telemetry contains invalid or null values.`);
-      }
-      const caudalHistory = reversedFlow.map(p => p.value as number);
+      const caudalHistory = await fetchAndVerifyTelemetry(
+        () => celecService.fetchFlow(plant, yesterday),
+        `Plant ${item.key} flow (caudal)`
+      );
 
       // Level (Cota) History validation
       let cotaHistory: number[] | undefined = undefined;
       if (item.hasCota) {
-        const levelPointsRaw = await celecService.fetchLevel(plant, yesterday);
-        if (!levelPointsRaw || levelPointsRaw.length < 24) {
-          throw new Error(`Plant ${item.key} level (cota) telemetry is incomplete or offline in CELEC.`);
-        }
-        const reversedLevel = [...levelPointsRaw].reverse().slice(0, 24);
-        if (reversedLevel.some(p => !p || p.value === null || p.value === undefined)) {
-          throw new Error(`Plant ${item.key} level telemetry contains invalid or null values.`);
-        }
-        cotaHistory = reversedLevel.map(p => p.value as number);
+        cotaHistory = await fetchAndVerifyTelemetry(
+          () => celecService.fetchLevel(plant, yesterday),
+          `Plant ${item.key} level (cota)`
+        );
       }
 
       const todayMWh = genHistory.reduce((a, b) => a + b, 0);
