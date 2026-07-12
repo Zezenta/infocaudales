@@ -13,15 +13,16 @@
 */
 
 
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
 import { CelecService, CelecPointValue } from './services/celec.service.js';
 import { CenaceService } from './services/cenace.service.js';
-import { generateReportCard, TelemetryData } from './services/report-generator.service.js';
+import { generateReportCard, generateDailyReport, TelemetryData } from './services/report-generator.service.js';
 import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
-import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline } from './utils/cenace-history.js';
+import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline, getCcsYesterdayHourlyCurve } from './utils/cenace-history.js';
 
 dotenv.config();
 
@@ -362,6 +363,176 @@ const eveningCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+function getFormattedEcuadorDate(date: Date): string {
+  const daysOfWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const months = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  const ecTime = new Date(date.getTime() - 5 * 60 * 60 * 1000);
+  const dayName = daysOfWeek[ecTime.getUTCDay()];
+  const day = ecTime.getUTCDate();
+  const monthName = months[ecTime.getUTCMonth()];
+  const year = ecTime.getUTCFullYear();
+  return `${dayName}, ${day} de ${monthName} del ${year}`;
+}
+
+async function publishDailyConsolidatedReport() {
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const dateStr = getFormattedEcuadorDate(yesterday);
+
+  console.log(`\n[CronJob] [Daily Report] Starting daily publication cycle for target date: ${dateStr}...`);
+
+  try {
+    // 1. Fetch CENACE yesterday operational data
+    const cenaceData = await cenaceService.fetchYesterdayOperationalData();
+    
+    // Validate Coca Codo Sinclair daily total MWh from CENACE
+    const ccsYesterdayMWh = cenaceData.plantsDailyTotalMWh.cocaCodoSinclair;
+    if (!ccsYesterdayMWh || ccsYesterdayMWh <= 0) {
+      throw new Error("Coca Codo Sinclair yesterday MWh is missing or invalid in CENACE data.");
+    }
+
+    // Validate and calculate yesterday composition national MWh
+    if (!cenaceData.compositionMWh || Object.keys(cenaceData.compositionMWh).length === 0) {
+      throw new Error("Yesterday matrix composition is missing in CENACE data.");
+    }
+    const totalNationalMWh = Object.values(cenaceData.compositionMWh).reduce((a: any, b: any) => a + b, 0);
+    if (totalNationalMWh <= 0) {
+      throw new Error("Total national MWh is zero or invalid in CENACE composition data.");
+    }
+
+    // 2. Validate and retrieve Coca Codo Sinclair actual hourly curve
+    const ccsGenHistory = getCcsYesterdayHourlyCurve(yesterday);
+    if (!ccsGenHistory || ccsGenHistory.length < 24) {
+      throw new Error("Coca Codo Sinclair hourly telemetry is incomplete or missing from JSON/CSV database.");
+    }
+
+    // Validate that ccsGenHistory has all valid numbers (no NaNs or nulls)
+    if (ccsGenHistory.some(val => val === null || val === undefined || isNaN(val))) {
+      throw new Error("Coca Codo Sinclair hourly telemetry contains invalid or corrupt values.");
+    }
+
+    // 3. Fetch CCS Flow history (Caudal) from CELEC
+    const ccsFlowPointsRaw = await celecService.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday);
+    if (!ccsFlowPointsRaw || ccsFlowPointsRaw.length < 24) {
+      throw new Error("Coca Codo Sinclair flow (caudal) telemetry is incomplete or offline in CELEC.");
+    }
+    const reversedCcsFlow = [...ccsFlowPointsRaw].reverse().slice(0, 24);
+    if (reversedCcsFlow.some(p => !p || p.value === null || p.value === undefined)) {
+      throw new Error("Coca Codo Sinclair flow telemetry contains invalid or null values.");
+    }
+    const ccsFlowHistory = reversedCcsFlow.map(p => p.value as number);
+
+    const ccsMaxMW = hydroelectricPlants.cocaCodoSinclair.physicalData?.maxEnergyMW || 1500;
+    const ccsFactor = (ccsYesterdayMWh / (ccsMaxMW * 24)) * 100;
+
+    const plantPayloads: any[] = [{
+      key: 'cocaCodoSinclair',
+      todayMWh: ccsYesterdayMWh,
+      factor: ccsFactor,
+      genHistory: ccsGenHistory,
+      caudalHistory: ccsFlowHistory
+    }];
+
+    // 4. Fetch and strictly validate the other 5 CELEC plants
+    const celecPlantsList = [
+      { key: 'molino', hasCota: true },
+      { key: 'sopladora', hasCota: false },
+      { key: 'mazar', hasCota: true },
+      { key: 'minasSanFrancisco', hasCota: true },
+      { key: 'agoyan', hasCota: true }
+    ];
+
+    for (const item of celecPlantsList) {
+      const plant = hydroelectricPlants[item.key];
+      const maxMW = plant.physicalData?.maxEnergyMW || 100;
+
+      // Gen History validation
+      const genPointsRaw = await celecService.fetchDailyEnergy(plant, yesterday);
+      if (!genPointsRaw || genPointsRaw.length < 24) {
+        throw new Error(`Plant ${item.key} daily energy telemetry is incomplete or offline in CELEC.`);
+      }
+      const reversedGen = [...genPointsRaw].reverse().slice(0, 24);
+      if (reversedGen.some(p => !p || p.value === null || p.value === undefined)) {
+        throw new Error(`Plant ${item.key} daily energy telemetry contains invalid or null values.`);
+      }
+      const genHistory = reversedGen.map(p => p.value as number);
+
+      // Flow (Caudal) History validation
+      const flowPointsRaw = await celecService.fetchFlow(plant, yesterday);
+      if (!flowPointsRaw || flowPointsRaw.length < 24) {
+        throw new Error(`Plant ${item.key} flow (caudal) telemetry is incomplete or offline in CELEC.`);
+      }
+      const reversedFlow = [...flowPointsRaw].reverse().slice(0, 24);
+      if (reversedFlow.some(p => !p || p.value === null || p.value === undefined)) {
+        throw new Error(`Plant ${item.key} flow telemetry contains invalid or null values.`);
+      }
+      const caudalHistory = reversedFlow.map(p => p.value as number);
+
+      // Level (Cota) History validation
+      let cotaHistory: number[] | undefined = undefined;
+      if (item.hasCota) {
+        const levelPointsRaw = await celecService.fetchLevel(plant, yesterday);
+        if (!levelPointsRaw || levelPointsRaw.length < 24) {
+          throw new Error(`Plant ${item.key} level (cota) telemetry is incomplete or offline in CELEC.`);
+        }
+        const reversedLevel = [...levelPointsRaw].reverse().slice(0, 24);
+        if (reversedLevel.some(p => !p || p.value === null || p.value === undefined)) {
+          throw new Error(`Plant ${item.key} level telemetry contains invalid or null values.`);
+        }
+        cotaHistory = reversedLevel.map(p => p.value as number);
+      }
+
+      const todayMWh = genHistory.reduce((a, b) => a + b, 0);
+      const factor = (todayMWh / (maxMW * 24)) * 100;
+
+      plantPayloads.push({
+        key: item.key,
+        todayMWh,
+        factor,
+        genHistory,
+        caudalHistory,
+        cotaHistory
+      });
+    }
+
+    const sum6PlantsMWh = plantPayloads.reduce((sum, p) => sum + p.todayMWh, 0);
+    const nationalShare = (sum6PlantsMWh / totalNationalMWh) * 100;
+
+    const liveData = {
+      plants: plantPayloads,
+      dateStr,
+      nationalShare
+    };
+
+    // 5. Generate Daily Consolidated Report image
+    const tempPath = `/tmp/daily-report-capture-${Date.now()}.png`;
+    console.log('[CronJob] [Daily Report] Generating Daily Consolidated Report image card...');
+    await generateDailyReport(tempPath, liveData);
+
+    if (!fs.existsSync(tempPath)) {
+      throw new Error("Failed to generate daily report screenshot.");
+    }
+    const imageBuffer = fs.readFileSync(tempPath);
+
+    // 6. Tweet the report to X
+    const postMessage = `💧 Reporte diario de generación de las 6 principales centrales hidroeléctricas del país para el ${dateStr}.\n\n` +
+      `Estas 6 centrales produjeron el ${nationalShare.toFixed(2)}% de la energía generada a nivel nacional.\n\n` +
+      `#Ecuador #Energía #EnergíaEc`;
+
+    console.log(`[CronJob] [Daily Report] Posting daily report to X...`);
+    await xService.postTweet(postMessage, imageBuffer);
+    console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully!');
+
+    // Cleanup temp file
+    try { fs.unlinkSync(tempPath); } catch {}
+  } catch (err: any) {
+    console.error(`[CronJob] [Daily Report] ABORTED: Failed daily report publication cycle:`, err?.message || err);
+  }
+}
+
 const hourlyCenaceLogJob = new CronJob(
   '0 * * * *',
   async () => {
@@ -373,11 +544,22 @@ const hourlyCenaceLogJob = new CronJob(
   'America/Guayaquil'
 );
 
+const dailyReportCronJob = new CronJob(
+  '30 8 * * *',
+  async () => {
+    await publishDailyConsolidatedReport();
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
 cenaceSamplingJob.start();
 morningCronJob.start();
 afternoonCronJob.start();
 eveningCronJob.start();
 hourlyCenaceLogJob.start();
+dailyReportCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
