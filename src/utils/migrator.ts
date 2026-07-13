@@ -17,13 +17,14 @@ export function runMigration(): void {
       const records = JSON.parse(raw);
       
       const insertRaw = db.prepare(`
-        INSERT OR IGNORE INTO coca_codo_raw_history (timestamp, accumulated_mwh)
+        INSERT OR IGNORE INTO coca_codo_hourly_log (timestamp, accumulated_mwh)
         VALUES (?, ?)
       `);
 
       const insertMany = db.transaction((rows: any[]) => {
         for (const row of rows) {
-          const res = insertRaw.run(row.timestamp, row.cocaCodoMWh);
+          const hourlyTimestamp = Math.round(row.timestamp / (3600 * 1000)) * (3600 * 1000);
+          const res = insertRaw.run(hourlyTimestamp, row.cocaCodoMWh);
           if (res.changes > 0) jsonMigratedCount++;
         }
       });
@@ -40,20 +41,15 @@ export function runMigration(): void {
       const lines = content.split('\n');
 
       const insertRaw = db.prepare(`
-        INSERT OR IGNORE INTO coca_codo_raw_history (timestamp, accumulated_mwh)
+        INSERT OR IGNORE INTO coca_codo_hourly_log (timestamp, accumulated_mwh)
         VALUES (?, ?)
-      `);
-
-      const insertHourly = db.prepare(`
-        INSERT OR IGNORE INTO hourly_telemetry (timestamp, plant_key, generation_mw, caudal_flow, cota_level)
-        VALUES (?, 'cocaCodoSinclair', ?, 0, NULL)
       `);
 
       const migrationTx = db.transaction((rows: any[]) => {
         for (const row of rows) {
-          const resRaw = insertRaw.run(row.timestamp, row.accumulatedMWh);
-          const resHourly = insertHourly.run(row.timestamp, row.hourlyMW);
-          if (resRaw.changes > 0 || resHourly.changes > 0) {
+          const hourlyTimestamp = Math.round(row.timestamp / (3600 * 1000)) * (3600 * 1000);
+          const resRaw = insertRaw.run(hourlyTimestamp, row.accumulatedMWh);
+          if (resRaw.changes > 0) {
             csvMigratedCount++;
           }
         }
@@ -66,9 +62,8 @@ export function runMigration(): void {
         if (parts.length >= 4) {
           const timestamp = Number(parts[0]);
           const accumulatedMWh = Number(parts[2]);
-          const hourlyMW = Number(parts[3]);
-          if (!isNaN(timestamp) && !isNaN(accumulatedMWh) && !isNaN(hourlyMW)) {
-            parsedRows.push({ timestamp, accumulatedMWh, hourlyMW });
+          if (!isNaN(timestamp) && !isNaN(accumulatedMWh)) {
+            parsedRows.push({ timestamp, accumulatedMWh });
           }
         }
       }

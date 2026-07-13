@@ -24,6 +24,7 @@ import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
 import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline, getCcsYesterdayHourlyCurve } from './utils/cenace-history.js';
 import { runMigration } from './utils/migrator.js';
+import { db } from './utils/db.js';
 
 dotenv.config();
 
@@ -174,39 +175,47 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
   // 4. Fetch Generation
   if (plantKey === 'cocaCodoSinclair') {
     try {
-      const currentMWh = await cenaceService.fetchPlantProduction('cocaCodoSinclair');
-      if (currentMWh !== null && currentMWh > 0) {
-        const history = readCenaceHistory();
-        const nowMs = now.getTime();
+      // Find today's date parts in Ecuador timezone
+      const ecTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+      const year = ecTime.getUTCFullYear();
+      const month = ecTime.getUTCMonth();
+      const date = ecTime.getUTCDate();
+      
+      // Target UTC timestamp of the completed hour (e.g. 7:00 AM local = 12:00:00 UTC)
+      const targetUtcMs = Date.UTC(year, month, date, hora + 5);
+      const prevUtcMs = targetUtcMs - 60 * 60 * 1000;
+
+      const rows = db.prepare(`
+        SELECT timestamp, accumulated_mwh 
+        FROM coca_codo_hourly_log 
+        WHERE timestamp = ? OR timestamp = ?
+        ORDER BY timestamp ASC
+      `).all(prevUtcMs, targetUtcMs) as any[];
+
+      if (rows.length === 2) {
+        const start = rows[0];
+        const end = rows[1];
+        const diffHours = (end.timestamp - start.timestamp) / (1000 * 60 * 60);
+        const deltaMWh = end.accumulated_mwh - start.accumulated_mwh;
         
-        let calculatedMW: number | null = null;
-        if (history.length > 0) {
-          const prev = history[history.length - 1];
-          const diffMs = nowMs - prev.timestamp;
-          const diffHours = diffMs / (1000 * 60 * 60);
-          const deltaMWh = currentMWh - prev.cocaCodoMWh;
-
-          if (diffHours > 0.1 && deltaMWh >= 0) {
-            const rawRate = deltaMWh / diffHours;
-            const maxCapacity = hydroelectricPlants.cocaCodoSinclair.physicalData?.maxEnergyMW || 1500;
-            if (rawRate <= maxCapacity) {
-              calculatedMW = rawRate;
-            } else {
-              console.warn(`[Index] Ignored raw hourly rate of ${rawRate.toFixed(2)} MW for Coca Codo Sinclair (exceeds max capacity of ${maxCapacity} MW). Falling back to daily average.`);
-            }
-          }
+        if (diffHours > 0.05 && deltaMWh >= 0) {
+          const rawRate = deltaMWh / diffHours;
+          gen = Math.min(rawRate, 1500); // Cap at max capacity
+          console.log(`[Index] Inferred completed hourly generation for Coca Codo Sinclair from SQLite: ${gen.toFixed(2)} MW`);
         }
+      }
 
-        if (calculatedMW === null || calculatedMW <= 0) {
+      if (gen === null) {
+        // Fallback to daily average from CENACE live scrape
+        console.log(`[Index] Completed hourly logs for Coca Codo Sinclair not found in SQLite. Falling back to daily average.`);
+        const currentMWh = await cenaceService.fetchPlantProduction('cocaCodoSinclair');
+        if (currentMWh !== null && currentMWh > 0) {
           const currentLocalHour = Math.max(1, hora === 0 ? 24 : hora);
-          calculatedMW = currentMWh / currentLocalHour;
+          gen = currentMWh / currentLocalHour;
         }
-
-        gen = calculatedMW;
-        saveCenaceHistory({ timestamp: nowMs, cocaCodoMWh: currentMWh });
       }
     } catch (err) {
-      console.warn(`[Index] Failed to infer CENACE generation for Coca Codo Sinclair:`, err);
+      console.warn(`[Index] Failed to fetch SQLite/CENACE generation for Coca Codo Sinclair:`, err);
     }
   } else {
     try {
@@ -315,21 +324,10 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
 
 console.log('--------------------------------------------------');
 console.log('🤖 Infocaudales Bot Started');
-console.log('CENACE Pre-Sampling Schedule: 6:15 AM, 12:15 PM, 6:15 PM');
 console.log('CENACE Hourly Logging: Every hour on the hour');
 console.log('Publishing Schedule: 7:15 AM, 1:15 PM, 7:15 PM (America/Guayaquil)');
+console.log('Daily Report Schedule: 8:30 AM (America/Guayaquil)');
 console.log('--------------------------------------------------');
-
-const cenaceSamplingJob = new CronJob(
-  '15 6,12,18 * * *',
-  async () => {
-    console.log('\n[CronJob] Running pre-publication CENACE baseline sampling...');
-    await recordCenaceBaseline(cenaceService);
-  },
-  null,
-  true,
-  'America/Guayaquil'
-);
 
 // 7:15 AM (Morning Run - 4 plants)
 const morningCronJob = new CronJob(
@@ -559,7 +557,6 @@ const dailyReportCronJob = new CronJob(
 
 runMigration();
 
-cenaceSamplingJob.start();
 morningCronJob.start();
 afternoonCronJob.start();
 eveningCronJob.start();

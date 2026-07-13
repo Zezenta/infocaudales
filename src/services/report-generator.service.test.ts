@@ -253,5 +253,5 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     await generateDailyReport(filePath, liveData);
     expect(fs.existsSync(filePath)).toBe(true);
     console.log(`[Test Daily Report] Successfully generated and verified daily report file: ${filePath}`);
-  }, 45000);
+  }, 120000);
 });

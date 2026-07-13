@@ -13,7 +13,7 @@ export function readCenaceHistory(): CenaceHistoryRecord[] {
   try {
     const rows = db.prepare(`
       SELECT timestamp, accumulated_mwh AS cocaCodoMWh 
-      FROM coca_codo_raw_history 
+      FROM coca_codo_hourly_log 
       ORDER BY timestamp ASC
     `).all() as any[];
     return rows;
@@ -28,37 +28,15 @@ export function readCenaceHistory(): CenaceHistoryRecord[] {
  */
 export function saveCenaceHistory(record: CenaceHistoryRecord): void {
   try {
-    const prev = db.prepare(`
-      SELECT timestamp, accumulated_mwh 
-      FROM coca_codo_raw_history 
-      ORDER BY timestamp DESC 
-      LIMIT 1
-    `).get() as any;
+    // Round timestamp to the nearest hour mark
+    const hourlyTimestamp = Math.round(record.timestamp / (3600 * 1000)) * (3600 * 1000);
 
-    let hourlyMW = 0;
-    if (prev) {
-      const diffMs = record.timestamp - prev.timestamp;
-      const diffHours = diffMs / (1000 * 60 * 60);
-      const deltaMWh = record.cocaCodoMWh - prev.accumulated_mwh;
-      if (diffHours > 0.05 && deltaMWh >= 0) {
-        const rawRate = deltaMWh / diffHours;
-        hourlyMW = Math.min(rawRate, 1500); // Cap at Coca Codo Sinclair max capacity
-      }
-    }
-
-    // Insert into raw history
     db.prepare(`
-      INSERT OR REPLACE INTO coca_codo_raw_history (timestamp, accumulated_mwh)
+      INSERT OR REPLACE INTO coca_codo_hourly_log (timestamp, accumulated_mwh)
       VALUES (?, ?)
-    `).run(record.timestamp, record.cocaCodoMWh);
+    `).run(hourlyTimestamp, record.cocaCodoMWh);
 
-    // Insert into hourly telemetry
-    db.prepare(`
-      INSERT OR REPLACE INTO hourly_telemetry (timestamp, plant_key, generation_mw, caudal_flow, cota_level)
-      VALUES (?, 'cocaCodoSinclair', ?, 0, NULL)
-    `).run(record.timestamp, hourlyMW);
-
-    console.log(`[SQLite] Saved baseline: ${record.cocaCodoMWh} MWh. Calculated rate: ${hourlyMW.toFixed(2)} MW`);
+    console.log(`[SQLite] Saved hourly baseline: ${record.cocaCodoMWh} MWh at timestamp ${hourlyTimestamp}`);
   } catch (err) {
     console.warn('[SQLite] Failed to save CENACE history to DB:', err);
   }
@@ -92,7 +70,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
     const month = ecDate.getUTCMonth();
     const date = ecDate.getUTCDate();
 
-    // Create UTC timestamps for each local hour in Ecuador timezone
+    // Create UTC timestamps for each local hour in Ecuador timezone (0 to 24)
     const targetTimestamps: number[] = [];
     for (let h = 0; h <= 24; h++) {
       targetTimestamps.push(Date.UTC(year, month, date, h + 5));
@@ -103,7 +81,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
 
     const matchStmt = db.prepare(`
       SELECT timestamp, accumulated_mwh AS cocaCodoMWh 
-      FROM coca_codo_raw_history 
+      FROM coca_codo_hourly_log 
       WHERE abs(timestamp - ?) <= ? 
       LIMIT 1
     `);
@@ -116,7 +94,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
       matchedRecords.push(match);
     }
 
-    // Calculate the 24 hourly averages in MW
+    // Calculate the 24 hourly averages in MW on-the-fly, capping at max capacity
     const curve: number[] = [];
     for (let i = 1; i <= 24; i++) {
       const start = matchedRecords[i - 1];
@@ -135,7 +113,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
 
     return curve;
   } catch (err) {
-    console.warn('[SQLite] Error calculating yesterday hourly curve:', err);
+    console.warn('[SQLite] Error retrieving yesterday hourly curve:', err);
   }
   return null;
 }

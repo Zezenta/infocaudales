@@ -54,7 +54,7 @@ export class CelecService {
     return this.requestWithRetry(async () => {
       const response = await axios.get(`${this.baseUrl}/sardomcsr/pointValues`, {
         httpsAgent: this.agent,
-        timeout: 45000,
+        timeout: 15000,
         params: {
           mrid: mrid,
           fechaInicio: fechaInicio,

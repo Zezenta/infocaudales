@@ -11,23 +11,24 @@ if (!fs.existsSync(dataDir)) {
 const DB_PATH = path.join(dataDir, 'infocaudales.db');
 export const db = new Database(DB_PATH);
 
-// Initialize Database Schema
+// Dynamically drop table to recreate it if transitioning from the older schema containing hourly_mw
+try {
+  const tableInfo = db.pragma('table_info(coca_codo_hourly_log)') as any[];
+  const hasHourlyMw = tableInfo.some(col => col.name === 'hourly_mw');
+  if (hasHourlyMw) {
+    console.log('[SQLite] Dropping old coca_codo_hourly_log table containing stale hourly_mw column...');
+    db.exec('DROP TABLE IF EXISTS coca_codo_hourly_log');
+  }
+} catch (e) {
+  // Table might not exist yet
+}
+
+// Initialize Database Schema (strictly raw accumulated MWh tracking)
 db.exec(`
-  CREATE TABLE IF NOT EXISTS coca_codo_raw_history (
+  CREATE TABLE IF NOT EXISTS coca_codo_hourly_log (
     timestamp INTEGER PRIMARY KEY,
     accumulated_mwh REAL NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS hourly_telemetry (
-    timestamp INTEGER,
-    plant_key TEXT,
-    generation_mw REAL NOT NULL,
-    caudal_flow REAL NOT NULL,
-    cota_level REAL,
-    PRIMARY KEY (timestamp, plant_key)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_telemetry_range ON hourly_telemetry (timestamp, plant_key);
 `);
 
 console.log('[SQLite] Database initialized at:', DB_PATH);
