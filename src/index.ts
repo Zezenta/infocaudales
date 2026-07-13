@@ -23,6 +23,7 @@ import { generateReportCard, generateDailyReport, TelemetryData } from './servic
 import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
 import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline, getCcsYesterdayHourlyCurve } from './utils/cenace-history.js';
+import { runMigration } from './utils/migrator.js';
 
 dotenv.config();
 
@@ -186,7 +187,13 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
           const deltaMWh = currentMWh - prev.cocaCodoMWh;
 
           if (diffHours > 0.1 && deltaMWh >= 0) {
-            calculatedMW = deltaMWh / diffHours;
+            const rawRate = deltaMWh / diffHours;
+            const maxCapacity = hydroelectricPlants.cocaCodoSinclair.physicalData?.maxEnergyMW || 1500;
+            if (rawRate <= maxCapacity) {
+              calculatedMW = rawRate;
+            } else {
+              console.warn(`[Index] Ignored raw hourly rate of ${rawRate.toFixed(2)} MW for Coca Codo Sinclair (exceeds max capacity of ${maxCapacity} MW). Falling back to daily average.`);
+            }
           }
         }
 
@@ -549,6 +556,8 @@ const dailyReportCronJob = new CronJob(
   true,
   'America/Guayaquil'
 );
+
+runMigration();
 
 cenaceSamplingJob.start();
 morningCronJob.start();
