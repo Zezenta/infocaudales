@@ -23,7 +23,6 @@ import { generateReportCard, generateDailyReport, TelemetryData } from './servic
 import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
 import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline, getCcsYesterdayHourlyCurve } from './utils/cenace-history.js';
-import { runMigration } from './utils/migrator.js';
 import { db } from './utils/db.js';
 
 dotenv.config();
@@ -554,8 +553,6 @@ const dailyReportCronJob = new CronJob(
   true,
   'America/Guayaquil'
 );
-
-runMigration();
 
 morningCronJob.start();
 afternoonCronJob.start();
