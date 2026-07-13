@@ -2,8 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const projectRoot = path.join(__dirname, '..', '..');
-const dataDir = path.join(projectRoot, 'data');
+const dataDir = path.join(process.cwd(), 'data');
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
