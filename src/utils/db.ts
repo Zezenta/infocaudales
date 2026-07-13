@@ -23,6 +23,12 @@ try {
   // Table might not exist yet
 }
 
+// Clean up unused old tables to free database space
+db.exec(`
+  DROP TABLE IF EXISTS coca_codo_raw_history;
+  DROP TABLE IF EXISTS hourly_telemetry;
+`);
+
 // Initialize Database Schema (strictly raw accumulated MWh tracking)
 db.exec(`
   CREATE TABLE IF NOT EXISTS coca_codo_hourly_log (
