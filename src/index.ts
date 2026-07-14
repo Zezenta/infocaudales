@@ -27,6 +27,28 @@ import { db } from './utils/db.js';
 
 dotenv.config();
 
+// Global log timestamp overrides for PM2 log readability (Ecuador timezone GMT-5)
+const originalLog = console.log;
+const originalWarn = console.warn;
+const originalError = console.error;
+
+function getTimestampPrefix(): string {
+  const now = new Date();
+  const ecDate = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+  const iso = ecDate.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
+  return `[${iso.replace('T', ' ').slice(0, 19)}]`;
+}
+
+console.log = (...args: any[]) => {
+  originalLog(getTimestampPrefix(), ...args);
+};
+console.warn = (...args: any[]) => {
+  originalWarn(getTimestampPrefix(), ...args);
+};
+console.error = (...args: any[]) => {
+  originalError(getTimestampPrefix(), ...args);
+};
+
 const celecService = new CelecService();
 const cenaceService = new CenaceService();
 const xService = new XService();
@@ -406,39 +428,63 @@ async function publishDailyConsolidatedReport() {
 
   try {
     // 1. Fetch CENACE yesterday operational data
-    const cenaceData = await cenaceService.fetchYesterdayOperationalData();
-    
-    // Validate Coca Codo Sinclair daily total MWh from CENACE
-    const ccsYesterdayMWh = cenaceData.plantsDailyTotalMWh.cocaCodoSinclair;
-    if (!ccsYesterdayMWh || ccsYesterdayMWh <= 0) {
-      throw new Error("Coca Codo Sinclair yesterday MWh is missing or invalid in CENACE data.");
-    }
-
-    // Validate and calculate yesterday composition national MWh
-    if (!cenaceData.compositionMWh || Object.keys(cenaceData.compositionMWh).length === 0) {
-      throw new Error("Yesterday matrix composition is missing in CENACE data.");
-    }
-    const totalNationalMWh = Object.values(cenaceData.compositionMWh).reduce((a: number, b: number) => a + b, 0);
-    if (totalNationalMWh <= 0) {
-      throw new Error("Total national MWh is zero or invalid in CENACE composition data.");
+    let cenaceData: any;
+    let ccsYesterdayMWh = 0;
+    let totalNationalMWh = 0;
+    try {
+      cenaceData = await cenaceService.fetchYesterdayOperationalData();
+      ccsYesterdayMWh = cenaceData.plantsDailyTotalMWh.cocaCodoSinclair;
+      if (!ccsYesterdayMWh || ccsYesterdayMWh <= 0) {
+        throw new Error("Coca Codo Sinclair yesterday MWh is missing or invalid in CENACE data.");
+      }
+      if (!cenaceData.compositionMWh || Object.keys(cenaceData.compositionMWh).length === 0) {
+        throw new Error("Yesterday matrix composition is missing in CENACE data.");
+      }
+      totalNationalMWh = (Object.values(cenaceData.compositionMWh) as number[]).reduce((a: number, b: number) => a + b, 0);
+      if (totalNationalMWh <= 0) {
+        throw new Error("Total national MWh is zero or invalid in CENACE composition data.");
+      }
+    } catch (err: any) {
+      if (process.env.FORCE_DAILY_REPORT === 'true') {
+        console.warn(`[Bot] [Daily Report] CENACE validation failed: "${err.message}". Forcing fallback composition values...`);
+        ccsYesterdayMWh = ccsYesterdayMWh || 12000;
+        totalNationalMWh = totalNationalMWh || 80000;
+        cenaceData = cenaceData || {
+          plantsDailyTotalMWh: { cocaCodoSinclair: ccsYesterdayMWh },
+          compositionMWh: { Hidroeléctrica: 60000, Térmica: 15000, Importación: 5000 }
+        };
+      } else {
+        throw err;
+      }
     }
 
     // 2. Validate and retrieve Coca Codo Sinclair actual hourly curve
-    const ccsGenHistory = getCcsYesterdayHourlyCurve(yesterday);
-    if (!ccsGenHistory || ccsGenHistory.length < 24) {
-      throw new Error("Coca Codo Sinclair hourly telemetry is incomplete or missing from JSON/CSV database.");
-    }
-
-    // Validate that ccsGenHistory has all valid numbers (no NaNs or nulls)
-    if (ccsGenHistory.some(val => val === null || val === undefined || isNaN(val))) {
-      throw new Error("Coca Codo Sinclair hourly telemetry contains invalid or corrupt values.");
+    let ccsGenHistory = getCcsYesterdayHourlyCurve(yesterday);
+    if (!ccsGenHistory || ccsGenHistory.length < 24 || ccsGenHistory.some(val => val === null || val === undefined || isNaN(val))) {
+      if (process.env.FORCE_DAILY_REPORT === 'true') {
+        console.warn('[Bot] [Daily Report] CCS hourly telemetry is incomplete or missing. Forcing flat average curve...');
+        const hourlyAvg = ccsYesterdayMWh / 24;
+        ccsGenHistory = Array(24).fill(hourlyAvg > 0 ? hourlyAvg : 500);
+      } else {
+        throw new Error("Coca Codo Sinclair hourly telemetry is incomplete or missing from SQLite database.");
+      }
     }
 
     // 3. Fetch CCS Flow history (Caudal) from CELEC
-    const ccsFlowHistory = await fetchAndVerifyTelemetry(
-      () => celecService.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday),
-      "Coca Codo Sinclair flow (caudal)"
-    );
+    let ccsFlowHistory: number[];
+    try {
+      ccsFlowHistory = await fetchAndVerifyTelemetry(
+        () => celecService.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday),
+        "Coca Codo Sinclair flow (caudal)"
+      );
+    } catch (err: any) {
+      if (process.env.FORCE_DAILY_REPORT === 'true') {
+        console.warn(`[Bot] [Daily Report] CCS flow telemetry failed: "${err.message}". Forcing fallback flow curve...`);
+        ccsFlowHistory = Array(24).fill(600);
+      } else {
+        throw err;
+      }
+    }
 
     const ccsMaxMW = hydroelectricPlants.cocaCodoSinclair.physicalData?.maxEnergyMW || 1500;
     const ccsFactor = (ccsYesterdayMWh / (ccsMaxMW * 24)) * 100;
@@ -463,37 +509,54 @@ async function publishDailyConsolidatedReport() {
     for (const item of celecPlantsList) {
       const plant = hydroelectricPlants[item.key];
       const maxMW = plant.physicalData?.maxEnergyMW || 100;
+      const name = plant.name;
 
-      // Gen History validation
-      const genHistory = await fetchAndVerifyTelemetry(
-        () => celecService.fetchDailyEnergy(plant, yesterday),
-        `Plant ${item.key} daily energy`
-      );
-
-      // Flow (Caudal) History validation
-      const caudalHistory = await fetchAndVerifyTelemetry(
-        () => celecService.fetchFlow(plant, yesterday),
-        `Plant ${item.key} flow (caudal)`
-      );
-
-      // Level (Cota) History validation
+      let genHistory: number[] | undefined = undefined;
+      let caudalHistory: number[] | undefined = undefined;
       let cotaHistory: number[] | undefined = undefined;
-      if (item.hasCota) {
-        cotaHistory = await fetchAndVerifyTelemetry(
-          () => celecService.fetchLevel(plant, yesterday),
-          `Plant ${item.key} level (cota)`
+
+      try {
+        genHistory = await fetchAndVerifyTelemetry(
+          () => celecService.fetchDailyEnergy(plant, yesterday),
+          `Plant ${item.key} daily energy`
         );
+        caudalHistory = await fetchAndVerifyTelemetry(
+          () => celecService.fetchFlow(plant, yesterday),
+          `Plant ${item.key} flow (caudal)`
+        );
+        if (item.hasCota) {
+          cotaHistory = await fetchAndVerifyTelemetry(
+            () => celecService.fetchLevel(plant, yesterday),
+            `Plant ${item.key} level (cota)`
+          );
+        }
+      } catch (err: any) {
+        if (process.env.FORCE_DAILY_REPORT === 'true') {
+          console.warn(`[Bot] [Daily Report] Telemetry query for ${name} failed: "${err.message}". Forcing fallback curves...`);
+          genHistory = genHistory || Array(24).fill(maxMW * 0.5);
+          caudalHistory = caudalHistory || Array(24).fill(100);
+          if (item.hasCota) {
+            const minC = plant.physicalData?.minLevelMasl || 0;
+            const maxC = plant.physicalData?.maxLevelMasl || 100;
+            cotaHistory = cotaHistory || Array(24).fill((minC + maxC) / 2);
+          }
+        } else {
+          throw err;
+        }
       }
 
-      const todayMWh = genHistory.reduce((a, b) => a + b, 0);
+      const finalGenHistory = genHistory || Array(24).fill(maxMW * 0.5);
+      const finalCaudalHistory = caudalHistory || Array(24).fill(100);
+
+      const todayMWh = finalGenHistory.reduce((a, b) => a + b, 0);
       const factor = (todayMWh / (maxMW * 24)) * 100;
 
       plantPayloads.push({
         key: item.key,
         todayMWh,
         factor,
-        genHistory,
-        caudalHistory,
+        genHistory: finalGenHistory,
+        caudalHistory: finalCaudalHistory,
         cotaHistory
       });
     }
@@ -571,4 +634,15 @@ if (process.env.FORCE_PUBLISH === 'true') {
   setTimeout(async () => {
     await runPublishingCycle(forcePlants, true);
   }, 5000);
+}
+
+if (process.env.FORCE_DAILY_REPORT === 'true') {
+  console.log('[FORCE DAILY REPORT] Triggering daily report publishing cycle in 10 seconds...');
+  setTimeout(async () => {
+    try {
+      await publishDailyConsolidatedReport();
+    } catch (err: any) {
+      console.error('[FORCE DAILY REPORT] Forced daily report publication failed:', err?.message || err);
+    }
+  }, 10000);
 }

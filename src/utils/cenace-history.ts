@@ -76,7 +76,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
       targetTimestamps.push(Date.UTC(year, month, date, h + 5));
     }
 
-    const matchedRecords: CenaceHistoryRecord[] = [];
+    const matchedRecords: (CenaceHistoryRecord | null)[] = [];
     const tolerance = 15 * 60 * 1000; // 15 minutes window
 
     const matchStmt = db.prepare(`
@@ -88,17 +88,77 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
 
     for (const targetT of targetTimestamps) {
       const match = matchStmt.get(targetT, tolerance) as any;
-      if (!match) {
-        return null; // Missing hourly point!
+      matchedRecords.push(match || null);
+    }
+
+    // Count how many records were successfully found
+    const foundCount = matchedRecords.filter(r => r !== null).length;
+    if (foundCount < 20) {
+      console.warn(`[SQLite] Too many missing hourly readings for yesterday (${25 - foundCount} missing). Aborting curve generation.`);
+      return null;
+    }
+
+    // Interpolate missing entries
+    for (let i = 0; i < matchedRecords.length; i++) {
+      if (matchedRecords[i] === null) {
+        const targetT = targetTimestamps[i];
+
+        // Find closest available record before i
+        let prevRecord: CenaceHistoryRecord | null = null;
+        for (let j = i - 1; j >= 0; j--) {
+          if (matchedRecords[j] !== null) {
+            prevRecord = matchedRecords[j]!;
+            break;
+          }
+        }
+        // If not found in yesterday's bounds, query database for closest record before targetT
+        if (!prevRecord) {
+          prevRecord = db.prepare(`
+            SELECT timestamp, accumulated_mwh AS cocaCodoMWh
+            FROM coca_codo_hourly_log
+            WHERE timestamp < ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+          `).get(targetT) as any;
+        }
+
+        // Find closest available record after i
+        let nextRecord: CenaceHistoryRecord | null = null;
+        for (let j = i + 1; j < matchedRecords.length; j++) {
+          if (matchedRecords[j] !== null) {
+            nextRecord = matchedRecords[j]!;
+            break;
+          }
+        }
+        // If not found in yesterday's bounds, query database for closest record after targetT
+        if (!nextRecord) {
+          nextRecord = db.prepare(`
+            SELECT timestamp, accumulated_mwh AS cocaCodoMWh
+            FROM coca_codo_hourly_log
+            WHERE timestamp > ?
+            ORDER BY timestamp ASC
+            LIMIT 1
+          `).get(targetT) as any;
+        }
+
+        if (prevRecord && nextRecord) {
+          const timeRange = nextRecord.timestamp - prevRecord.timestamp;
+          const timeFraction = (targetT - prevRecord.timestamp) / timeRange;
+          const interpolatedMWh = prevRecord.cocaCodoMWh + (nextRecord.cocaCodoMWh - prevRecord.cocaCodoMWh) * timeFraction;
+          matchedRecords[i] = { timestamp: targetT, cocaCodoMWh: interpolatedMWh };
+          console.log(`[SQLite] Interpolated missing hour at timestamp ${targetT} (${new Date(targetT).toLocaleTimeString()} local): ${interpolatedMWh.toFixed(2)} MWh`);
+        } else {
+          console.warn(`[SQLite] Cannot interpolate missing hour at timestamp ${targetT}. Aborting.`);
+          return null;
+        }
       }
-      matchedRecords.push(match);
     }
 
     // Calculate the 24 hourly averages in MW on-the-fly, capping at max capacity
     const curve: number[] = [];
     for (let i = 1; i <= 24; i++) {
-      const start = matchedRecords[i - 1];
-      const end = matchedRecords[i];
+      const start = matchedRecords[i - 1]!;
+      const end = matchedRecords[i]!;
       
       const diffHours = (end.timestamp - start.timestamp) / (1000 * 60 * 60);
       const deltaMWh = end.cocaCodoMWh - start.cocaCodoMWh;

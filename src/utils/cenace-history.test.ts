@@ -118,19 +118,43 @@ describe('Coca Codo Sinclair SQLite History & Queries', () => {
     expect(curve?.every(val => val === 800)).toBe(true);
   });
 
-  it('should return null for getCcsYesterdayHourlyCurve if any hour is missing', () => {
+  it('should successfully interpolate missing hours if at least 20 records are present', () => {
     const yesterdayDate = new Date(Date.UTC(2026, 6, 12, 12, 0, 0, 0));
     
-    // Inject only 24 records, missing the 12:00 local record
+    // Inject 25 records, but miss 12:00 local (index 12)
     let baseline = 5000;
     for (let h = 0; h <= 24; h++) {
-      if (h === 12) continue; // Skip 12:00 PM local
+      if (h === 12) {
+        baseline += 800; // Increment baseline anyway to simulate generation during the missing hour
+        continue;
+      }
       const ts = Date.UTC(2026, 6, 12, h + 5, 0, 0, 0);
       saveCenaceHistory({ timestamp: ts, cocaCodoMWh: baseline });
       baseline += 800;
     }
 
     const curve = getCcsYesterdayHourlyCurve(yesterdayDate);
-    expect(curve).toBeNull(); // Missing record triggers validation abort
+    expect(curve).not.toBeNull();
+    expect(curve?.length).toBe(24);
+    // Verified that it interpolated index 11 (from 11:00 to 12:00 local) and index 12 (from 12:00 to 1:00 PM local) correctly
+    expect(curve?.[11]).toBe(800);
+    expect(curve?.[12]).toBe(800);
+    expect(curve?.every(val => val === 800)).toBe(true);
+  });
+
+  it('should return null for getCcsYesterdayHourlyCurve if too many hours are missing (less than 20 records)', () => {
+    const yesterdayDate = new Date(Date.UTC(2026, 6, 12, 12, 0, 0, 0));
+    
+    // Inject only 18 records (7 hours missing)
+    let baseline = 5000;
+    for (let h = 0; h <= 24; h++) {
+      if (h % 3 === 0) continue; // Skip multiple hours
+      const ts = Date.UTC(2026, 6, 12, h + 5, 0, 0, 0);
+      saveCenaceHistory({ timestamp: ts, cocaCodoMWh: baseline });
+      baseline += 800;
+    }
+
+    const curve = getCcsYesterdayHourlyCurve(yesterdayDate);
+    expect(curve).toBeNull(); // Too many missing records triggers validation abort
   });
 });
