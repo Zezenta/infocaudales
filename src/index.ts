@@ -459,15 +459,9 @@ async function publishDailyConsolidatedReport() {
     }
 
     // 2. Validate and retrieve Coca Codo Sinclair actual hourly curve
-    let ccsGenHistory = getCcsYesterdayHourlyCurve(yesterday);
+    const ccsGenHistory = getCcsYesterdayHourlyCurve(yesterday);
     if (!ccsGenHistory || ccsGenHistory.length < 24 || ccsGenHistory.some(val => val === null || val === undefined || isNaN(val))) {
-      if (process.env.FORCE_DAILY_REPORT === 'true') {
-        console.warn('[Bot] [Daily Report] CCS hourly telemetry is incomplete or missing. Forcing flat average curve...');
-        const hourlyAvg = ccsYesterdayMWh / 24;
-        ccsGenHistory = Array(24).fill(hourlyAvg > 0 ? hourlyAvg : 500);
-      } else {
-        throw new Error("Coca Codo Sinclair hourly telemetry is incomplete or missing from SQLite database.");
-      }
+      throw new Error("Coca Codo Sinclair hourly telemetry is incomplete (less than 20 records in SQLite database). Daily report aborted.");
     }
 
     // 3. Fetch CCS Flow history (Caudal) from CELEC
