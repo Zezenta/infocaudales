@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as https from 'https';
 import { HydroelectricPlant } from '../types/hydroelectric.js';
+import { celecLogger } from '../utils/logger.js';
 
 export interface CelecPointValue {
   timestamp: string; // ISO string or loctimestamp
@@ -31,7 +32,7 @@ export class CelecService {
       return await fn();
     } catch (error) {
       if (retries <= 0) throw error;
-      console.warn(`[CelecService] Request failed, retrying in ${delay}ms... (${retries} attempts left)`);
+      celecLogger.warn(`Request failed, retrying in ${delay}ms... (${retries} attempts left)`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return this.requestWithRetry(fn, retries - 1, delay * 2);
     }

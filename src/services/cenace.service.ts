@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as https from 'https';
 import { HydroelectricPlant } from '../types/hydroelectric.js';
+import { cenaceLogger } from '../utils/logger.js';
 
 // Type definitions for output values
 export interface SystemCurvePoint {
@@ -54,7 +55,7 @@ export class CenaceService {
       return await fn();
     } catch (error) {
       if (retries <= 0) throw error;
-      console.warn(`[CenaceService] Request failed, retrying in ${delay}ms... (${retries} attempts left)`);
+      cenaceLogger.warn(`Request failed, retrying in ${delay}ms... (${retries} attempts left)`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return this.requestWithRetry(fn, retries - 1, delay * 2);
     }
@@ -82,7 +83,7 @@ export class CenaceService {
         try {
           datasets.push(JSON.parse(match[1]));
         } catch (parseError) {
-          console.error('[CenaceService] Failed to parse Plotly dataset JSON:', parseError);
+          cenaceLogger.error(`Failed to parse Plotly dataset JSON: ${parseError}`);
         }
       }
       return datasets;

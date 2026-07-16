@@ -24,29 +24,25 @@ import { XService } from './services/x.service.js';
 import { buildMessageText } from './utils/post-formatter.js';
 import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline, getCcsYesterdayHourlyCurve } from './utils/cenace-history.js';
 import { db } from './utils/db.js';
+import { systemLogger } from './utils/logger.js';
 
 dotenv.config();
 
-// Global log timestamp overrides for PM2 log readability (Ecuador timezone GMT-5)
-const originalLog = console.log;
-const originalWarn = console.warn;
-const originalError = console.error;
-
-function getTimestampPrefix(): string {
-  const now = new Date();
-  const ecDate = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-  const iso = ecDate.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
-  return `[${iso.replace('T', ' ').slice(0, 19)}]`;
-}
-
-console.log = (...args: any[]) => {
-  originalLog(getTimestampPrefix(), ...args);
+// Globally redirect standard console calls to winston systemLogger to write logs to disk
+console.log = (message?: any, ...optionalParams: any[]) => {
+  const msg = typeof message === 'string' ? message : (message === undefined ? '' : JSON.stringify(message));
+  const extra = optionalParams.map(p => typeof p === 'string' ? p : JSON.stringify(p)).join(' ');
+  systemLogger.info(msg + (extra ? ' ' + extra : ''));
 };
-console.warn = (...args: any[]) => {
-  originalWarn(getTimestampPrefix(), ...args);
+console.warn = (message?: any, ...optionalParams: any[]) => {
+  const msg = typeof message === 'string' ? message : (message === undefined ? '' : JSON.stringify(message));
+  const extra = optionalParams.map(p => typeof p === 'string' ? p : JSON.stringify(p)).join(' ');
+  systemLogger.warn(msg + (extra ? ' ' + extra : ''));
 };
-console.error = (...args: any[]) => {
-  originalError(getTimestampPrefix(), ...args);
+console.error = (message?: any, ...optionalParams: any[]) => {
+  const msg = typeof message === 'string' ? message : (message === undefined ? '' : JSON.stringify(message));
+  const extra = optionalParams.map(p => typeof p === 'string' ? p : JSON.stringify(p)).join(' ');
+  systemLogger.error(msg + (extra ? ' ' + extra : ''));
 };
 
 const celecService = new CelecService();

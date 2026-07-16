@@ -1,5 +1,6 @@
 import { CenaceService } from '../services/cenace.service.js';
 import { db } from './db.js';
+import { dbLogger } from './logger.js';
 
 export interface CenaceHistoryRecord {
   timestamp: number;
@@ -18,7 +19,7 @@ export function readCenaceHistory(): CenaceHistoryRecord[] {
     `).all() as any[];
     return rows;
   } catch (err) {
-    console.warn('[SQLite] Failed to read CENACE history from DB:', err);
+    dbLogger.warn(`Failed to read CENACE history from DB: ${err}`);
   }
   return [];
 }
@@ -36,9 +37,9 @@ export function saveCenaceHistory(record: CenaceHistoryRecord): void {
       VALUES (?, ?)
     `).run(hourlyTimestamp, record.cocaCodoMWh);
 
-    console.log(`[SQLite] Saved hourly baseline: ${record.cocaCodoMWh} MWh at timestamp ${hourlyTimestamp}`);
+    dbLogger.info(`Saved hourly baseline: ${record.cocaCodoMWh} MWh at timestamp ${hourlyTimestamp}`);
   } catch (err) {
-    console.warn('[SQLite] Failed to save CENACE history to DB:', err);
+    dbLogger.warn(`Failed to save CENACE history to DB: ${err}`);
   }
 }
 
@@ -51,10 +52,10 @@ export async function recordCenaceBaseline(cenaceService: CenaceService): Promis
     if (currentMWh !== null && currentMWh > 0) {
       const nowMs = Date.now();
       saveCenaceHistory({ timestamp: nowMs, cocaCodoMWh: currentMWh });
-      console.log(`[SQLite] Baseline recorded: ${currentMWh} MWh at ${new Date().toLocaleTimeString()}`);
+      dbLogger.info(`Baseline recorded: ${currentMWh} MWh at ${new Date().toLocaleTimeString()}`);
     }
   } catch (err) {
-    console.warn(`[SQLite] Failed to record CENACE baseline:`, err);
+    dbLogger.warn(`Failed to record CENACE baseline: ${err}`);
   }
 }
 
@@ -94,7 +95,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
     // Count how many records were successfully found
     const foundCount = matchedRecords.filter(r => r !== null).length;
     if (foundCount < 20) {
-      console.warn(`[SQLite] Too many missing hourly readings for yesterday (${25 - foundCount} missing). Aborting curve generation.`);
+      dbLogger.warn(`Too many missing hourly readings for yesterday (${25 - foundCount} missing). Aborting curve generation.`);
       return null;
     }
 
@@ -121,6 +122,32 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
             LIMIT 1
           `).get(targetT) as any;
         }
+        // If still not found (e.g. database has no history before targetT), fallback to backward extrapolation from first available points
+        if (!prevRecord) {
+          let firstAvailableIdx = -1;
+          for (let j = 0; j < matchedRecords.length; j++) {
+            if (matchedRecords[j] !== null) {
+              firstAvailableIdx = j;
+              break;
+            }
+          }
+          if (firstAvailableIdx !== -1) {
+            const firstAvailable = matchedRecords[firstAvailableIdx]!;
+            let secondAvailable: CenaceHistoryRecord | null = null;
+            for (let j = firstAvailableIdx + 1; j < matchedRecords.length; j++) {
+              if (matchedRecords[j] !== null) {
+                secondAvailable = matchedRecords[j]!;
+                break;
+              }
+            }
+            const rate = secondAvailable
+              ? (secondAvailable.cocaCodoMWh - firstAvailable.cocaCodoMWh) / ((secondAvailable.timestamp - firstAvailable.timestamp) / (3600 * 1000))
+              : 500; // fallback to 500 MW rate
+            const hoursDiff = (firstAvailable.timestamp - targetT) / (3600 * 1000);
+            const extrapolatedMWh = Math.max(0, firstAvailable.cocaCodoMWh - rate * hoursDiff);
+            prevRecord = { timestamp: targetT, cocaCodoMWh: extrapolatedMWh };
+          }
+        }
 
         // Find closest available record after i
         let nextRecord: CenaceHistoryRecord | null = null;
@@ -140,15 +167,41 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
             LIMIT 1
           `).get(targetT) as any;
         }
+        // If still not found (e.g. database has no history after targetT), fallback to forward extrapolation from last available points
+        if (!nextRecord) {
+          let lastAvailableIdx = -1;
+          for (let j = matchedRecords.length - 1; j >= 0; j--) {
+            if (matchedRecords[j] !== null) {
+              lastAvailableIdx = j;
+              break;
+            }
+          }
+          if (lastAvailableIdx !== -1) {
+            const lastAvailable = matchedRecords[lastAvailableIdx]!;
+            let secondToLastAvailable: CenaceHistoryRecord | null = null;
+            for (let j = lastAvailableIdx - 1; j >= 0; j--) {
+              if (matchedRecords[j] !== null) {
+                secondToLastAvailable = matchedRecords[j]!;
+                break;
+              }
+            }
+            const rate = secondToLastAvailable
+              ? (lastAvailable.cocaCodoMWh - secondToLastAvailable.cocaCodoMWh) / ((lastAvailable.timestamp - secondToLastAvailable.timestamp) / (3600 * 1000))
+              : 500;
+            const hoursDiff = (targetT - lastAvailable.timestamp) / (3600 * 1000);
+            const extrapolatedMWh = lastAvailable.cocaCodoMWh + rate * hoursDiff;
+            nextRecord = { timestamp: targetT, cocaCodoMWh: extrapolatedMWh };
+          }
+        }
 
         if (prevRecord && nextRecord) {
           const timeRange = nextRecord.timestamp - prevRecord.timestamp;
           const timeFraction = (targetT - prevRecord.timestamp) / timeRange;
           const interpolatedMWh = prevRecord.cocaCodoMWh + (nextRecord.cocaCodoMWh - prevRecord.cocaCodoMWh) * timeFraction;
           matchedRecords[i] = { timestamp: targetT, cocaCodoMWh: interpolatedMWh };
-          console.log(`[SQLite] Interpolated missing hour at timestamp ${targetT} (${new Date(targetT).toLocaleTimeString()} local): ${interpolatedMWh.toFixed(2)} MWh`);
+          dbLogger.info(`Interpolated missing hour at timestamp ${targetT} (${new Date(targetT).toLocaleTimeString()} local): ${interpolatedMWh.toFixed(2)} MWh`);
         } else {
-          console.warn(`[SQLite] Cannot interpolate missing hour at timestamp ${targetT}. Aborting.`);
+          dbLogger.warn(`Cannot interpolate missing hour at timestamp ${targetT}. Aborting.`);
           return null;
         }
       }
@@ -173,7 +226,7 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
 
     return curve;
   } catch (err) {
-    console.warn('[SQLite] Error retrieving yesterday hourly curve:', err);
+    dbLogger.warn(`Error retrieving yesterday hourly curve: ${err}`);
   }
   return null;
 }

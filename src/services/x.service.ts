@@ -1,4 +1,5 @@
 import { Client, OAuth1, type OAuth1Config, type ClientConfig } from '@xdevplatform/xdk';
+import { xLogger } from '../utils/logger.js';
 
 export class XService {
   private client: Client;
@@ -46,9 +47,16 @@ export class XService {
           } as any
         });
 
-        const mediaId = uploadRes?.data?.id || uploadRes?.data?.media_id_string || (uploadRes as any)?.id;
+        const mediaId = uploadRes?.data?.id 
+          || uploadRes?.data?.media_id_string 
+          || (uploadRes as any)?.id 
+          || (uploadRes as any)?.media_id_string 
+          || (uploadRes as any)?.media_id;
+
         if (mediaId) {
           mediaIds = [String(mediaId)];
+        } else {
+          xLogger.warn(`Media upload call succeeded, but no media ID could be resolved in the response. Raw response: ${JSON.stringify(uploadRes)}`);
         }
       }
 
@@ -62,12 +70,12 @@ export class XService {
         };
       }
 
-      console.log('[XService] Posting post:', message);
+      xLogger.info(`Posting post: ${message}`);
       const response = await this.client.posts.create(postPayload);
-      console.log('[XService] Posted response:', response);
+      xLogger.info(`Posted response: ${JSON.stringify(response)}`);
       return response;
     } catch (error) {
-      console.error('[XService] Error posting to X:', error);
+      xLogger.error(`Error posting to X: ${error}`);
       throw error;
     }
   }
