@@ -214,7 +214,12 @@ export function getCcsYesterdayHourlyCurve(yesterdayDate: Date): number[] | null
       const end = matchedRecords[i]!;
       
       const diffHours = (end.timestamp - start.timestamp) / (1000 * 60 * 60);
-      const deltaMWh = end.cocaCodoMWh - start.cocaCodoMWh;
+      let deltaMWh = end.cocaCodoMWh - start.cocaCodoMWh;
+      if (deltaMWh < 0) {
+        // Midnight counter reset: at 00:00 local time, CENACE resets its accumulated MWh counter to 0.
+        // Therefore, end.cocaCodoMWh at 01:00 AM represents the generation accumulated since midnight.
+        deltaMWh = end.cocaCodoMWh;
+      }
       
       if (diffHours <= 0.05 || deltaMWh < 0) {
         return null; // Invalid reading interval

@@ -213,7 +213,11 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
         const start = rows[0];
         const end = rows[1];
         const diffHours = (end.timestamp - start.timestamp) / (1000 * 60 * 60);
-        const deltaMWh = end.accumulated_mwh - start.accumulated_mwh;
+        let deltaMWh = end.accumulated_mwh - start.accumulated_mwh;
+        if (deltaMWh < 0) {
+          // Midnight counter reset: at 00:00 local time, CENACE resets its accumulated MWh counter to 0.
+          deltaMWh = end.accumulated_mwh;
+        }
         
         if (diffHours > 0.05 && deltaMWh >= 0) {
           const rawRate = deltaMWh / diffHours;

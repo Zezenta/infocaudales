@@ -157,4 +157,26 @@ describe('Coca Codo Sinclair SQLite History & Queries', () => {
     const curve = getCcsYesterdayHourlyCurve(yesterdayDate);
     expect(curve).toBeNull(); // Too many missing records triggers validation abort
   });
+
+  it('should handle midnight counter reset correctly when calculating yesterday hourly curve', () => {
+    const yesterdayDate = new Date(Date.UTC(2026, 6, 12, 12, 0, 0, 0));
+
+    // 00:00 local (05:00 UTC) has previous day's end total (e.g. 28994 MWh)
+    const ts0 = Date.UTC(2026, 6, 12, 5, 0, 0, 0);
+    saveCenaceHistory({ timestamp: ts0, cocaCodoMWh: 28994 });
+
+    // 01:00 to 24:00 local (06:00 to 29:00 UTC) reset to 0 and increment by 800 MWh hourly
+    let baseline = 800;
+    for (let h = 1; h <= 24; h++) {
+      const ts = Date.UTC(2026, 6, 12, h + 5, 0, 0, 0);
+      saveCenaceHistory({ timestamp: ts, cocaCodoMWh: baseline });
+      baseline += 800;
+    }
+
+    const curve = getCcsYesterdayHourlyCurve(yesterdayDate);
+    expect(curve).not.toBeNull();
+    expect(curve?.length).toBe(24);
+    expect(curve?.[0]).toBe(800); // 00:00 - 01:00 AM rate
+    expect(curve?.every(val => val === 800)).toBe(true);
+  });
 });
