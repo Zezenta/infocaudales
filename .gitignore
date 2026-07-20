@@ -15,5 +15,6 @@ temp
 data/
 *.db
 logs/
-
-
+.local-validation/
+API_REFERENCE_SHEET.md
+PREDICTIONS.md
