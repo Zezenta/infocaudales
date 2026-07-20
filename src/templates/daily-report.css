@@ -254,10 +254,11 @@ body {
 }
 
 .plant-title {
-  font-size: 19px;
+  font-size: 25px;
   font-weight: 700;
   color: var(--text-main);
-  line-height: 1.1;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
 }
 
 .plant-metrics-meta {
