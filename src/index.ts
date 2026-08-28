@@ -100,21 +100,22 @@ function extractCelecPoint(
 /**
  * Fetches real-time telemetry data for a specific plant.
  * Supports retry validation when requireTargetHour is true.
+ * Returns null if essential live metrics (gen, flow) cannot be obtained.
  */
-export async function fetchTelemetry(plantKey: string, requireTargetHour: boolean = false): Promise<TelemetryData> {
+export async function fetchTelemetry(plantKey: string, requireTargetHour: boolean = false): Promise<TelemetryData | null> {
   const plant = hydroelectricPlants[plantKey];
   if (!plant) throw new Error(`Plant ${plantKey} not found in configuration`);
 
   const now = new Date();
   const { hora } = celecService.getEcuadorDateParts(now);
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const targetIdx = 24 - hora;
+  const targetIdx = Math.max(0, 24 - hora);
 
-  let flow: number = plant.visualData?.defaultFlow ?? 100;
-  let flow3hAgo: number = plant.visualData?.defaultFlow ?? 100;
-  let cota: number | undefined = plant.visualData?.defaultCota;
-  let turbines: number | undefined = plant.visualData?.defaultTurbines;
-  let gen: number = plant.visualData?.defaultGen ?? 200;
+  let flow: number | null = null;
+  let flow3hAgo: number | null = null;
+  let cota: number | undefined = undefined;
+  let turbines: number | undefined = undefined;
+  let gen: number | null = null;
   let telemetryTimestamp: Date = now;
 
   // 1. Fetch Flow (Caudal) from CELEC
@@ -147,8 +148,10 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
     } else {
       try {
         const flowPointsYesterday = await celecService.fetchFlow(plant, yesterday);
-        if (flowPointsYesterday[2] && flowPointsYesterday[2].value !== null) {
-          flow3hAgo = flowPointsYesterday[2].value;
+        const idxYesterday = Math.max(0, 3 - hora);
+        const flow3hResult = extractCelecPoint(flowPointsYesterday, idxYesterday, false);
+        if (flow3hResult.value !== null) {
+          flow3hAgo = flow3hResult.value;
         }
       } catch (e) {}
     }
@@ -211,6 +214,8 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
         ORDER BY timestamp ASC
       `).all(prevUtcMs, targetUtcMs) as any[];
 
+      let ccsGen: number | null = null;
+
       if (rows.length === 2) {
         const start = rows[0];
         const end = rows[1];
@@ -223,19 +228,23 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
         
         if (diffHours > 0.05 && deltaMWh >= 0) {
           const rawRate = deltaMWh / diffHours;
-          gen = Math.min(rawRate, 1500); // Cap at max capacity
-          console.log(`[Index] Inferred completed hourly generation for Coca Codo Sinclair from SQLite: ${gen.toFixed(2)} MW`);
+          ccsGen = Math.min(rawRate, 1500); // Cap at max capacity
+          console.log(`[Index] Inferred completed hourly generation for Coca Codo Sinclair from SQLite: ${ccsGen.toFixed(2)} MW`);
         }
       }
 
-      if (gen === null) {
+      if (ccsGen === null) {
         // Fallback to daily average from CENACE live scrape
         console.log(`[Index] Completed hourly logs for Coca Codo Sinclair not found in SQLite. Falling back to daily average.`);
         const currentMWh = await cenaceService.fetchPlantProduction('cocaCodoSinclair');
         if (currentMWh !== null && currentMWh > 0) {
           const currentLocalHour = Math.max(1, hora === 0 ? 24 : hora);
-          gen = currentMWh / currentLocalHour;
+          ccsGen = currentMWh / currentLocalHour;
         }
+      }
+
+      if (ccsGen !== null) {
+        gen = ccsGen;
       }
     } catch (err) {
       console.warn(`[Index] Failed to fetch SQLite/CENACE generation for Coca Codo Sinclair:`, err);
@@ -253,10 +262,16 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
     }
   }
 
+  // Strict live validation: do not return mock/fake numbers if vital telemetry is unavailable
+  if (gen === null || flow === null) {
+    console.warn(`[Index] Aborting telemetry for ${plant.name}: missing live data (gen: ${gen}, flow: ${flow})`);
+    return null;
+  }
+
   return {
     gen,
     flow,
-    flow3hAgo,
+    flow3hAgo: flow3hAgo ?? flow,
     cota,
     turbines,
     timestamp: telemetryTimestamp
@@ -307,7 +322,7 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         telemetry = await fetchTelemetry(plantKey, !isForcePublish);
-        break;
+        if (telemetry) break;
       } catch (error) {
         if (error instanceof DataPendingError && attempt < maxRetries) {
           console.warn(`[Bot] Live telemetry for ${plant.name} for the current hour is pending publication. Retrying in 5 minutes... (Attempt ${attempt}/${maxRetries})`);
@@ -332,6 +347,8 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
       } catch (error) {
         console.error(`[Bot] Error publishing ${plant.name}:`, error);
       }
+    } else {
+      console.error(`[Bot] Skipped publishing ${plant.name} due to unavailable live telemetry.`);
     }
 
     if (i < targetPlantKeys.length - 1) {
