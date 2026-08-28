@@ -77,17 +77,21 @@ function extractCelecPoint(
   targetIdx: number,
   requireTargetHour: boolean = false
 ): { value: number | null; timestamp?: Date } {
-  if (pointsToday[targetIdx] && pointsToday[targetIdx].value !== null && pointsToday[targetIdx].value !== undefined) {
-    const pointDate = pointsToday[targetIdx].timestamp ? new Date(pointsToday[targetIdx].timestamp) : undefined;
-    return { value: pointsToday[targetIdx].value, timestamp: pointDate };
+  if (!pointsToday || pointsToday.length === 0) return { value: null };
+
+  const safeIdx = Math.min(Math.max(0, targetIdx), pointsToday.length - 1);
+
+  if (pointsToday[safeIdx] && pointsToday[safeIdx].value !== null && pointsToday[safeIdx].value !== undefined) {
+    const pointDate = pointsToday[safeIdx].timestamp ? new Date(pointsToday[safeIdx].timestamp) : undefined;
+    return { value: pointsToday[safeIdx].value, timestamp: pointDate };
   }
 
   if (requireTargetHour) {
-    throw new DataPendingError(`CELEC target point at index ${targetIdx} is not yet published (null)`);
+    throw new DataPendingError(`CELEC target point at index ${safeIdx} is not yet published (null)`);
   }
 
-  // Fallback mode: find first available non-null point starting from targetIdx onwards
-  for (let i = targetIdx; i < pointsToday.length; i++) {
+  // Fallback mode: find first available non-null point starting from safeIdx onwards
+  for (let i = safeIdx; i < pointsToday.length; i++) {
     if (pointsToday[i] && pointsToday[i].value !== null && pointsToday[i].value !== undefined) {
       const pointDate = pointsToday[i].timestamp ? new Date(pointsToday[i].timestamp) : undefined;
       return { value: pointsToday[i].value, timestamp: pointDate };
