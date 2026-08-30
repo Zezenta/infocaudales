@@ -172,6 +172,11 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       minLevelMasl: 1645,
       maxLevelMasl: 1651,
       turbineType: 'Francis',
+      flowThresholds: {
+        low: 60,
+        normal: 120,
+        high: 180,
+      },
     },
     visualData: {
       drawingImage: '/hydroelectric-drawings/Agoyan.png',

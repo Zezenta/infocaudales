@@ -12,6 +12,11 @@ export interface HydroelectricPlant {
     minLevelMasl?: number;      // Minimum operational level (meters above sea level)
     maxLevelMasl?: number;      // Maximum operational level (meters above sea level)
     turbineType?: 'Pelton' | 'Francis' | 'Kaplan'; // Type of turbine used
+    flowThresholds?: {
+      low: number;              // Threshold below which caudal is considered 'Bajo'
+      normal: number;           // Threshold below which caudal is considered 'Normal'
+      high: number;             // Threshold below which caudal is considered 'Alto' (above is 'Muy Alto')
+    };
   };
 
   // Specific configuration for CELEC's API endpoints
