@@ -1231,6 +1231,9 @@
 
       // Flow status determination
       let flowStatus = '';
+      const isCrecidaPlant = plantKey === 'cocaCodoSinclair';
+      const extremeStatus = isCrecidaPlant ? 'Crecida' : 'Muy Alto';
+
       if (plant.flowThresholds) {
         if (flowVal < plant.flowThresholds.low) {
           flowStatus = 'Bajo';
@@ -1239,7 +1242,7 @@
         } else if (flowVal < plant.flowThresholds.high) {
           flowStatus = 'Alto';
         } else {
-          flowStatus = 'Crecida';
+          flowStatus = extremeStatus;
         }
       } else {
         const flowRatio = flowVal / plant.maxFlowM3s;
@@ -1250,7 +1253,7 @@
         } else if (flowRatio < 0.75) {
           flowStatus = 'Alto';
         } else {
-          flowStatus = 'Crecida';
+          flowStatus = extremeStatus;
         }
       }
 
@@ -1269,6 +1272,9 @@
           obsidianFlowStatus.style.color = '#94a3b8';
         } else if (flowStatus === 'Alto') {
           obsidianFlowStatus.classList.add('text-orange');
+          obsidianFlowStatus.style.color = '';
+        } else if (flowStatus === 'Muy Alto') {
+          obsidianFlowStatus.classList.add('text-cyan');
           obsidianFlowStatus.style.color = '';
         }
       }

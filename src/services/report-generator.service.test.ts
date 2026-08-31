@@ -60,32 +60,34 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     const { plantsData } = getVisualizerPlantsData();
 
     // Helper implementing the template logic
-    function evaluateFlowStatus(plant: any, flowVal: number): string {
+    function evaluateFlowStatus(plantKey: string, plant: any, flowVal: number): string {
+      const extremeStatus = plantKey === 'cocaCodoSinclair' ? 'Crecida' : 'Muy Alto';
       if (plant.flowThresholds) {
         if (flowVal < plant.flowThresholds.low) return 'Bajo';
         if (flowVal < plant.flowThresholds.normal) return 'Normal';
         if (flowVal < plant.flowThresholds.high) return 'Alto';
-        return 'Crecida';
+        return extremeStatus;
       }
       const flowRatio = flowVal / plant.maxFlowM3s;
       if (flowRatio < 0.25) return 'Bajo';
       if (flowRatio < 0.50) return 'Normal';
       if (flowRatio < 0.75) return 'Alto';
-      return 'Crecida';
+      return extremeStatus;
     }
 
     // Verify all 6 plants
     for (const [key, plant] of Object.entries(hydroelectricPlants)) {
       if (!plant.physicalData?.flowThresholds) continue;
       const { low, normal, high } = plant.physicalData.flowThresholds;
+      const expectedExtreme = key === 'cocaCodoSinclair' ? 'Crecida' : 'Muy Alto';
 
-      expect(evaluateFlowStatus(plantsData[key], low - 1)).toBe('Bajo');
-      expect(evaluateFlowStatus(plantsData[key], low)).toBe('Normal');
-      expect(evaluateFlowStatus(plantsData[key], (low + normal) / 2)).toBe('Normal');
-      expect(evaluateFlowStatus(plantsData[key], normal)).toBe('Alto');
-      expect(evaluateFlowStatus(plantsData[key], (normal + high) / 2)).toBe('Alto');
-      expect(evaluateFlowStatus(plantsData[key], high)).toBe('Crecida');
-      expect(evaluateFlowStatus(plantsData[key], high + 100)).toBe('Crecida');
+      expect(evaluateFlowStatus(key, plantsData[key], low - 1)).toBe('Bajo');
+      expect(evaluateFlowStatus(key, plantsData[key], low)).toBe('Normal');
+      expect(evaluateFlowStatus(key, plantsData[key], (low + normal) / 2)).toBe('Normal');
+      expect(evaluateFlowStatus(key, plantsData[key], normal)).toBe('Alto');
+      expect(evaluateFlowStatus(key, plantsData[key], (normal + high) / 2)).toBe('Alto');
+      expect(evaluateFlowStatus(key, plantsData[key], high)).toBe(expectedExtreme);
+      expect(evaluateFlowStatus(key, plantsData[key], high + 100)).toBe(expectedExtreme);
     }
   });
 
