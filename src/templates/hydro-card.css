@@ -504,12 +504,30 @@ body {
 }
 
 .form-label .badge {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   padding: 2px 8px;
   border-radius: 4px;
   font-family: 'DejaVu Sans Mono', monospace;
   font-size: 12px;
   font-weight: bold;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: text;
+  transition: all 0.15s ease;
+  user-select: text;
+  color: #00e5ff;
+}
+
+.form-label .badge:hover {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.4);
+}
+
+.form-label .badge:focus {
+  background: #0f172a;
+  border-color: #00e5ff;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.25);
+  outline: none;
 }
 
 .form-select, .form-input {

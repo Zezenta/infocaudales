@@ -493,7 +493,7 @@
             <div class="stats-col flow-col">
               <span class="section-label">Caudal:</span>
               <span class="flow-value text-cyan">154.43 m³/s</span>
-              <span class="flow-status text-cyan">Crecida</span>
+              <span class="flow-status text-red">Crecida</span>
             </div>
           </div>
 
@@ -1062,10 +1062,10 @@
       const thirdsGap = parseFloat(thirdsGapSlider.value);
       const thirdsSize = parseFloat(thirdsSizeSlider.value);
 
-      thirdsYBadge.textContent = `${thirdsY} px`;
-      thirdsXBadge.textContent = `${thirdsX} px`;
-      thirdsGapBadge.textContent = `${thirdsGap} px`;
-      thirdsSizeBadge.textContent = `${thirdsSize} px`;
+      if (document.activeElement !== thirdsYBadge) thirdsYBadge.textContent = `${thirdsY} px`;
+      if (document.activeElement !== thirdsXBadge) thirdsXBadge.textContent = `${thirdsX} px`;
+      if (document.activeElement !== thirdsGapBadge) thirdsGapBadge.textContent = `${thirdsGap} px`;
+      if (document.activeElement !== thirdsSizeBadge) thirdsSizeBadge.textContent = `${thirdsSize} px`;
 
       // Update visibility of boxes config inputs
       if (thirdsBoxesSwitch.checked) {
@@ -1078,8 +1078,8 @@
 
       const thirdsBoxWidth = parseFloat(thirdsBoxWidthSlider.value);
       const thirdsBoxHeight = parseFloat(thirdsBoxHeightSlider.value);
-      thirdsBoxWidthBadge.textContent = `${thirdsBoxWidth} px`;
-      thirdsBoxHeightBadge.textContent = `${thirdsBoxHeight} px`;
+      if (document.activeElement !== thirdsBoxWidthBadge) thirdsBoxWidthBadge.textContent = `${thirdsBoxWidth} px`;
+      if (document.activeElement !== thirdsBoxHeightBadge) thirdsBoxHeightBadge.textContent = `${thirdsBoxHeight} px`;
 
       // Update visibility of separation lines config inputs
       if (thirdsLinesSwitch.checked) {
@@ -1092,8 +1092,8 @@
 
       const thirdsLinesLength = parseFloat(thirdsLinesLengthSlider.value);
       const thirdsLinesY = parseFloat(thirdsLinesYSlider.value);
-      thirdsLinesLengthBadge.textContent = `${thirdsLinesLength} px`;
-      thirdsLinesYBadge.textContent = `${thirdsLinesY} px`;
+      if (document.activeElement !== thirdsLinesLengthBadge) thirdsLinesLengthBadge.textContent = `${thirdsLinesLength} px`;
+      if (document.activeElement !== thirdsLinesYBadge) thirdsLinesYBadge.textContent = `${thirdsLinesY} px`;
 
       const hasBoxes = thirdsBoxesSwitch.checked;
 
@@ -1145,7 +1145,7 @@
       }
 
       // 3. Generation
-      genBadge.textContent = `${genVal.toFixed(2)} MW`;
+      if (document.activeElement !== genBadge) genBadge.textContent = `${genVal.toFixed(2)} MW`;
       document.querySelectorAll('.generation-value').forEach(el => {
         el.textContent = `${genVal.toFixed(2)} MW`;
       });
@@ -1195,7 +1195,7 @@
 
       // 4. Turbines
       if (plant.maxTurbines && turbineLayouts[plantKey] && plantKey !== 'cocaCodoSinclair') {
-        turbinesBadge.textContent = `${turbinesActive} / ${plant.maxTurbines}`;
+        if (document.activeElement !== turbinesBadge) turbinesBadge.textContent = `${turbinesActive} / ${plant.maxTurbines}`;
         document.querySelectorAll('.turbines-col').forEach(el => {
           el.style.display = 'flex';
         });
@@ -1224,7 +1224,7 @@
       });
 
       // 5. Flow (Caudal)
-      flowBadge.textContent = `${flowVal.toFixed(2)} m³/s`;
+      if (document.activeElement !== flowBadge) flowBadge.textContent = `${flowVal.toFixed(2)} m³/s`;
       document.querySelectorAll('.flow-value').forEach(el => {
         el.textContent = `${flowVal.toFixed(2)} m³/s`;
       });
@@ -1262,15 +1262,13 @@
       const obsidianFlowStatus = document.querySelector('.card-obsidian-grotesk .flow-status');
       if (obsidianFlowStatus) {
         obsidianFlowStatus.className = 'flow-status';
-        if (flowStatus === 'Bajo') {
+        if (flowStatus === 'Bajo' || flowStatus === 'Crecida') {
           obsidianFlowStatus.classList.add('text-red');
+          obsidianFlowStatus.style.color = '';
         } else if (flowStatus === 'Normal') {
           obsidianFlowStatus.style.color = '#94a3b8';
         } else if (flowStatus === 'Alto') {
           obsidianFlowStatus.classList.add('text-orange');
-          obsidianFlowStatus.style.color = '';
-        } else {
-          obsidianFlowStatus.classList.add('text-cyan');
           obsidianFlowStatus.style.color = '';
         }
       }
@@ -1279,24 +1277,24 @@
       const imgX = parseFloat(imgXSlider.value);
       const imgY = parseFloat(imgYSlider.value);
       const imgScale = parseFloat(imgScaleSlider.value);
-      imgXBadge.textContent = `${imgX} px`;
-      imgYBadge.textContent = `${imgY} px`;
-      imgScaleBadge.textContent = `${imgScale}%`;
+      if (document.activeElement !== imgXBadge) imgXBadge.textContent = `${imgX} px`;
+      if (document.activeElement !== imgYBadge) imgYBadge.textContent = `${imgY} px`;
+      if (document.activeElement !== imgScaleBadge) imgScaleBadge.textContent = `${imgScale}%`;
 
       // Get cota min/max Y and X values
       const cotaMaxY = cotaMaxYSlider.value;
       const cotaMinY = cotaMinYSlider.value;
-      cotaMaxYBadge.textContent = `${cotaMaxY} px`;
-      cotaMinYBadge.textContent = `${cotaMinY} px`;
+      if (document.activeElement !== cotaMaxYBadge) cotaMaxYBadge.textContent = `${cotaMaxY} px`;
+      if (document.activeElement !== cotaMinYBadge) cotaMinYBadge.textContent = `${cotaMinY} px`;
 
       const cotaXMin = cotaXMinSlider.value;
       const cotaXMax = cotaXMaxSlider.value;
-      cotaXMinBadge.textContent = `${cotaXMin} px`;
-      cotaXMaxBadge.textContent = `${cotaXMax} px`;
+      if (document.activeElement !== cotaXMinBadge) cotaXMinBadge.textContent = `${cotaXMin} px`;
+      if (document.activeElement !== cotaXMaxBadge) cotaXMaxBadge.textContent = `${cotaXMax} px`;
 
       // Get 3D water top perspective value
       const water3dVal = parseFloat(water3dSlider.value);
-      water3dBadge.textContent = `${water3dVal} px`;
+      if (document.activeElement !== water3dBadge) water3dBadge.textContent = `${water3dVal} px`;
 
       // 6. Visualizer Drawing (PNG vs SVG Dam)
       if (plant.drawingImage) {
@@ -1414,7 +1412,7 @@
           bottomPos = cotaMinYVal + flowPct * (cotaMaxYVal - cotaMinYVal);
         } else if (hasLevels) {
           const cotaVal = parseFloat(cotaSlider.value);
-          cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
+          if (document.activeElement !== cotaBadge) cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
 
           const cotaRange = plant.maxLevelMasl - plant.minLevelMasl;
           const cotaPct = Math.max(0, Math.min(1, (cotaVal - plant.minLevelMasl) / cotaRange));
@@ -1600,7 +1598,7 @@
 
         if (hasLevels) {
           const cotaVal = parseFloat(cotaSlider.value);
-          cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
+          if (document.activeElement !== cotaBadge) cotaBadge.textContent = `${cotaVal.toFixed(2)} msnm`;
 
           document.querySelectorAll('.reference-levels').forEach(el => {
             el.style.display = 'block';
@@ -1687,8 +1685,8 @@
           const cotaMinYVal = parseFloat(cotaMinY);
           const lineY = 420 - cotaMinYVal;
 
-          cotaMinXBadge.textContent = `${cotaMinX} px`;
-          cotaMinSizeBadge.textContent = `${cotaMinSize} px`;
+          if (document.activeElement !== cotaMinXBadge) cotaMinXBadge.textContent = `${cotaMinX} px`;
+          if (document.activeElement !== cotaMinSizeBadge) cotaMinSizeBadge.textContent = `${cotaMinSize} px`;
 
           const textEl = el.querySelector('.cota-min-label-text');
           textEl.textContent = `Cota mínima: ${plant.minLevelMasl} msnm`;
@@ -1711,9 +1709,9 @@
           const embalseSize = parseFloat(embalseSizeSlider.value);
           const embalseBg = embalseBgSwitch.checked;
 
-          embalseXBadge.textContent = `${embalseX} px`;
-          embalseYBadge.textContent = `${embalseY} px`;
-          embalseSizeBadge.textContent = `${embalseSize} px`;
+          if (document.activeElement !== embalseXBadge) embalseXBadge.textContent = `${embalseX} px`;
+          if (document.activeElement !== embalseYBadge) embalseYBadge.textContent = `${embalseY} px`;
+          if (document.activeElement !== embalseSizeBadge) embalseSizeBadge.textContent = `${embalseSize} px`;
 
           const textEl = el.querySelector('.embalse-label-text');
           const bgEl = el.querySelector('.embalse-label-bg');
@@ -1850,6 +1848,132 @@
     }
 
 
+
+    // Helper: Make badges editable numbers and enable wheel scroll on sliders & badges
+    function makeBadgeAndSliderInteractive(badge, slider, unit = '', decimals = 2) {
+      if (!badge || !slider) return;
+
+      badge.setAttribute('contenteditable', 'true');
+      badge.setAttribute('spellcheck', 'false');
+      badge.classList.add('editable-badge');
+      badge.title = 'Haz clic para escribir un valor o usa el scroll del ratón';
+
+      // Scroll mouse wheel control
+      const onWheel = (e) => {
+        e.preventDefault();
+        const step = parseFloat(slider.step) || 1;
+        let val = parseFloat(slider.value) || 0;
+        if (e.deltaY < 0) {
+          val += step;
+        } else {
+          val -= step;
+        }
+        const min = slider.min !== '' ? parseFloat(slider.min) : -Infinity;
+        const max = slider.max !== '' ? parseFloat(slider.max) : Infinity;
+        if (val < min) val = min;
+        if (val > max) val = max;
+        slider.value = decimals > 0 ? val.toFixed(decimals) : String(Math.round(val));
+        slider.dispatchEvent(new Event('input'));
+      };
+
+      slider.addEventListener('wheel', onWheel, { passive: false });
+      badge.addEventListener('wheel', onWheel, { passive: false });
+      const container = slider.closest('.slider-container');
+      if (container) {
+        container.addEventListener('wheel', onWheel, { passive: false });
+      }
+
+      // Direct text editing in badge
+      badge.addEventListener('focus', () => {
+        let text = badge.textContent.trim();
+        if (unit) {
+          text = text.replace(unit.trim(), '').trim();
+        }
+        if (badge.id === 'turbines-badge') {
+          text = text.split('/')[0].trim();
+        }
+        badge.textContent = text;
+        const range = document.createRange();
+        range.selectNodeContents(badge);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      });
+
+      const applyTypedValue = () => {
+        let text = badge.textContent.trim();
+        if (unit) {
+          text = text.replace(unit.trim(), '').trim();
+        }
+        if (badge.id === 'turbines-badge') {
+          text = text.split('/')[0].trim();
+        }
+        const num = parseFloat(text);
+        if (!isNaN(num)) {
+          if (slider.max !== '' && num > parseFloat(slider.max)) slider.max = String(num);
+          if (slider.min !== '' && num < parseFloat(slider.min)) slider.min = String(num);
+          slider.value = String(num);
+        }
+        updateCards();
+      };
+
+      badge.addEventListener('input', () => {
+        let text = badge.textContent.trim();
+        if (unit) {
+          text = text.replace(unit.trim(), '').trim();
+        }
+        if (badge.id === 'turbines-badge') {
+          text = text.split('/')[0].trim();
+        }
+        const num = parseFloat(text);
+        if (!isNaN(num)) {
+          if (slider.max !== '' && num > parseFloat(slider.max)) slider.max = String(num);
+          if (slider.min !== '' && num < parseFloat(slider.min)) slider.min = String(num);
+          slider.value = String(num);
+          updateCards();
+        }
+      });
+
+      badge.addEventListener('blur', () => {
+        applyTypedValue();
+      });
+
+      badge.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          badge.blur();
+        }
+      });
+    }
+
+    // Initialize all interactive badges and sliders
+    makeBadgeAndSliderInteractive(genBadge, genSlider, ' MW', 2);
+    makeBadgeAndSliderInteractive(flowBadge, flowSlider, ' m³/s', 2);
+    makeBadgeAndSliderInteractive(turbinesBadge, turbinesSlider, '', 0);
+    makeBadgeAndSliderInteractive(cotaBadge, cotaSlider, ' msnm', 2);
+    makeBadgeAndSliderInteractive(cotaMaxYBadge, cotaMaxYSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(cotaMinYBadge, cotaMinYSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(cotaXMinBadge, cotaXMinSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(cotaXMaxBadge, cotaXMaxSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(water3dBadge, water3dSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(imgXBadge, imgXSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(imgYBadge, imgYSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(imgScaleBadge, imgScaleSlider, '%', 0);
+    makeBadgeAndSliderInteractive(embalseXBadge, embalseXSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(embalseYBadge, embalseYSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(embalseSizeBadge, embalseSizeSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(cotaMinXBadge, cotaMinXSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(cotaMinSizeBadge, cotaMinSizeSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsYBadge, thirdsYSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsXBadge, thirdsXSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsGapBadge, thirdsGapSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsSizeBadge, thirdsSizeSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsBoxWidthBadge, thirdsBoxWidthSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsBoxHeightBadge, thirdsBoxHeightSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsLinesLengthBadge, thirdsLinesLengthSlider, ' px', 0);
+    makeBadgeAndSliderInteractive(thirdsLinesYBadge, thirdsLinesYSlider, ' px', 0);
 
     // Attach Event Listeners
     plantSelect.addEventListener('change', loadPlantControls);
