@@ -493,7 +493,7 @@
             <div class="stats-col flow-col">
               <span class="section-label">Caudal:</span>
               <span class="flow-value text-cyan">154.43 m³/s</span>
-              <span class="flow-status text-cyan">Muy Alto</span>
+              <span class="flow-status text-cyan">Crecida</span>
             </div>
           </div>
 
@@ -1230,16 +1230,28 @@
       });
 
       // Flow status determination
-      const flowRatio = flowVal / plant.maxFlowM3s;
       let flowStatus = '';
-      if (flowRatio < 0.25) {
-        flowStatus = 'Bajo';
-      } else if (flowRatio < 0.50) {
-        flowStatus = 'Normal';
-      } else if (flowRatio < 0.75) {
-        flowStatus = 'Alto';
+      if (plant.flowThresholds) {
+        if (flowVal < plant.flowThresholds.low) {
+          flowStatus = 'Bajo';
+        } else if (flowVal < plant.flowThresholds.normal) {
+          flowStatus = 'Normal';
+        } else if (flowVal < plant.flowThresholds.high) {
+          flowStatus = 'Alto';
+        } else {
+          flowStatus = 'Crecida';
+        }
       } else {
-        flowStatus = 'Muy Alto';
+        const flowRatio = flowVal / plant.maxFlowM3s;
+        if (flowRatio < 0.25) {
+          flowStatus = 'Bajo';
+        } else if (flowRatio < 0.50) {
+          flowStatus = 'Normal';
+        } else if (flowRatio < 0.75) {
+          flowStatus = 'Alto';
+        } else {
+          flowStatus = 'Crecida';
+        }
       }
 
       document.querySelectorAll('.flow-status').forEach(el => {

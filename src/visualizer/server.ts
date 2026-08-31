@@ -32,6 +32,7 @@ function generatePlantsConfigScript() {
       defaultFlow: vis.defaultFlow,
       defaultCota: vis.defaultCota,
       drawingImage: vis.drawingImage,
+      flowThresholds: phys.flowThresholds,
     };
 
     if (vis.turbineGrid) {

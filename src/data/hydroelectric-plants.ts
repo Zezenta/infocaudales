@@ -12,6 +12,11 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       minLevelMasl: 2098,
       maxLevelMasl: 2153,
       turbineType: 'Francis',
+      flowThresholds: {
+        low: 45,
+        normal: 115,
+        high: 185,
+      },
     },
     visualData: {
       drawingImage: '/hydroelectric-drawings/Mazar.png',
@@ -47,6 +52,11 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       minLevelMasl: 1975,
       maxLevelMasl: 1991,
       turbineType: 'Pelton',
+      flowThresholds: {
+        low: 75,
+        normal: 160,
+        high: 230,
+      },
     },
     visualData: {
       drawingImage: '/hydroelectric-drawings/Molino.png',
@@ -79,6 +89,11 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxTurbines: 3,
       maxFlowM3s: 100,
       turbineType: 'Francis',
+      flowThresholds: {
+        low: 80,
+        normal: 140,
+        high: 150,
+      },
     },
     visualData: {
       drawingImage: '/hydroelectric-drawings/Sopladora.png',
@@ -109,6 +124,11 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       minLevelMasl: 783,
       maxLevelMasl: 792,
       turbineType: 'Pelton',
+      flowThresholds: {
+        low: 25,
+        normal: 65,
+        high: 120,
+      },
     },
     visualData: {
       drawingImage: '/hydroelectric-drawings/Minas_San_Francisco.png',
@@ -138,6 +158,11 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxTurbines: 8,
       maxFlowM3s: 3000,
       turbineType: 'Pelton',
+      flowThresholds: {
+        low: 190,
+        normal: 420,
+        high: 700,
+      },
     },
     visualData: {
       drawingImage: '/hydroelectric-drawings/Coca_Codo_Sinclair.png',
@@ -173,9 +198,9 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxLevelMasl: 1651,
       turbineType: 'Francis',
       flowThresholds: {
-        low: 60,
-        normal: 120,
-        high: 180,
+        low: 80,
+        normal: 160,
+        high: 250,
       },
     },
     visualData: {

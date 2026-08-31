@@ -15,7 +15,7 @@ export interface HydroelectricPlant {
     flowThresholds?: {
       low: number;              // Threshold below which caudal is considered 'Bajo'
       normal: number;           // Threshold below which caudal is considered 'Normal'
-      high: number;             // Threshold below which caudal is considered 'Alto' (above is 'Muy Alto')
+      high: number;             // Threshold below which caudal is considered 'Alto' (above is 'Crecida')
     };
   };
 
