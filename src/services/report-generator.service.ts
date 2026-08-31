@@ -36,7 +36,7 @@ export async function closeBrowser(): Promise<void> {
   }
 }
 
-function getVisualizerPlantsData() {
+export function getVisualizerPlantsData() {
   const plantsData: Record<string, any> = {};
   const turbineLayouts: Record<string, any> = {};
 
