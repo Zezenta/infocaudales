@@ -45,3 +45,6 @@ export const celecLogger = createCategoryLogger('CELEC');
 export const cenaceLogger = createCategoryLogger('CENACE');
 export const dbLogger = createCategoryLogger('Database');
 export const xLogger = createCategoryLogger('X');
+export const inamhiLogger = createCategoryLogger('INAMHI');
+export const geoglowsLogger = createCategoryLogger('GEOGLOWS');
+export const predictionLogger = createCategoryLogger('Prediction');

@@ -57,3 +57,19 @@ export interface HydroelectricPlant {
     };
   };
 }
+
+export type PredictionHorizon = '1h' | '3h' | '24h';
+
+export interface PredictionResult {
+  plantKey: string;
+  plantName: string;
+  forecastFlow: number;             // Predicted flow rate in m³/s
+  horizon: PredictionHorizon;       // Forecast horizon
+  horizonHours: number;             // Numeric hours (1, 3, 24)
+  method: string;                   // Description of the model (e.g. 'Multivariate 3h (INAMHI Telemetry)')
+  pearsonR?: number;                // Empirical Pearson correlation coefficient
+  mae?: number;                     // Mean Absolute Error in m³/s
+  isFallback: boolean;              // True if any degraded sensor fallback was used
+  components: Record<string, number | null | undefined>; // Intermediate inputs/variables
+  calculatedAt: Date;
+}
