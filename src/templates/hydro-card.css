@@ -32,6 +32,40 @@ body {
   min-height: 100vh;
 }
 
+/* Nav Switcher */
+.nav-switcher {
+  display: flex;
+  gap: 12px;
+  background: rgba(13, 21, 39, 0.85);
+  padding: 6px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: -40px;
+  z-index: 1000;
+}
+
+.nav-link {
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13.5px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.nav-link.active {
+  background: #38bdf8;
+  color: #070b12;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+}
+
+.nav-link:hover:not(.active) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* ==========================================================================
    THEME WRAPPER & TITLE LABELS
    ========================================================================== */

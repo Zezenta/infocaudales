@@ -1,0 +1,456 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-primary: #070b12;
+  --bg-card: #0d1527;
+  --bg-card-sub: #111c35;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-cyan: rgba(56, 189, 248, 0.35);
+  
+  --color-cyan: #38bdf8;
+  --color-orange: #fb923c;
+  --color-red: #f43f5e;
+  --color-green: #34d399;
+  
+  --ribbon-outer: rgba(56, 189, 248, 0.12);
+  --ribbon-inner: rgba(56, 189, 248, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: 'Space Grotesk', -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  overflow-x: hidden;
+}
+
+/* Nav Switcher */
+.nav-switcher {
+  display: flex;
+  gap: 12px;
+  background: rgba(13, 21, 39, 0.8);
+  padding: 6px;
+  border-radius: 30px;
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 24px;
+}
+
+.nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.nav-link.active {
+  background: var(--color-cyan);
+  color: #070b12;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+}
+
+.nav-link:hover:not(.active) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Main Forecast Card Container */
+.forecast-card {
+  width: 100%;
+  max-width: 1050px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-cyan);
+  border-radius: 20px;
+  padding: 30px 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 50px rgba(56, 189, 248, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 18px;
+}
+
+.header-left h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-left h1 span.plant-badge {
+  color: var(--color-cyan);
+}
+
+.header-left p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.status-crecida {
+  background: rgba(244, 63, 94, 0.18);
+  color: var(--color-red);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.2);
+}
+
+.status-normal {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--color-cyan);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.status-alto {
+  background: rgba(251, 146, 60, 0.18);
+  color: var(--color-orange);
+  border: 1px solid rgba(251, 146, 60, 0.4);
+}
+
+.confidence-indicator {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.confidence-indicator strong {
+  color: var(--text-muted);
+}
+
+/* Metrics Summary Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.metric-box {
+  background: var(--bg-card-sub);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.metric-value.cyan {
+  color: var(--color-cyan);
+}
+
+.metric-value.orange {
+  color: var(--color-orange);
+}
+
+.metric-value.red {
+  color: var(--color-red);
+}
+
+.metric-unit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.metric-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* Fan Chart Container */
+.chart-container {
+  background: #080d1a;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 14px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color {
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.legend-obs { background: var(--color-cyan); }
+.legend-p50 { background: var(--color-cyan); border-top: 2px dashed #ffffff; }
+.legend-inner { background: rgba(56, 189, 248, 0.4); }
+.legend-outer { background: rgba(56, 189, 248, 0.15); }
+.legend-thresh { background: var(--color-red); height: 2px; }
+
+/* SVG Chart Elements */
+.forecast-svg {
+  width: 100%;
+  height: 320px;
+  display: block;
+}
+
+.grid-line {
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-dasharray: 3 3;
+}
+
+.axis-text {
+  fill: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.ribbon-outer {
+  fill: var(--ribbon-outer);
+  transition: all 0.3s;
+}
+
+.ribbon-inner {
+  fill: var(--ribbon-inner);
+  transition: all 0.3s;
+}
+
+.line-historical {
+  fill: none;
+  stroke: var(--color-cyan);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.line-median {
+  fill: none;
+  stroke: var(--color-cyan);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+}
+
+.line-threshold {
+  stroke: var(--color-red);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.85;
+}
+
+.threshold-text {
+  fill: var(--color-red);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.now-marker {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
+}
+
+.point-historical {
+  fill: #0d1527;
+  stroke: var(--color-cyan);
+  stroke-width: 2.5;
+  cursor: pointer;
+  transition: r 0.2s;
+}
+
+.point-historical:hover {
+  r: 6;
+}
+
+.point-forecast {
+  fill: var(--color-cyan);
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+/* Bottom Telemetry Chips */
+.telemetry-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 14px;
+}
+
+.chips-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  background: var(--bg-card-sub);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chip strong {
+  color: #ffffff;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.chip span.sensor-name {
+  color: var(--text-dim);
+}
+
+.source-info {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Visualizer Controls Sidebar / Drawer */
+.controls-panel {
+  width: 100%;
+  max-width: 1050px;
+  background: #0d1527;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 10px;
+}
+
+.controls-header h3 {
+  font-size: 15px;
+  color: var(--color-cyan);
+  font-weight: 700;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+}
+
+.control-group label span.val {
+  color: var(--color-cyan);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.control-group input[type="range"] {
+  accent-color: var(--color-cyan);
+  cursor: pointer;
+}
+
+.control-group select {
+  background: #070b12;
+  border: 1px solid var(--border-subtle);
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+@media (max-width: 850px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .controls-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

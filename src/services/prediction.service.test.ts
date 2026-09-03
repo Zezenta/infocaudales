@@ -159,4 +159,43 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
       expect(dt3?.getUTCHours()).toBe(15);
     });
   });
+
+  describe('Statistical Percentiles & Fan Chart Trajectory', () => {
+    it('computes correct p10, p25, p50, p75, p90 percentiles given point forecast and MAE', () => {
+      // Mean = 500, MAE = 20 -> sigma = 1.2533 * 20 = 25.066
+      // p50 = 500
+      // p25 = 500 - 0.674 * 25.066 = 500 - 16.894 = 483.11
+      // p75 = 500 + 16.894 = 516.89
+      // p10 = 500 - 1.282 * 25.066 = 500 - 32.134 = 467.87
+      // p90 = 500 + 32.134 = 532.13
+      const p = service.calculatePredictionPercentiles(500, 20);
+
+      expect(p.p50).toBe(500);
+      expect(p.p25).toBeCloseTo(483.11, 1);
+      expect(p.p75).toBeCloseTo(516.89, 1);
+      expect(p.p10).toBeCloseTo(467.87, 1);
+      expect(p.p90).toBeCloseTo(532.13, 1);
+    });
+
+    it('builds fan chart trajectory with historical points and future expanding uncertainty cone', () => {
+      const trajectory = service.buildForecastTrajectory({
+        currentFlow: 450,
+        forecastFlow: 600,
+        horizonHours: 3,
+        mae: 27.2
+      });
+
+      expect(trajectory.length).toBe(7); // 3 past (-6h, -4h, -2h) + 1 current (0 / AHORA) + 3 future (+1h, +2h, +3h)
+      
+      const nowPoint = trajectory.find(t => t.step === 0);
+      expect(nowPoint?.label).toBe('AHORA');
+      expect(nowPoint?.observedFlow).toBe(450);
+
+      const finalPoint = trajectory.find(t => t.step === 3);
+      expect(finalPoint?.label).toBe('+3h');
+      expect(finalPoint?.percentiles?.p50).toBe(600);
+      expect(finalPoint?.percentiles?.p75).toBeGreaterThan(600);
+      expect(finalPoint?.percentiles?.p25).toBeLessThan(600);
+    });
+  });
 });

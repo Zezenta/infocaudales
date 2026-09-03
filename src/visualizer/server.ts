@@ -194,6 +194,21 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Serve Forecast Fan Chart HTML
+  if (req.url === '/forecast' || req.url === '/forecasts' || req.url === '/forecast-card.html') {
+    const forecastHtmlPath = path.join(TEMPLATE_DIR, 'forecast-card.html');
+    fs.readFile(forecastHtmlPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading forecast HTML');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+  }
+
   // Serve the CSS files
   if (req.url === '/hydro-card.css') {
     fs.readFile(CSS_FILE, 'utf8', (err, data) => {
@@ -214,6 +229,20 @@ const server = http.createServer((req, res) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('Error loading daily report CSS');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/css' });
+      res.end(data);
+    });
+    return;
+  }
+
+  if (req.url === '/forecast-card.css') {
+    const forecastCssPath = path.join(TEMPLATE_DIR, 'forecast-card.css');
+    fs.readFile(forecastCssPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading forecast CSS');
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/css' });
@@ -265,7 +294,8 @@ fs.watch(TEMPLATE_DIR, (eventType, filename) => {
   if (!filename) return;
   
   // Only trigger for the actual template files
-  if (filename !== 'hydro-card.html' && filename !== 'hydro-card.css' && filename !== 'daily-report.html' && filename !== 'daily-report.css') {
+  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html', 'forecast-card.css'];
+  if (!watchedFiles.includes(filename)) {
     return;
   }
   
@@ -286,6 +316,7 @@ fs.watch(TEMPLATE_DIR, (eventType, filename) => {
 
 server.listen(PORT, () => {
   console.log(`\n🚀 Hydro Telemetry Visualizer Server running at:`);
-  console.log(`   👉 http://localhost:${PORT}`);
+  console.log(`   👉 Telemetry Cards: http://localhost:${PORT}`);
+  console.log(`   👉 Forecast Fan Chart: http://localhost:${PORT}/forecast`);
   console.log(`\nWatching files in: ${TEMPLATE_DIR} for changes (live reloading active)`);
 });

@@ -60,10 +60,28 @@ export interface HydroelectricPlant {
 
 export type PredictionHorizon = '1h' | '3h' | '24h';
 
+export interface PredictionPercentiles {
+  p10: number;                      // 10th percentile (lower broad uncertainty bound)
+  p25: number;                      // 25th percentile (lower high-confidence bound)
+  p50: number;                      // 50th percentile (median expected forecast)
+  p75: number;                      // 75th percentile (upper high-confidence bound)
+  p90: number;                      // 90th percentile (upper broad uncertainty bound)
+}
+
+export interface ForecastTrajectoryPoint {
+  step: number;                     // Hour step: negative for past (e.g. -6..0), positive for future (e.g. 1..3)
+  label: string;                    // Time label (e.g. '-3h', 'AHORA', '+1h', '+3h')
+  isHistorical: boolean;            // True if observed historical data
+  observedFlow?: number;            // Actual flow measured in m³/s
+  percentiles?: PredictionPercentiles; // Statistical forecast fan spread
+}
+
 export interface PredictionResult {
   plantKey: string;
   plantName: string;
-  forecastFlow: number;             // Predicted flow rate in m³/s
+  forecastFlow: number;             // Predicted flow rate in m³/s (median / p50)
+  percentiles?: PredictionPercentiles; // Statistical prediction percentiles
+  trajectory?: ForecastTrajectoryPoint[]; // Full historical + forecast curve for fan charts
   horizon: PredictionHorizon;       // Forecast horizon
   horizonHours: number;             // Numeric hours (1, 3, 24)
   method: string;                   // Description of the model (e.g. 'Multivariate 3h (INAMHI Telemetry)')
