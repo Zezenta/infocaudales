@@ -3,9 +3,131 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Infocaudales - Pronósticos Hidrológicos (Visualizador)</title>
-  <link rel="stylesheet" href="forecast-card.css">
+  <title>Hydroelectric Plant Forecast Cards (Electric Obsidian)</title>
+  <link rel="stylesheet" href="hydro-card.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* Forecast Fan Chart Specific SVG Elements (Sharing Obsidian Colors) */
+    .card-container .visualizer-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 600px;
+      height: 380px;
+      overflow: hidden;
+    }
+
+    .forecast-svg {
+      width: 600px;
+      height: 380px;
+      display: block;
+    }
+
+    .forecast-grid-line {
+      stroke: #1e293b;
+      stroke-dasharray: 4 4;
+      stroke-width: 1.2px;
+    }
+
+    .forecast-axis-text {
+      fill: #64748b;
+      font-family: 'DejaVu Sans Mono', monospace;
+      font-size: 11px;
+      font-weight: normal;
+    }
+
+    .forecast-ribbon-outer {
+      fill: rgba(0, 176, 255, 0.10);
+      transition: all 0.2s ease;
+    }
+
+    .forecast-ribbon-inner {
+      fill: rgba(0, 176, 255, 0.24);
+      transition: all 0.2s ease;
+    }
+
+    .forecast-line-historical {
+      fill: none;
+      stroke: #00b0ff;
+      stroke-width: 3.5px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .forecast-line-median {
+      fill: none;
+      stroke: #00b0ff;
+      stroke-width: 2.8px;
+      stroke-dasharray: 6 5;
+    }
+
+    .forecast-line-threshold {
+      stroke: #f43f5e;
+      stroke-width: 2px;
+      stroke-dasharray: 5 4;
+    }
+
+    .forecast-threshold-text {
+      fill: #f43f5e;
+      font-family: 'DejaVu Sans Mono', monospace;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .forecast-now-marker {
+      stroke: #475569;
+      stroke-width: 1.8px;
+      stroke-dasharray: 4 4;
+    }
+
+    .forecast-point-historical {
+      fill: #080c14;
+      stroke: #00b0ff;
+      stroke-width: 2.5px;
+    }
+
+    .forecast-point-future {
+      fill: #00b0ff;
+      stroke: #ffffff;
+      stroke-width: 1.5px;
+    }
+
+    .forecast-telemetry-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 38px;
+      padding: 0 16px;
+      background: rgba(8, 12, 20, 0.96);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #1e293b;
+      font-family: 'DejaVu Sans Mono', monospace;
+      font-size: 11px;
+      z-index: 10;
+    }
+
+    .forecast-telemetry-chips {
+      display: flex;
+      gap: 12px;
+    }
+
+    .forecast-telemetry-chips span {
+      color: #94a3b8;
+    }
+
+    .forecast-telemetry-chips strong {
+      color: #f3f4f6;
+    }
+
+    .forecast-model-info {
+      color: #64748b;
+      font-size: 10.5px;
+    }
+  </style>
 </head>
 <body>
 
@@ -18,18 +140,110 @@
 
   <div class="main-layout">
 
-    <!-- LEFT COLUMN: Control Panel -->
+    <!-- LEFT COLUMN: The Report Card -->
+    <div class="cards-column">
+      <div class="theme-wrapper">
+        <h2 class="theme-title">Electric Obsidian (Space Grotesk Font)</h2>
+
+        <!-- Exact 600px x 600px Card Container with class card-obsidian-grotesk -->
+        <div class="card-container card-obsidian-grotesk" id="forecast-card-container">
+
+          <!-- Header Area -->
+          <div class="header">
+            <div class="header-left">
+              <span class="header-pre-title">HIDROELÉCTRICA · PRONÓSTICO</span>
+              <h1 class="plant-name" id="card-plant-name">Coca Codo Sinclair</h1>
+              <p class="timestamp" id="card-timestamp">03/09/2026 01:00</p>
+            </div>
+            <div class="header-right">
+              <div class="watermark">
+                <div class="x-icon-container">
+                  <svg class="x-logo" viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </div>
+                <span>@Hidro_Info_Bot</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Row: Generación, Turbinas, Caudal in thirds -->
+          <div class="stats-row" style="top: 116px;">
+            <!-- Column 1: Caudal Actual (T0) -->
+            <div class="stats-col">
+              <span class="section-label">Caudal Actual:</span>
+              <span class="flow-value text-cyan" id="card-flow-actual">480.00 m³/s</span>
+              <span class="status-text" style="color: #64748b !important;" id="card-flow-source">T₀ CELEC EP</span>
+            </div>
+
+            <div class="thirds-divider divider-1"></div>
+
+            <!-- Column 2: Pronóstico Horizon (p50) -->
+            <div class="stats-col">
+              <span class="section-label" id="card-lbl-forecast">Pronóstico 3h:</span>
+              <span class="generation-value text-cyan" id="card-flow-forecast">479.18 m³/s</span>
+              <span class="status-text text-green" id="card-delta-forecast">-0.2% (p50)</span>
+            </div>
+
+            <div class="thirds-divider divider-2"></div>
+
+            <!-- Column 3: Rango de Probabilidad (50%) -->
+            <div class="stats-col">
+              <span class="section-label">Rango 50%:</span>
+              <span class="flow-value text-cyan" id="card-flow-range">456 - 502</span>
+              <span class="flow-status text-green" id="card-flow-status">Normal</span>
+            </div>
+          </div>
+
+          <!-- Visualizer Panel (600px width x 380px height) -->
+          <div class="visualizer-panel">
+            <svg class="forecast-svg" id="forecast-svg" viewBox="0 0 600 380">
+              <!-- Grid Lines & Y-Axis Layer -->
+              <g id="grid-layer"></g>
+
+              <!-- Threshold Line -->
+              <g id="threshold-layer"></g>
+
+              <!-- Uncertainty Ribbons -->
+              <path id="ribbon-outer" class="forecast-ribbon-outer" d="" />
+              <path id="ribbon-inner" class="forecast-ribbon-inner" d="" />
+
+              <!-- Trajectory Lines -->
+              <path id="line-historical" class="forecast-line-historical" d="" />
+              <path id="line-median" class="forecast-line-median" d="" />
+
+              <!-- Markers Layer -->
+              <g id="markers-layer"></g>
+            </svg>
+
+            <!-- Bottom Telemetry & Model Attribution Overlay -->
+            <div class="forecast-telemetry-overlay">
+              <div class="forecast-telemetry-chips">
+                <span>Quijos: <strong id="chip-sensor-1">1.45m</strong></span>
+                <span>Salado: <strong id="chip-sensor-2">0.90m</strong></span>
+                <span>Lluvia: <strong id="chip-rain-1">8.5mm</strong></span>
+              </div>
+              <div class="forecast-model-info" id="card-model-info">Modelo Multivariable (r = 0.939, MAE = 27.2)</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Control Panel (Compact & On Right like hydro-card.html) -->
     <div class="control-panel">
       <div class="panel-header-compact">
-        <div class="panel-title">Filtros & Pronóstico</div>
-        <div class="panel-subtitle">Simulador de variables hidrológicas</div>
+        <h3 class="panel-title">Filtros & Pronóstico</h3>
+        <p class="panel-subtitle">Simulador de variables hidrológicas en vivo</p>
       </div>
 
-      <div class="panel-body">
-        <!-- Central Dropdown -->
+      <!-- Top Row: Central Dropdown, Date Input -->
+      <div class="panel-top-row">
+        <!-- Dropdown Central -->
         <div class="form-group">
-          <label class="form-label">Central Hidroeléctrica</label>
-          <select id="ctrlPlant" class="form-select">
+          <label class="form-label" for="plant-select">Central Hidroeléctrica</label>
+          <select id="plant-select" class="form-select">
             <option value="cocaCodoSinclair" selected>Coca Codo Sinclair (3h)</option>
             <option value="mazar_3h">Mazar (3h)</option>
             <option value="mazar_24h">Mazar (24h Autoregresivo)</option>
@@ -38,29 +252,35 @@
 
         <!-- Date Input -->
         <div class="form-group">
-          <label class="form-label">Fecha & Hora</label>
-          <input type="datetime-local" id="dateInput" class="form-input">
+          <label class="form-label" for="date-input">Fecha & Hora</label>
+          <input type="datetime-local" id="date-input" class="form-input">
         </div>
+      </div>
 
-        <!-- Section: Telemetría de Caudal -->
-        <div class="panel-section">
+      <!-- Sliders Grid (Organized in Sections) -->
+      <div class="panel-sliders-grid">
+        <!-- Sección: Caudal & Horizonte -->
+        <div class="panel-section" id="section-flow">
           <div class="panel-section-title">Telemetría de Caudal</div>
 
-          <div class="form-group">
+          <div class="form-group slider-container">
             <label class="form-label">
               Caudal Actual (T₀)
-              <span id="lblCtrlFlow" class="badge">480 m³/s</span>
+              <span id="badge-flow" class="badge">480.00 m³/s</span>
             </label>
-            <input type="range" id="ctrlCurrentFlow" class="slider-range" min="50" max="1500" step="5" value="480">
+            <input type="range" id="slider-flow" class="slider-range" min="50" max="1500" step="5" value="480">
             <div class="slider-limits">
               <span>50 m³/s</span>
               <span>1500 m³/s</span>
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Horizonte</label>
-            <select id="ctrlHorizon" class="form-select">
+          <div class="form-group slider-container">
+            <label class="form-label">
+              Horizonte Temporal
+              <span id="badge-horizon" class="badge">3 Horas</span>
+            </label>
+            <select id="select-horizon" class="form-select">
               <option value="3" selected>3 Horas Futuras (Horario)</option>
               <option value="6">6 Horas Futuras</option>
               <option value="12">12 Horas Futuras</option>
@@ -69,134 +289,50 @@
           </div>
         </div>
 
-        <!-- Section: Sensores de Entrada -->
-        <div class="panel-section">
+        <!-- Sección: Sensores Hidrológicos -->
+        <div class="panel-section" id="section-sensors">
           <div class="panel-section-title">Variables de Entrada (INAMHI)</div>
 
-          <div class="form-group">
+          <div class="form-group slider-container">
             <label class="form-label">
-              <span id="lblSensor1">Nivel Río Quijos</span>
-              <span id="lblValSensor1" class="badge">1.45 m</span>
+              <span id="lbl-sensor-1">Nivel Río Quijos (H0719)</span>
+              <span id="badge-sensor-1" class="badge">1.45 m</span>
             </label>
-            <input type="range" id="ctrlSensor1" class="slider-range" min="0.2" max="4.0" step="0.05" value="1.45">
+            <input type="range" id="slider-sensor-1" class="slider-range" min="0.2" max="4.0" step="0.05" value="1.45">
           </div>
 
-          <div class="form-group">
+          <div class="form-group slider-container">
             <label class="form-label">
-              <span id="lblSensor2">Nivel Río Salado</span>
-              <span id="lblValSensor2" class="badge">0.92 m</span>
+              <span id="lbl-sensor-2">Nivel Río Salado (H0728)</span>
+              <span id="badge-sensor-2" class="badge">0.90 m</span>
             </label>
-            <input type="range" id="ctrlSensor2" class="slider-range" min="0.1" max="3.0" step="0.05" value="0.92">
+            <input type="range" id="slider-sensor-2" class="slider-range" min="0.1" max="3.0" step="0.05" value="0.90">
           </div>
 
-          <div class="form-group">
+          <div class="form-group slider-container">
             <label class="form-label">
-              <span id="lblRain1">Lluvia Sierrazul (t-9)</span>
-              <span id="lblValRain1" class="badge">8.5 mm</span>
+              <span id="lbl-rain-1">Lluvia Sierrazul (t-9)</span>
+              <span id="badge-rain-1" class="badge">8.5 mm</span>
             </label>
-            <input type="range" id="ctrlRain1" class="slider-range" min="0" max="60" step="0.5" value="8.5">
+            <input type="range" id="slider-rain-1" class="slider-range" min="0" max="60" step="0.5" value="8.5">
           </div>
 
-          <div class="form-group">
+          <div class="form-group slider-container">
             <label class="form-label">
-              <span id="lblRain2">Lluvia Papallacta (t-6)</span>
-              <span id="lblValRain2" class="badge">4.2 mm</span>
+              <span id="lbl-rain-2">Lluvia Papallacta (t-6)</span>
+              <span id="badge-rain-2" class="badge">4.0 mm</span>
             </label>
-            <input type="range" id="ctrlRain2" class="slider-range" min="0" max="60" step="0.5" value="4.2">
+            <input type="range" id="slider-rain-2" class="slider-range" min="0" max="60" step="0.5" value="4.0">
           </div>
         </div>
-
-        <button id="btnGeneratePng" class="form-btn">Guardar Reporte en Disco (PNG)</button>
       </div>
-    </div>
 
-    <!-- RIGHT COLUMN: Exact 600px x 600px Square Card -->
-    <div class="cards-column">
-      <div class="theme-wrapper">
-        <div class="theme-title">Electric Obsidian (Space Grotesk Font)</div>
-
-        <div class="card-container" id="forecastSquareCard">
-
-          <!-- Header -->
-          <div class="header">
-            <div class="header-left">
-              <span class="header-pre-title">HIDROELÉCTRICA · PRONÓSTICO</span>
-              <h1 class="plant-name" id="plantName">Coca Codo Sinclair</h1>
-              <p class="timestamp" id="timestampStr">03/09/2026 01:00</p>
-            </div>
-            <div class="header-right">
-              <div class="watermark">
-                <div class="x-icon-container">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                </div>
-                <span>@Hidro_Info_Bot</span>
-              </div>
-              <div class="model-confidence-tag">
-                Confianza: <strong id="modelR" style="color: #38bdf8;">r = 0.939</strong> (MAE: <span id="modelMae">27.2</span> m³/s)
-              </div>
-            </div>
-          </div>
-
-          <!-- Stats Row: 3 Columns in Thirds -->
-          <div class="stats-row">
-            <!-- Col 1: Caudal Actual -->
-            <div class="stats-col">
-              <span class="section-label">Caudal Actual:</span>
-              <span class="stat-main-value text-cyan" id="valCurrentFlow">480.0 m³/s</span>
-              <span class="stat-sub-text text-muted">T₀ CELEC EP</span>
-            </div>
-
-            <!-- Col 2: Pronóstico Mediana p50 -->
-            <div class="stats-col">
-              <span class="section-label" id="lblForecastCol">Pronóstico 3h:</span>
-              <span class="stat-main-value text-green" id="valForecastFlow">620.0 m³/s</span>
-              <span class="stat-sub-text text-green" id="valDeltaFlow">+29.2% (p50)</span>
-            </div>
-
-            <!-- Col 3: Rango de Probabilidad -->
-            <div class="stats-col">
-              <span class="section-label">Rango 50%:</span>
-              <span class="stat-main-value text-orange" id="valRange50">597 - 643</span>
-              <span class="stat-sub-text text-red" id="valStatusAlert">Alerta Crecida</span>
-            </div>
-          </div>
-
-          <!-- Visualizer Panel (600px x 400px at bottom) -->
-          <div class="visualizer-panel">
-            <!-- Dynamic SVG Fan Chart -->
-            <svg class="visualizer-svg" id="forecastSvg" viewBox="0 0 600 360">
-              <!-- Grid Lines & Axes Layer -->
-              <g id="gridLayer"></g>
-
-              <!-- Threshold Reference Line -->
-              <g id="thresholdLayer"></g>
-
-              <!-- Fan Shaded Uncertainty Ribbons -->
-              <path id="ribbonOuter" class="ribbon-outer" d="" />
-              <path id="ribbonInner" class="ribbon-inner" d="" />
-
-              <!-- Curves Layer -->
-              <path id="lineHistorical" class="line-historical" d="" />
-              <path id="lineMedian" class="line-median" d="" />
-
-              <!-- Markers and Points -->
-              <g id="markersLayer"></g>
-            </svg>
-
-            <!-- Integrated Bottom Telemetry Bar -->
-            <div class="bottom-telemetry-bar">
-              <div class="sensor-chips-group">
-                <span>Quijos: <strong id="chipQuijos">1.45m</strong></span>
-                <span>Salado: <strong id="chipSalado">0.90m</strong></span>
-                <span>Lluvia: <strong id="chipRain1">8.5mm</strong></span>
-              </div>
-              <div class="telemetry-source-tag">INAMHI · GEOGLOWS · CELEC EP</div>
-            </div>
-          </div>
-
-        </div>
+      <!-- Generate PNG Button -->
+      <div style="margin-top: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
+        <button id="btn-generate-png" class="form-btn" style="width: 100%; padding: 10px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background-color 0.2s;">
+          Guardar Reporte en Disco (PNG)
+        </button>
+        <div id="generation-status" style="font-size: 13px; text-align: center; font-weight: 500; min-height: 18px;"></div>
       </div>
     </div>
 
@@ -207,14 +343,13 @@
     const MODELS = {
       cocaCodoSinclair: {
         name: 'Coca Codo Sinclair',
-        method: 'Modelo Multivariable de Inflow (INAMHI Telemetría + Lluvias de Cabecera)',
-        r: 'r = 0.939',
-        mae: 27.2,
+        method: 'Modelo Multivariable (r = 0.939, MAE = 27.2)',
         thresholdCrecida: 700,
         sensor1Name: 'Nivel Río Quijos (H0719)',
         sensor2Name: 'Nivel Río Salado (H0728)',
         rain1Name: 'Lluvia Sierrazul (t-9)',
         rain2Name: 'Lluvia Papallacta (t-6)',
+        mae: 27.2,
         calc: (inputs) => {
           return (
             219.53 * inputs.sensor1 +
@@ -227,31 +362,29 @@
       },
       mazar_3h: {
         name: 'Mazar (3h)',
-        method: 'Modelo Multivariable 3h (Paute Level + Lluvia Cañar)',
-        r: 'r = 0.879',
-        mae: 21.1,
+        method: 'Modelo Multivariable Paute/Cañar (r = 0.879, MAE = 21.1)',
         thresholdCrecida: 185,
         sensor1Name: 'Nivel Río Paute (H0894)',
         sensor2Name: 'Caudal Turbinado',
         rain1Name: 'Lluvia Cañar (M0031)',
         rain2Name: 'Lluvia Cuenca (M5103)',
+        mae: 21.1,
         calc: (inputs) => {
           return 118.086 * inputs.sensor1 + 65.895 * inputs.rain1 + 8.505;
         }
       },
       mazar_24h: {
         name: 'Mazar (24h Autoregresivo)',
-        method: 'Modelo Híbrido Autoregresivo (CELEC Q(t-1) + GEOGLOWS + WRF Rain)',
-        r: 'r = 0.845',
-        mae: 14.12,
+        method: 'Modelo Híbrido CELEC/WRF (r = 0.845, MAE = 14.1)',
         thresholdCrecida: 185,
         sensor1Name: 'Caudal Ayer Q(t-1)',
         sensor2Name: 'COMID GEOGLOWS',
         rain1Name: 'Lluvia WRF Ayer (t-1)',
         rain2Name: 'Lluvia WRF Anteayer (t-2)',
+        mae: 14.12,
         calc: (inputs) => {
           return (
-            0.6881 * inputs.currentFlow +
+            0.6881 * inputs.flow +
             0.0151 * (inputs.sensor2 * 50) +
             1.3737 * inputs.rain1 +
             0.0369 * inputs.rain2 +
@@ -273,16 +406,16 @@
     }
 
     function renderForecast() {
-      const plantKey = document.getElementById('ctrlPlant').value;
+      const plantKey = document.getElementById('plant-select').value;
       const model = MODELS[plantKey] || MODELS.cocaCodoSinclair;
 
       const inputs = {
-        currentFlow: parseFloat(document.getElementById('ctrlCurrentFlow').value),
-        sensor1: parseFloat(document.getElementById('ctrlSensor1').value),
-        sensor2: parseFloat(document.getElementById('ctrlSensor2').value),
-        rain1: parseFloat(document.getElementById('ctrlRain1').value),
-        rain2: parseFloat(document.getElementById('ctrlRain2').value),
-        horizon: parseInt(document.getElementById('ctrlHorizon').value, 10)
+        flow: parseFloat(document.getElementById('slider-flow').value),
+        sensor1: parseFloat(document.getElementById('slider-sensor-1').value),
+        sensor2: parseFloat(document.getElementById('slider-sensor-2').value),
+        rain1: parseFloat(document.getElementById('slider-rain-1').value),
+        rain2: parseFloat(document.getElementById('slider-rain-2').value),
+        horizon: parseInt(document.getElementById('select-horizon').value, 10)
       };
 
       // 1. Calculate Expected Forecast
@@ -291,52 +424,55 @@
       const percentiles = calculatePercentiles(forecastFlow, model.mae);
 
       // 2. Update Header & Stats Row UI
-      document.getElementById('plantName').innerText = model.name;
-      document.getElementById('modelR').innerText = model.r;
-      document.getElementById('modelMae').innerText = model.mae.toFixed(1);
+      document.getElementById('card-plant-name').innerText = model.name;
+      document.getElementById('card-model-info').innerText = model.method;
 
-      document.getElementById('valCurrentFlow').innerText = inputs.currentFlow.toFixed(1) + ' m³/s';
-      document.getElementById('lblForecastCol').innerText = `Pronóstico ${inputs.horizon}h:`;
-      document.getElementById('valForecastFlow').innerText = forecastFlow.toFixed(1) + ' m³/s';
-      document.getElementById('valRange50').innerText = `${Math.round(percentiles.p25)} - ${Math.round(percentiles.p75)}`;
+      document.getElementById('card-flow-actual').innerText = inputs.flow.toFixed(2) + ' m³/s';
+      document.getElementById('card-lbl-forecast').innerText = `Pronóstico ${inputs.horizon}h:`;
+      document.getElementById('card-flow-forecast').innerText = forecastFlow.toFixed(2) + ' m³/s';
+      document.getElementById('card-flow-range').innerText = `${Math.round(percentiles.p25)} - ${Math.round(percentiles.p75)}`;
 
-      const deltaPct = ((forecastFlow - inputs.currentFlow) / inputs.currentFlow) * 100;
+      const deltaPct = ((forecastFlow - inputs.flow) / inputs.flow) * 100;
       const deltaSign = deltaPct >= 0 ? '+' : '';
-      document.getElementById('valDeltaFlow').innerText = `${deltaSign}${deltaPct.toFixed(1)}% (p50)`;
+      const deltaEl = document.getElementById('card-delta-forecast');
+      deltaEl.innerText = `${deltaSign}${deltaPct.toFixed(1)}% (p50)`;
 
-      // Status Alert Badge
-      const statusAlert = document.getElementById('valStatusAlert');
+      const statusEl = document.getElementById('card-flow-status');
       if (forecastFlow >= model.thresholdCrecida) {
-        statusAlert.className = 'stat-sub-text text-red';
-        statusAlert.innerText = '⚡ Alerta Crecida';
+        statusEl.className = 'flow-status text-red';
+        statusEl.innerText = 'Crecida';
+        deltaEl.className = 'status-text text-red';
       } else if (deltaPct > 20) {
-        statusAlert.className = 'stat-sub-text text-orange';
-        statusAlert.innerText = '📈 Alza Fuerte';
+        statusEl.className = 'flow-status text-orange';
+        statusEl.innerText = 'Alza Fuerte';
+        deltaEl.className = 'status-text text-orange';
       } else if (deltaPct < -20) {
-        statusAlert.className = 'stat-sub-text text-cyan';
-        statusAlert.innerText = '📉 Descenso';
+        statusEl.className = 'flow-status text-cyan';
+        statusEl.innerText = 'Descenso';
+        deltaEl.className = 'status-text text-cyan';
       } else {
-        statusAlert.className = 'stat-sub-text text-green';
-        statusAlert.innerText = '💧 Estable';
+        statusEl.className = 'flow-status text-green';
+        statusEl.innerText = 'Normal';
+        deltaEl.className = 'status-text text-green';
       }
 
       // Update Bottom Telemetry Chips
-      document.getElementById('chipQuijos').innerText = inputs.sensor1.toFixed(2) + 'm';
-      document.getElementById('chipSalado').innerText = inputs.sensor2.toFixed(2) + 'm';
-      document.getElementById('chipRain1').innerText = inputs.rain1.toFixed(1) + 'mm';
+      document.getElementById('chip-sensor-1').innerText = inputs.sensor1.toFixed(2) + 'm';
+      document.getElementById('chip-sensor-2').innerText = inputs.sensor2.toFixed(2) + 'm';
+      document.getElementById('chip-rain-1').innerText = inputs.rain1.toFixed(1) + 'mm';
 
-      // 3. Render 600x360 SVG Fan Chart
+      // 3. Render 600x380 SVG Fan Chart
       renderSvgFanChart(inputs, forecastFlow, model);
     }
 
     function renderSvgFanChart(inputs, forecastFlow, model) {
-      const svg = document.getElementById('forecastSvg');
+      const svg = document.getElementById('forecast-svg');
       const width = 600;
-      const height = 360;
+      const height = 380;
       const padLeft = 45;
       const padRight = 45;
-      const padTop = 20;
-      const padBottom = 45;
+      const padTop = 15;
+      const padBottom = 65; // leaves 38px bottom telemetry clearance
 
       const plotW = width - padLeft - padRight;
       const plotH = height - padTop - padBottom;
@@ -350,23 +486,23 @@
       const maxStep = inputs.horizon;
 
       // Realistic historical curve
-      const deltaExpected = forecastFlow - inputs.currentFlow;
+      const deltaExpected = forecastFlow - inputs.flow;
       const histFactor1 = deltaExpected >= 0 ? 0.78 : 1.18;
       const histFactor2 = deltaExpected >= 0 ? 0.87 : 1.10;
       const histFactor3 = deltaExpected >= 0 ? 0.95 : 1.04;
 
       const historicalPoints = [
-        { step: -6, flow: Math.max(0, inputs.currentFlow * histFactor1) },
-        { step: -4, flow: Math.max(0, inputs.currentFlow * histFactor2) },
-        { step: -2, flow: Math.max(0, inputs.currentFlow * histFactor3) },
-        { step: 0, flow: inputs.currentFlow }
+        { step: -6, flow: Math.max(0, inputs.flow * histFactor1) },
+        { step: -4, flow: Math.max(0, inputs.flow * histFactor2) },
+        { step: -2, flow: Math.max(0, inputs.flow * histFactor3) },
+        { step: 0, flow: inputs.flow }
       ];
 
       const futurePoints = [];
       for (const h of futureSteps) {
         const weight = h / inputs.horizon;
         const curveWeight = 1 - (1 - weight) * (1 - weight);
-        const stepMean = inputs.currentFlow + (forecastFlow - inputs.currentFlow) * curveWeight;
+        const stepMean = inputs.flow + (forecastFlow - inputs.flow) * curveWeight;
         const stepMae = model.mae * Math.sqrt(weight);
         futurePoints.push({
           step: h,
@@ -389,8 +525,8 @@
       }
 
       const rawSpan = Math.max(25, maxVal - minVal);
-      const rawYMin = Math.max(0, minVal - rawSpan * 0.22);
-      const rawYMax = maxVal + rawSpan * 0.22;
+      const rawYMin = Math.max(0, minVal - rawSpan * 0.18);
+      const rawYMax = maxVal + rawSpan * 0.18;
 
       const roughStep = (rawYMax - rawYMin) / 4;
       const power = Math.pow(10, Math.floor(Math.log10(roughStep)));
@@ -410,29 +546,29 @@
       for (let i = 0; i <= numYLines; i++) {
         const flowVal = yMin + (yRange / numYLines) * i;
         const yPos = getY(flowVal);
-        gridHtml += `<line class="grid-line" x1="${padLeft}" y1="${yPos}" x2="${width - padRight}" y2="${yPos}" />`;
-        gridHtml += `<text class="axis-text" x="${padLeft - 6}" y="${yPos + 4}" text-anchor="end">${Math.round(flowVal)}</text>`;
+        gridHtml += `<line class="forecast-grid-line" x1="${padLeft}" y1="${yPos}" x2="${width - padRight}" y2="${yPos}" />`;
+        gridHtml += `<text class="forecast-axis-text" x="${padLeft - 6}" y="${yPos + 4}" text-anchor="end">${Math.round(flowVal)}</text>`;
       }
 
       // Vertical X Steps & Now Line
       for (const s of allSteps) {
         const xPos = getX(s);
         const label = s === 0 ? 'AHORA' : (s < 0 ? `${s}h` : `+${s}h`);
-        gridHtml += `<line class="grid-line" x1="${xPos}" y1="${padTop}" x2="${xPos}" y2="${padTop + plotH}" />`;
-        gridHtml += `<text class="axis-text" x="${xPos}" y="${padTop + plotH + 18}" text-anchor="middle" font-weight="${s === 0 ? 'bold' : 'normal'}" fill="${s === 0 ? '#38bdf8' : '#64748b'}">${label}</text>`;
+        gridHtml += `<line class="forecast-grid-line" x1="${xPos}" y1="${padTop}" x2="${xPos}" y2="${padTop + plotH}" />`;
+        gridHtml += `<text class="forecast-axis-text" x="${xPos}" y="${padTop + plotH + 18}" text-anchor="middle" font-weight="${s === 0 ? 'bold' : 'normal'}" fill="${s === 0 ? '#00b0ff' : '#64748b'}">${label}</text>`;
       }
-      gridHtml += `<line class="now-marker" x1="${getX(0)}" y1="${padTop}" x2="${getX(0)}" y2="${padTop + plotH}" />`;
-      document.getElementById('gridLayer').innerHTML = gridHtml;
+      gridHtml += `<line class="forecast-now-marker" x1="${getX(0)}" y1="${padTop}" x2="${getX(0)}" y2="${padTop + plotH}" />`;
+      document.getElementById('grid-layer').innerHTML = gridHtml;
 
       // Threshold Reference Line
       if (model.thresholdCrecida >= yMin && model.thresholdCrecida <= yMax) {
         const threshY = getY(model.thresholdCrecida);
-        document.getElementById('thresholdLayer').innerHTML = `
-          <line class="line-threshold" x1="${padLeft}" y1="${threshY}" x2="${width - padRight}" y2="${threshY}" />
-          <text class="threshold-text" x="${width - padRight}" y="${threshY - 5}" text-anchor="end">Crecida (${model.thresholdCrecida} m³/s)</text>
+        document.getElementById('threshold-layer').innerHTML = `
+          <line class="forecast-line-threshold" x1="${padLeft}" y1="${threshY}" x2="${width - padRight}" y2="${threshY}" />
+          <text class="forecast-threshold-text" x="${width - padRight}" y="${threshY - 6}" text-anchor="end">Umbral Crecida (${model.thresholdCrecida} m³/s)</text>
         `;
       } else {
-        document.getElementById('thresholdLayer').innerHTML = '';
+        document.getElementById('threshold-layer').innerHTML = '';
       }
 
       // Smooth Spline Helper
@@ -456,34 +592,34 @@
       }
 
       // Outer Ribbon Path (p10 to p90)
-      const outerTopPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p90) }))];
-      const outerBotPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p10) }))];
+      const outerTopPts = [{ x: getX(0), y: getY(inputs.flow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p90) }))];
+      const outerBotPts = [{ x: getX(0), y: getY(inputs.flow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p10) }))];
       let outerTopPath = buildSmoothPath(outerTopPts);
       let outerBotPath = buildSmoothPath(outerBotPts.reverse());
-      document.getElementById('ribbonOuter').setAttribute('d', outerTopPath + ' ' + outerBotPath.replace('M', 'L') + ' Z');
+      document.getElementById('ribbon-outer').setAttribute('d', outerTopPath + ' ' + outerBotPath.replace('M', 'L') + ' Z');
 
       // Inner Ribbon Path (p25 to p75)
-      const innerTopPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p75) }))];
-      const innerBotPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p25) }))];
+      const innerTopPts = [{ x: getX(0), y: getY(inputs.flow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p75) }))];
+      const innerBotPts = [{ x: getX(0), y: getY(inputs.flow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p25) }))];
       let innerTopPath = buildSmoothPath(innerTopPts);
       let innerBotPath = buildSmoothPath(innerBotPts.reverse());
-      document.getElementById('ribbonInner').setAttribute('d', innerTopPath + ' ' + innerBotPath.replace('M', 'L') + ' Z');
+      document.getElementById('ribbon-inner').setAttribute('d', innerTopPath + ' ' + innerBotPath.replace('M', 'L') + ' Z');
 
       // Historical Curve (Smooth)
       const histPts = historicalPoints.map(p => ({ x: getX(p.step), y: getY(p.flow) }));
-      document.getElementById('lineHistorical').setAttribute('d', buildSmoothPath(histPts));
+      document.getElementById('line-historical').setAttribute('d', buildSmoothPath(histPts));
 
       // Median Forecast Curve (Smooth)
-      const medPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p50) }))];
-      document.getElementById('lineMedian').setAttribute('d', buildSmoothPath(medPts));
+      const medPts = [{ x: getX(0), y: getY(inputs.flow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p50) }))];
+      document.getElementById('line-median').setAttribute('d', buildSmoothPath(medPts));
 
       // Markers & End Badges
       let markersHtml = '';
       for (const p of historicalPoints) {
-        markersHtml += `<circle class="point-historical" cx="${getX(p.step)}" cy="${getY(p.flow)}" r="3.5" />`;
+        markersHtml += `<circle class="forecast-point-historical" cx="${getX(p.step)}" cy="${getY(p.flow)}" r="3.5" />`;
       }
       for (const p of futurePoints) {
-        markersHtml += `<circle class="point-forecast" cx="${getX(p.step)}" cy="${getY(p.p50)}" r="3" />`;
+        markersHtml += `<circle class="forecast-point-future" cx="${getX(p.step)}" cy="${getY(p.p50)}" r="3" />`;
       }
 
       // End target forecast badge
@@ -492,11 +628,11 @@
       const endY = getY(lastFuture.p50);
       markersHtml += `
         <g transform="translate(${endX + 6}, ${endY})">
-          <rect x="0" y="-10" width="48" height="20" rx="4" fill="#0c111c" stroke="#00b0ff" stroke-width="1.2" />
-          <text x="24" y="4" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace" font-size="10" font-weight="bold" fill="#00b0ff">${Math.round(lastFuture.p50)}</text>
+          <rect x="0" y="-10" width="50" height="20" rx="4" fill="#080c14" stroke="#00b0ff" stroke-width="1.5" />
+          <text x="25" y="4" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace" font-size="10.5" font-weight="bold" fill="#00b0ff">${Math.round(lastFuture.p50)}</text>
         </g>
       `;
-      document.getElementById('markersLayer').innerHTML = markersHtml;
+      document.getElementById('markers-layer').innerHTML = markersHtml;
     }
 
     // Attach Controls
@@ -504,7 +640,7 @@
       const rangeInputs = document.querySelectorAll('input[type="range"], select');
       rangeInputs.forEach(input => {
         input.addEventListener('input', () => {
-          updateLabels();
+          updateBadges();
           renderForecast();
         });
 
@@ -514,22 +650,22 @@
             const step = parseFloat(input.step) || 1;
             const delta = e.deltaY < 0 ? step : -step;
             input.value = Math.min(parseFloat(input.max), Math.max(parseFloat(input.min), parseFloat(input.value) + delta));
-            updateLabels();
+            updateBadges();
             renderForecast();
           }, { passive: false });
         }
       });
 
-      document.getElementById('ctrlPlant').addEventListener('change', () => {
-        const plantKey = document.getElementById('ctrlPlant').value;
+      document.getElementById('plant-select').addEventListener('change', () => {
+        const plantKey = document.getElementById('plant-select').value;
         const model = MODELS[plantKey];
         if (model) {
-          document.getElementById('lblSensor1').innerText = model.sensor1Name;
-          document.getElementById('lblSensor2').innerText = model.sensor2Name;
-          document.getElementById('lblRain1').innerText = model.rain1Name;
-          document.getElementById('lblRain2').innerText = model.rain2Name;
+          document.getElementById('lbl-sensor-1').innerText = model.sensor1Name;
+          document.getElementById('lbl-sensor-2').innerText = model.sensor2Name;
+          document.getElementById('lbl-rain-1').innerText = model.rain1Name;
+          document.getElementById('lbl-rain-2').innerText = model.rain2Name;
         }
-        updateLabels();
+        updateBadges();
         renderForecast();
       });
 
@@ -537,8 +673,8 @@
       const now = new Date();
       const tzOffset = 300 * 60000;
       const localISOTime = (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
-      document.getElementById('dateInput').value = localISOTime;
-      document.getElementById('dateInput').addEventListener('input', (e) => {
+      document.getElementById('date-input').value = localISOTime;
+      document.getElementById('date-input').addEventListener('input', (e) => {
         if (e.target.value) {
           const d = new Date(e.target.value);
           const day = String(d.getDate()).padStart(2, '0');
@@ -546,22 +682,55 @@
           const year = d.getFullYear();
           const hours = String(d.getHours()).padStart(2, '0');
           const mins = String(d.getMinutes()).padStart(2, '0');
-          document.getElementById('timestampStr').innerText = `${day}/${month}/${year} ${hours}:${mins}`;
+          document.getElementById('card-timestamp').innerText = `${day}/${month}/${year} ${hours}:${mins}`;
+        }
+      });
+
+      // PNG Export Button
+      document.getElementById('btn-generate-png').addEventListener('click', async () => {
+        const statusEl = document.getElementById('generation-status');
+        statusEl.innerText = 'Generando imagen PNG...';
+        statusEl.style.color = '#38bdf8';
+
+        try {
+          const cardEl = document.getElementById('forecast-card-container');
+          const canvas = await html2canvas(cardEl, { scale: 2, backgroundColor: '#080c14' });
+          const imageData = canvas.toDataURL('image/png');
+          const plantKey = document.getElementById('plant-select').value;
+          const filename = `forecast_${plantKey}_${Date.now()}.png`;
+
+          const res = await fetch('/generate-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, imageData })
+          });
+          const data = await res.json();
+          if (data.success) {
+            statusEl.innerText = `¡Guardado!: generated/${filename}`;
+            statusEl.style.color = '#00e676';
+          } else {
+            statusEl.innerText = 'Error al guardar';
+            statusEl.style.color = '#f43f5e';
+          }
+        } catch (err) {
+          statusEl.innerText = 'Error: ' + err.message;
+          statusEl.style.color = '#f43f5e';
         }
       });
     }
 
-    function updateLabels() {
-      document.getElementById('lblCtrlFlow').innerText = document.getElementById('ctrlCurrentFlow').value + ' m³/s';
-      document.getElementById('lblValSensor1').innerText = parseFloat(document.getElementById('ctrlSensor1').value).toFixed(2) + ' m';
-      document.getElementById('lblValSensor2').innerText = parseFloat(document.getElementById('ctrlSensor2').value).toFixed(2) + ' m';
-      document.getElementById('lblValRain1').innerText = parseFloat(document.getElementById('ctrlRain1').value).toFixed(1) + ' mm';
-      document.getElementById('lblValRain2').innerText = parseFloat(document.getElementById('ctrlRain2').value).toFixed(1) + ' mm';
+    function updateBadges() {
+      document.getElementById('badge-flow').innerText = parseFloat(document.getElementById('slider-flow').value).toFixed(2) + ' m³/s';
+      document.getElementById('badge-horizon').innerText = document.getElementById('select-horizon').value + ' Horas';
+      document.getElementById('badge-sensor-1').innerText = parseFloat(document.getElementById('slider-sensor-1').value).toFixed(2) + ' m';
+      document.getElementById('badge-sensor-2').innerText = parseFloat(document.getElementById('slider-sensor-2').value).toFixed(2) + ' m';
+      document.getElementById('badge-rain-1').innerText = parseFloat(document.getElementById('slider-rain-1').value).toFixed(1) + ' mm';
+      document.getElementById('badge-rain-2').innerText = parseFloat(document.getElementById('slider-rain-2').value).toFixed(1) + ' mm';
     }
 
     window.addEventListener('DOMContentLoaded', () => {
       attachControls();
-      updateLabels();
+      updateBadges();
       renderForecast();
     });
 
