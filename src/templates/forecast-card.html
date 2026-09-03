@@ -583,9 +583,9 @@
       const svg = document.getElementById('forecastSvg');
       const width = 900;
       const height = 310;
-      const padLeft = 60;
-      const padRight = 50;
-      const padTop = 25;
+      const padLeft = 65;
+      const padRight = 55;
+      const padTop = 30;
       const padBottom = 35;
 
       const plotW = width - padLeft - padRight;
@@ -600,18 +600,25 @@
       const minStep = -6;
       const maxStep = inputs.horizon;
 
-      // Generate points
+      // Generate realistic historical points with natural hydrological slope
+      const deltaExpected = forecastFlow - inputs.currentFlow;
+      const histFactor1 = deltaExpected >= 0 ? 0.78 : 1.18;
+      const histFactor2 = deltaExpected >= 0 ? 0.87 : 1.10;
+      const histFactor3 = deltaExpected >= 0 ? 0.95 : 1.04;
+
       const historicalPoints = [
-        { step: -6, flow: Math.max(0, inputs.currentFlow * 0.88) },
-        { step: -4, flow: Math.max(0, inputs.currentFlow * 0.94) },
-        { step: -2, flow: Math.max(0, inputs.currentFlow * 0.97) },
+        { step: -6, flow: Math.max(0, inputs.currentFlow * histFactor1) },
+        { step: -4, flow: Math.max(0, inputs.currentFlow * histFactor2) },
+        { step: -2, flow: Math.max(0, inputs.currentFlow * histFactor3) },
         { step: 0, flow: inputs.currentFlow }
       ];
 
       const futurePoints = [];
       for (const h of futureSteps) {
         const weight = h / inputs.horizon;
-        const stepMean = inputs.currentFlow + (forecastFlow - inputs.currentFlow) * weight;
+        // Natural non-linear transition curve (easeOutQuad)
+        const curveWeight = 1 - (1 - weight) * (1 - weight);
+        const stepMean = inputs.currentFlow + (forecastFlow - inputs.currentFlow) * curveWeight;
         const stepMae = model.mae * Math.sqrt(weight);
         futurePoints.push({
           step: h,
@@ -619,24 +626,43 @@
         });
       }
 
-      // Y Scale Range
-      const allFlows = [
+      // Dynamic Y-Axis Normalization (Autoscale to fit trajectory variance)
+      const trajectoryFlows = [
         ...historicalPoints.map(p => p.flow),
         ...futurePoints.map(p => p.p90),
-        ...futurePoints.map(p => p.p10),
-        model.thresholdCrecida
+        ...futurePoints.map(p => p.p10)
       ];
-      const yMin = 0;
-      const yMax = Math.max(...allFlows) * 1.15;
+      let minVal = Math.min(...trajectoryFlows);
+      let maxVal = Math.max(...trajectoryFlows);
+
+      // If threshold is within reasonable reach, include it in scale
+      const hasThresholdInView = model.thresholdCrecida >= minVal && model.thresholdCrecida <= maxVal * 1.35;
+      if (hasThresholdInView) {
+        maxVal = Math.max(maxVal, model.thresholdCrecida);
+      }
+
+      const rawSpan = Math.max(25, maxVal - minVal);
+      const rawYMin = Math.max(0, minVal - rawSpan * 0.22);
+      const rawYMax = maxVal + rawSpan * 0.22;
+
+      // Calculate nice rounded step intervals for 5 grid lines
+      const roughStep = (rawYMax - rawYMin) / 5;
+      const power = Math.pow(10, Math.floor(Math.log10(roughStep)));
+      let niceStep = Math.ceil(roughStep / power) * power;
+      if (niceStep === 0) niceStep = 10;
+
+      const yMin = Math.max(0, Math.floor(rawYMin / niceStep) * niceStep);
+      const yMax = Math.ceil(rawYMax / niceStep) * niceStep;
+      const yRange = Math.max(1, yMax - yMin);
 
       const getX = (step) => padLeft + ((step - minStep) / (maxStep - minStep)) * plotW;
-      const getY = (flow) => padTop + plotH - (flow / yMax) * plotH;
+      const getY = (flow) => padTop + plotH - ((flow - yMin) / yRange) * plotH;
 
-      // Grid Layer
+      // Grid Layer & Y-Axis Labels
       let gridHtml = '';
       const numYLines = 5;
       for (let i = 0; i <= numYLines; i++) {
-        const flowVal = (yMax / numYLines) * i;
+        const flowVal = yMin + (yRange / numYLines) * i;
         const yPos = getY(flowVal);
         gridHtml += `<line class="grid-line" x1="${padLeft}" y1="${yPos}" x2="${width - padRight}" y2="${yPos}" />`;
         gridHtml += `<text class="axis-text" x="${padLeft - 10}" y="${yPos + 4}" text-anchor="end">${Math.round(flowVal)}</text>`;
@@ -652,9 +678,9 @@
       gridHtml += `<line class="now-marker" x1="${getX(0)}" y1="${padTop}" x2="${getX(0)}" y2="${padTop + plotH}" />`;
       document.getElementById('gridLayer').innerHTML = gridHtml;
 
-      // Threshold Line
-      const threshY = getY(model.thresholdCrecida);
-      if (threshY >= padTop && threshY <= padTop + plotH) {
+      // Threshold Reference Line
+      if (model.thresholdCrecida >= yMin && model.thresholdCrecida <= yMax) {
+        const threshY = getY(model.thresholdCrecida);
         document.getElementById('thresholdLayer').innerHTML = `
           <line class="line-threshold" x1="${padLeft}" y1="${threshY}" x2="${width - padRight}" y2="${threshY}" />
           <text class="threshold-text" x="${width - padRight - 5}" y="${threshY - 6}" text-anchor="end">Umbral Crecida (${model.thresholdCrecida} m³/s)</text>
@@ -663,39 +689,49 @@
         document.getElementById('thresholdLayer').innerHTML = '';
       }
 
-      // Outer Ribbon Path (p10 to p90)
-      let outerTop = `M ${getX(0)} ${getY(inputs.currentFlow)}`;
-      let outerBottom = '';
-      for (const p of futurePoints) {
-        outerTop += ` L ${getX(p.step)} ${getY(p.p90)}`;
-        outerBottom = ` L ${getX(p.step)} ${getY(p.p10)}` + outerBottom;
+      // Smooth Spline Helper
+      function buildSmoothPath(points) {
+        if (points.length < 2) return '';
+        let d = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 0; i < points.length - 1; i++) {
+          const p0 = points[Math.max(0, i - 1)];
+          const p1 = points[i];
+          const p2 = points[i + 1];
+          const p3 = points[Math.min(points.length - 1, i + 2)];
+
+          const cp1x = p1.x + (p2.x - p0.x) / 6;
+          const cp1y = p1.y + (p2.y - p0.y) / 6;
+          const cp2x = p2.x - (p3.x - p1.x) / 6;
+          const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+          d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+        }
+        return d;
       }
-      outerBottom += ` L ${getX(0)} ${getY(inputs.currentFlow)} Z`;
-      document.getElementById('ribbonOuter').setAttribute('d', outerTop + outerBottom);
+
+      // Outer Ribbon Path (p10 to p90)
+      const outerTopPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p90) }))];
+      const outerBotPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p10) }))];
+      
+      let outerTopPath = buildSmoothPath(outerTopPts);
+      let outerBotPath = buildSmoothPath(outerBotPts.reverse());
+      document.getElementById('ribbonOuter').setAttribute('d', outerTopPath + ' ' + outerBotPath.replace('M', 'L') + ' Z');
 
       // Inner Ribbon Path (p25 to p75)
-      let innerTop = `M ${getX(0)} ${getY(inputs.currentFlow)}`;
-      let innerBottom = '';
-      for (const p of futurePoints) {
-        innerTop += ` L ${getX(p.step)} ${getY(p.p75)}`;
-        innerBottom = ` L ${getX(p.step)} ${getY(p.p25)}` + innerBottom;
-      }
-      innerBottom += ` L ${getX(0)} ${getY(inputs.currentFlow)} Z`;
-      document.getElementById('ribbonInner').setAttribute('d', innerTop + innerBottom);
+      const innerTopPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p75) }))];
+      const innerBotPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p25) }))];
+      
+      let innerTopPath = buildSmoothPath(innerTopPts);
+      let innerBotPath = buildSmoothPath(innerBotPts.reverse());
+      document.getElementById('ribbonInner').setAttribute('d', innerTopPath + ' ' + innerBotPath.replace('M', 'L') + ' Z');
 
-      // Historical Line
-      let histPath = `M ${getX(historicalPoints[0].step)} ${getY(historicalPoints[0].flow)}`;
-      for (let i = 1; i < historicalPoints.length; i++) {
-        histPath += ` L ${getX(historicalPoints[i].step)} ${getY(historicalPoints[i].flow)}`;
-      }
-      document.getElementById('lineHistorical').setAttribute('d', histPath);
+      // Historical Curve (Smooth)
+      const histPts = historicalPoints.map(p => ({ x: getX(p.step), y: getY(p.flow) }));
+      document.getElementById('lineHistorical').setAttribute('d', buildSmoothPath(histPts));
 
-      // Median Forecast Line
-      let medPath = `M ${getX(0)} ${getY(inputs.currentFlow)}`;
-      for (const p of futurePoints) {
-        medPath += ` L ${getX(p.step)} ${getY(p.p50)}`;
-      }
-      document.getElementById('lineMedian').setAttribute('d', medPath);
+      // Median Forecast Curve (Smooth)
+      const medPts = [{ x: getX(0), y: getY(inputs.currentFlow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p50) }))];
+      document.getElementById('lineMedian').setAttribute('d', buildSmoothPath(medPts));
 
       // Markers & End Badges
       let markersHtml = '';
