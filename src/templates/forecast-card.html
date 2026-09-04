@@ -151,7 +151,7 @@
           <!-- Header Area -->
           <div class="header">
             <div class="header-left">
-              <span class="header-pre-title">HIDROELÉCTRICA · PRONÓSTICO</span>
+              <span class="header-pre-title">PRONÓSTICO DE HIDROELÉCTRICA</span>
               <h1 class="plant-name" id="card-plant-name">Coca Codo Sinclair</h1>
               <p class="timestamp" id="card-timestamp">04/09/2026 14:00</p>
             </div>
@@ -180,7 +180,7 @@
 
             <!-- Column 2: Pronóstico Horizon (p50) -->
             <div class="stats-col">
-              <span class="section-label" id="card-lbl-forecast">Pronóstico 3h:</span>
+              <span class="section-label" id="card-lbl-forecast">Pronóstico 6h:</span>
               <span class="generation-value text-cyan" id="card-flow-forecast">479.18 m³/s</span>
               <span class="status-text text-green" id="card-delta-forecast">-0.2% (p50)</span>
             </div>
@@ -223,7 +223,7 @@
                 <span id="chip-container-2"><span id="chip-lbl-2">Salado:</span> <strong id="chip-sensor-2">0.90m</strong></span>
                 <span id="chip-container-3"><span id="chip-lbl-3">Lluvia:</span> <strong id="chip-rain-1">8.5mm</strong></span>
               </div>
-              <div class="forecast-model-info" id="card-model-info">multi_guarded (1h) · r = 0.997 · MAE: 10.8 m³/s</div>
+              <div class="forecast-model-info" id="card-model-info">multi_guarded (6h) · r = 0.667 · MAE: 76.3 m³/s</div>
             </div>
           </div>
 
@@ -235,7 +235,7 @@
     <div class="control-panel">
       <div class="panel-header-compact">
         <h3 class="panel-title">Filtros & Pronóstico</h3>
-        <p class="panel-subtitle">Simulador de modelos multi-COMID (1h a 6h)</p>
+        <p class="panel-subtitle">Simulador de modelos multi-COMID a 6 horas</p>
       </div>
 
       <!-- Top Row: Central Dropdown, Date Input -->
@@ -262,9 +262,9 @@
 
       <!-- Sliders Grid (Organized in Sections) -->
       <div class="panel-sliders-grid">
-        <!-- Sección: Caudal & Horizonte -->
+        <!-- Sección: Caudal Actual -->
         <div class="panel-section" id="section-flow">
-          <div class="panel-section-title">Telemetría de Caudal & Horizonte</div>
+          <div class="panel-section-title">Telemetría de Caudal</div>
 
           <div class="form-group slider-container">
             <label class="form-label">
@@ -276,21 +276,6 @@
               <span id="lbl-min-flow">5 m³/s</span>
               <span id="lbl-max-flow">1500 m³/s</span>
             </div>
-          </div>
-
-          <div class="form-group slider-container">
-            <label class="form-label">
-              Horizonte de Predicción
-              <span id="badge-horizon" class="badge">3 Horas</span>
-            </label>
-            <select id="select-horizon" class="form-select">
-              <option value="1">1 Hora (+1h Multi-COMID)</option>
-              <option value="2">2 Horas (+2h Multi-COMID)</option>
-              <option value="3" selected>3 Horas (+3h Multi-COMID)</option>
-              <option value="4">4 Horas (+4h Multi-COMID)</option>
-              <option value="5">5 Horas (+5h Multi-COMID)</option>
-              <option value="6">6 Horas (+6h Multi-COMID)</option>
-            </select>
           </div>
         </div>
 
@@ -353,10 +338,10 @@
         defaultFlow: 480,
         minFlow: 50,
         maxFlow: 1500,
-        sensor1: { name: 'Nivel Río Quijos (H0719)', default: 1.45, min: 0.2, max: 4.0, step: 0.05, unit: 'm' },
-        sensor2: { name: 'Nivel Río Salado (H0728)', default: 0.90, min: 0.1, max: 3.0, step: 0.05, unit: 'm' },
-        rain1: { name: 'Lluvia Sierrazul (t-9)', default: 8.5, min: 0, max: 60, step: 0.5, unit: 'mm' },
-        rain2: { name: 'Lluvia Papallacta (t-6)', default: 4.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        sensor1: { name: 'Nivel Río Quijos (H0719)', shortLabel: 'Quijos', default: 1.45, min: 0.2, max: 4.0, step: 0.05, unit: 'm' },
+        sensor2: { name: 'Nivel Río Salado (H0728)', shortLabel: 'Salado', default: 0.90, min: 0.1, max: 3.0, step: 0.05, unit: 'm' },
+        rain1: { name: 'Lluvia Sierrazul (t-9)', shortLabel: 'Sierrazul', default: 8.5, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Papallacta (t-6)', shortLabel: 'Papallacta', default: 4.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
         horizons: {
           1: { model: 'multi_guarded', r: 0.997, mae: 10.82, vsPers: '+34.7%', dirAcc: 0.8 },
           2: { model: 'multi_guarded', r: 0.977, mae: 26.79, vsPers: '+25.9%', dirAcc: 0.8 },
@@ -372,10 +357,10 @@
         defaultFlow: 85,
         minFlow: 10,
         maxFlow: 300,
-        sensor1: { name: 'Nivel Río Paute (H0894)', default: 1.20, min: 0.2, max: 3.5, step: 0.05, unit: 'm' },
-        sensor2: { name: 'Caudal Turbinado Q(t)', default: 45.0, min: 0, max: 150, step: 1.0, unit: 'm³/s' },
-        rain1: { name: 'Lluvia Cañar (M0031)', default: 6.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
-        rain2: { name: 'Lluvia Cuenca (M5103)', default: 3.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        sensor1: { name: 'Nivel Río Paute (H0894)', shortLabel: 'Paute', default: 1.20, min: 0.2, max: 3.5, step: 0.05, unit: 'm' },
+        sensor2: { name: 'Caudal Turbinado Q(t)', shortLabel: 'Turbinado', default: 45.0, min: 0, max: 150, step: 1.0, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Cañar (M0031)', shortLabel: 'Cañar', default: 6.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Cuenca (M5103)', shortLabel: 'Cuenca', default: 3.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
         horizons: {
           1: { model: 'outlet_hybrid', r: 0.872, mae: 5.03, vsPers: '+7.1%', dirAcc: 0.7 },
           2: { model: 'autoregressive', r: 0.502, mae: 9.01, vsPers: '-2.9%', dirAcc: 0.6 },
@@ -391,10 +376,10 @@
         defaultFlow: 110,
         minFlow: 10,
         maxFlow: 250,
-        sensor1: { name: 'Descarga Mazar Q(t)', default: 85.0, min: 0, max: 160, step: 1.0, unit: 'm³/s' },
-        sensor2: { name: 'Cuenca Intermedia COMID', default: 15.0, min: 0, max: 60, step: 1.0, unit: 'm³/s' },
-        rain1: { name: 'Lluvia Paute (M0122)', default: 4.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
-        rain2: { name: 'Lluvia Cuenca', default: 2.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        sensor1: { name: 'Descarga Mazar Q(t)', shortLabel: 'Mazar', default: 85.0, min: 0, max: 160, step: 1.0, unit: 'm³/s' },
+        sensor2: { name: 'Cuenca Intermedia COMID', shortLabel: 'Intermedia', default: 15.0, min: 0, max: 60, step: 1.0, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Paute (M0122)', shortLabel: 'Paute', default: 4.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Cuenca', shortLabel: 'Cuenca', default: 2.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
         horizons: {
           1: { model: 'multi_comid', r: 0.971, mae: 7.63, vsPers: '+7.9%', dirAcc: 0.8 },
           2: { model: 'outlet_hybrid', r: 0.921, mae: 13.46, vsPers: '+11.5%', dirAcc: 0.7 },
@@ -410,10 +395,10 @@
         defaultFlow: 95,
         minFlow: 10,
         maxFlow: 200,
-        sensor1: { name: 'Caudal Turbinado Molino', default: 90.0, min: 0, max: 150, step: 1.0, unit: 'm³/s' },
-        sensor2: { name: 'Aporte Cuenca Sopladora', default: 5.0, min: 0, max: 30, step: 0.5, unit: 'm³/s' },
-        rain1: { name: 'Lluvia Cuenca Directa', default: 3.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
-        rain2: { name: 'Lluvia Río Cardenillo', default: 2.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        sensor1: { name: 'Caudal Turbinado Molino', shortLabel: 'Molino', default: 90.0, min: 0, max: 150, step: 1.0, unit: 'm³/s' },
+        sensor2: { name: 'Aporte Cuenca Sopladora', shortLabel: 'Cuenca', default: 5.0, min: 0, max: 30, step: 0.5, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Cuenca Directa', shortLabel: 'Lluvia Dir.', default: 3.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Río Cardenillo', shortLabel: 'Cardenillo', default: 2.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
         horizons: {
           1: { model: 'outlet_hybrid', r: 0.958, mae: 7.17, vsPers: '+20.9%', dirAcc: 0.7 },
           2: { model: 'outlet_hybrid', r: 0.911, mae: 9.26, vsPers: '+45.6%', dirAcc: 0.8 },
@@ -429,10 +414,10 @@
         defaultFlow: 120,
         minFlow: 15,
         maxFlow: 600,
-        sensor1: { name: 'Nivel Río Pastaza', default: 1.80, min: 0.5, max: 4.5, step: 0.05, unit: 'm' },
-        sensor2: { name: 'Afluente Chambo COMID', default: 25.0, min: 5, max: 100, step: 1.0, unit: 'm³/s' },
-        rain1: { name: 'Lluvia Baños (M0101)', default: 12.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
-        rain2: { name: 'Lluvia Tungurahua', default: 5.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        sensor1: { name: 'Nivel Río Pastaza', shortLabel: 'Pastaza', default: 1.80, min: 0.5, max: 4.5, step: 0.05, unit: 'm' },
+        sensor2: { name: 'Afluente Chambo COMID', shortLabel: 'Chambo', default: 25.0, min: 5, max: 100, step: 1.0, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Baños (M0101)', shortLabel: 'Baños', default: 12.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Tungurahua', shortLabel: 'Tungurahua', default: 5.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
         horizons: {
           1: { model: 'multi_guarded', r: 0.833, mae: 2.42, vsPers: '+0.0%', dirAcc: 0.3 },
           2: { model: 'persistence', r: 0.788, mae: 2.75, vsPers: '+0.0%', dirAcc: 0.2 },
@@ -448,10 +433,10 @@
         defaultFlow: 35,
         minFlow: 5,
         maxFlow: 150,
-        sensor1: { name: 'Nivel Río Jubones (H0650)', default: 1.10, min: 0.2, max: 3.0, step: 0.05, unit: 'm' },
-        sensor2: { name: 'COMID Río San Francisco', default: 18.0, min: 2, max: 60, step: 0.5, unit: 'm³/s' },
-        rain1: { name: 'Lluvia San Francisco (M0802)', default: 4.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
-        rain2: { name: 'Lluvia Saraguro', default: 2.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        sensor1: { name: 'Nivel Río Jubones (H0650)', shortLabel: 'Jubones', default: 1.10, min: 0.2, max: 3.0, step: 0.05, unit: 'm' },
+        sensor2: { name: 'COMID Río San Francisco', shortLabel: 'San Francisco', default: 18.0, min: 2, max: 60, step: 0.5, unit: 'm³/s' },
+        rain1: { name: 'Lluvia San Francisco (M0802)', shortLabel: 'San Francisco', default: 4.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Saraguro', shortLabel: 'Saraguro', default: 2.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
         horizons: {
           1: { model: 'autoregressive', r: 0.878, mae: 0.90, vsPers: '-29.3%', dirAcc: 0.5 },
           2: { model: 'multi_guarded', r: 0.903, mae: 0.74, vsPers: '+1.9%', dirAcc: 0.7 },
@@ -524,7 +509,7 @@
     function renderForecast() {
       const plantKey = document.getElementById('plant-select').value;
       const plantCfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
-      const horizonHours = parseInt(document.getElementById('select-horizon').value, 10);
+      const horizonHours = 6;
 
       const inputs = {
         flow: parseFloat(document.getElementById('slider-flow').value),
@@ -798,9 +783,9 @@
       r2.value = cfg.rain2.default;
 
       // Update bottom chip labels
-      document.getElementById('chip-lbl-1').innerText = cfg.sensor1.name.split(' ')[0] + ':';
-      document.getElementById('chip-lbl-2').innerText = cfg.sensor2.name.split(' ')[0] + ':';
-      document.getElementById('chip-lbl-3').innerText = cfg.rain1.name.split(' ')[0] + ':';
+      document.getElementById('chip-lbl-1').innerText = (cfg.sensor1.shortLabel || cfg.sensor1.name) + ':';
+      document.getElementById('chip-lbl-2').innerText = (cfg.sensor2.shortLabel || cfg.sensor2.name) + ':';
+      document.getElementById('chip-lbl-3').innerText = (cfg.rain1.shortLabel || cfg.rain1.name) + ':';
 
       updateBadges();
       renderForecast();
@@ -886,7 +871,6 @@
       const cfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
 
       document.getElementById('badge-flow').innerText = parseFloat(document.getElementById('slider-flow').value).toFixed(2) + ' m³/s';
-      document.getElementById('badge-horizon').innerText = document.getElementById('select-horizon').value + ' Horas';
       document.getElementById('badge-sensor-1').innerText = `${parseFloat(document.getElementById('slider-sensor-1').value).toFixed(2)} ${cfg.sensor1.unit}`;
       document.getElementById('badge-sensor-2').innerText = `${parseFloat(document.getElementById('slider-sensor-2').value).toFixed(2)} ${cfg.sensor2.unit}`;
       document.getElementById('badge-rain-1').innerText = `${parseFloat(document.getElementById('slider-rain-1').value).toFixed(1)} ${cfg.rain1.unit}`;
