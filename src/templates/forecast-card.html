@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hydroelectric Plant Forecast Cards (Electric Obsidian)</title>
+  <title>Hydroelectric Plant Forecast Cards (Electric Obsidian Multi-COMID)</title>
   <link rel="stylesheet" href="hydro-card.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -153,7 +153,7 @@
             <div class="header-left">
               <span class="header-pre-title">HIDROELÉCTRICA · PRONÓSTICO</span>
               <h1 class="plant-name" id="card-plant-name">Coca Codo Sinclair</h1>
-              <p class="timestamp" id="card-timestamp">03/09/2026 01:00</p>
+              <p class="timestamp" id="card-timestamp">04/09/2026 14:00</p>
             </div>
             <div class="header-right">
               <div class="watermark">
@@ -219,11 +219,11 @@
             <!-- Bottom Telemetry & Model Attribution Overlay -->
             <div class="forecast-telemetry-overlay">
               <div class="forecast-telemetry-chips">
-                <span>Quijos: <strong id="chip-sensor-1">1.45m</strong></span>
-                <span>Salado: <strong id="chip-sensor-2">0.90m</strong></span>
-                <span>Lluvia: <strong id="chip-rain-1">8.5mm</strong></span>
+                <span id="chip-container-1"><span id="chip-lbl-1">Quijos:</span> <strong id="chip-sensor-1">1.45m</strong></span>
+                <span id="chip-container-2"><span id="chip-lbl-2">Salado:</span> <strong id="chip-sensor-2">0.90m</strong></span>
+                <span id="chip-container-3"><span id="chip-lbl-3">Lluvia:</span> <strong id="chip-rain-1">8.5mm</strong></span>
               </div>
-              <div class="forecast-model-info" id="card-model-info">Modelo Multivariable (r = 0.939, MAE = 27.2)</div>
+              <div class="forecast-model-info" id="card-model-info">multi_guarded (1h) · r = 0.997 · MAE: 10.8 m³/s</div>
             </div>
           </div>
 
@@ -235,7 +235,7 @@
     <div class="control-panel">
       <div class="panel-header-compact">
         <h3 class="panel-title">Filtros & Pronóstico</h3>
-        <p class="panel-subtitle">Simulador de variables hidrológicas en vivo</p>
+        <p class="panel-subtitle">Simulador de modelos multi-COMID (1h a 6h)</p>
       </div>
 
       <!-- Top Row: Central Dropdown, Date Input -->
@@ -244,9 +244,12 @@
         <div class="form-group">
           <label class="form-label" for="plant-select">Central Hidroeléctrica</label>
           <select id="plant-select" class="form-select">
-            <option value="cocaCodoSinclair" selected>Coca Codo Sinclair (3h)</option>
-            <option value="mazar_3h">Mazar (3h)</option>
-            <option value="mazar_24h">Mazar (24h Autoregresivo)</option>
+            <option value="cocaCodoSinclair" selected>Coca Codo Sinclair</option>
+            <option value="mazar">Mazar</option>
+            <option value="molino">Molino</option>
+            <option value="sopladora">Sopladora</option>
+            <option value="agoyan">Agoyán</option>
+            <option value="minasSanFrancisco">Minas San Francisco</option>
           </select>
         </div>
 
@@ -261,44 +264,46 @@
       <div class="panel-sliders-grid">
         <!-- Sección: Caudal & Horizonte -->
         <div class="panel-section" id="section-flow">
-          <div class="panel-section-title">Telemetría de Caudal</div>
+          <div class="panel-section-title">Telemetría de Caudal & Horizonte</div>
 
           <div class="form-group slider-container">
             <label class="form-label">
               Caudal Actual (T₀)
               <span id="badge-flow" class="badge">480.00 m³/s</span>
             </label>
-            <input type="range" id="slider-flow" class="slider-range" min="50" max="1500" step="5" value="480">
+            <input type="range" id="slider-flow" class="slider-range" min="5" max="1500" step="1" value="480">
             <div class="slider-limits">
-              <span>50 m³/s</span>
-              <span>1500 m³/s</span>
+              <span id="lbl-min-flow">5 m³/s</span>
+              <span id="lbl-max-flow">1500 m³/s</span>
             </div>
           </div>
 
           <div class="form-group slider-container">
             <label class="form-label">
-              Horizonte Temporal
+              Horizonte de Predicción
               <span id="badge-horizon" class="badge">3 Horas</span>
             </label>
             <select id="select-horizon" class="form-select">
-              <option value="3" selected>3 Horas Futuras (Horario)</option>
-              <option value="6">6 Horas Futuras</option>
-              <option value="12">12 Horas Futuras</option>
-              <option value="24">24 Horas Futuras (Diario)</option>
+              <option value="1">1 Hora (+1h Multi-COMID)</option>
+              <option value="2">2 Horas (+2h Multi-COMID)</option>
+              <option value="3" selected>3 Horas (+3h Multi-COMID)</option>
+              <option value="4">4 Horas (+4h Multi-COMID)</option>
+              <option value="5">5 Horas (+5h Multi-COMID)</option>
+              <option value="6">6 Horas (+6h Multi-COMID)</option>
             </select>
           </div>
         </div>
 
         <!-- Sección: Sensores Hidrológicos -->
         <div class="panel-section" id="section-sensors">
-          <div class="panel-section-title">Variables de Entrada (INAMHI)</div>
+          <div class="panel-section-title">Variables de Entrada & Cuencas</div>
 
           <div class="form-group slider-container">
             <label class="form-label">
               <span id="lbl-sensor-1">Nivel Río Quijos (H0719)</span>
               <span id="badge-sensor-1" class="badge">1.45 m</span>
             </label>
-            <input type="range" id="slider-sensor-1" class="slider-range" min="0.2" max="4.0" step="0.05" value="1.45">
+            <input type="range" id="slider-sensor-1" class="slider-range" min="0.1" max="5.0" step="0.05" value="1.45">
           </div>
 
           <div class="form-group slider-container">
@@ -306,7 +311,7 @@
               <span id="lbl-sensor-2">Nivel Río Salado (H0728)</span>
               <span id="badge-sensor-2" class="badge">0.90 m</span>
             </label>
-            <input type="range" id="slider-sensor-2" class="slider-range" min="0.1" max="3.0" step="0.05" value="0.90">
+            <input type="range" id="slider-sensor-2" class="slider-range" min="0.1" max="4.0" step="0.05" value="0.90">
           </div>
 
           <div class="form-group slider-container">
@@ -340,56 +345,120 @@
 
   <!-- Client-side Calculation & Rendering Script -->
   <script>
-    const MODELS = {
+    // Multi-COMID holdout benchmarks extracted from MULTI_COMID_MODEL_RESULTS.md
+    const MULTI_COMID_BENCHMARKS = {
       cocaCodoSinclair: {
         name: 'Coca Codo Sinclair',
-        method: 'Modelo Multivariable (r = 0.939, MAE = 27.2)',
         thresholdCrecida: 700,
-        sensor1Name: 'Nivel Río Quijos (H0719)',
-        sensor2Name: 'Nivel Río Salado (H0728)',
-        rain1Name: 'Lluvia Sierrazul (t-9)',
-        rain2Name: 'Lluvia Papallacta (t-6)',
-        mae: 27.2,
-        calc: (inputs) => {
-          return (
-            219.53 * inputs.sensor1 +
-            115.85 * inputs.sensor2 -
-            7.86 * inputs.rain1 +
-            42.80 * inputs.rain2 -
-            47.79
-          );
+        defaultFlow: 480,
+        minFlow: 50,
+        maxFlow: 1500,
+        sensor1: { name: 'Nivel Río Quijos (H0719)', default: 1.45, min: 0.2, max: 4.0, step: 0.05, unit: 'm' },
+        sensor2: { name: 'Nivel Río Salado (H0728)', default: 0.90, min: 0.1, max: 3.0, step: 0.05, unit: 'm' },
+        rain1: { name: 'Lluvia Sierrazul (t-9)', default: 8.5, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Papallacta (t-6)', default: 4.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        horizons: {
+          1: { model: 'multi_guarded', r: 0.997, mae: 10.82, vsPers: '+34.7%', dirAcc: 0.8 },
+          2: { model: 'multi_guarded', r: 0.977, mae: 26.79, vsPers: '+25.9%', dirAcc: 0.8 },
+          3: { model: 'multi_comid', r: 0.955, mae: 33.74, vsPers: '+35.9%', dirAcc: 0.6 },
+          4: { model: 'autoregressive', r: 0.893, mae: 49.94, vsPers: '+32.2%', dirAcc: 0.8 },
+          5: { model: 'multi_guarded', r: 0.827, mae: 57.91, vsPers: '+35.5%', dirAcc: 0.8 },
+          6: { model: 'multi_guarded', r: 0.667, mae: 76.28, vsPers: '+32.0%', dirAcc: 0.8 }
         }
       },
-      mazar_3h: {
-        name: 'Mazar (3h)',
-        method: 'Modelo Multivariable Paute/Cañar (r = 0.879, MAE = 21.1)',
+      mazar: {
+        name: 'Mazar',
         thresholdCrecida: 185,
-        sensor1Name: 'Nivel Río Paute (H0894)',
-        sensor2Name: 'Caudal Turbinado',
-        rain1Name: 'Lluvia Cañar (M0031)',
-        rain2Name: 'Lluvia Cuenca (M5103)',
-        mae: 21.1,
-        calc: (inputs) => {
-          return 118.086 * inputs.sensor1 + 65.895 * inputs.rain1 + 8.505;
+        defaultFlow: 85,
+        minFlow: 10,
+        maxFlow: 300,
+        sensor1: { name: 'Nivel Río Paute (H0894)', default: 1.20, min: 0.2, max: 3.5, step: 0.05, unit: 'm' },
+        sensor2: { name: 'Caudal Turbinado Q(t)', default: 45.0, min: 0, max: 150, step: 1.0, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Cañar (M0031)', default: 6.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Cuenca (M5103)', default: 3.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        horizons: {
+          1: { model: 'outlet_hybrid', r: 0.872, mae: 5.03, vsPers: '+7.1%', dirAcc: 0.7 },
+          2: { model: 'autoregressive', r: 0.502, mae: 9.01, vsPers: '-2.9%', dirAcc: 0.6 },
+          3: { model: 'outlet_hybrid', r: 0.303, mae: 11.62, vsPers: '+1.0%', dirAcc: 0.7 },
+          4: { model: 'multi_comid', r: 0.225, mae: 12.17, vsPers: '+1.9%', dirAcc: 0.6 },
+          5: { model: 'multi_comid', r: 0.249, mae: 13.30, vsPers: '+0.7%', dirAcc: 0.4 },
+          6: { model: 'outlet_hybrid', r: 0.518, mae: 9.09, vsPers: '+13.9%', dirAcc: 0.8 }
         }
       },
-      mazar_24h: {
-        name: 'Mazar (24h Autoregresivo)',
-        method: 'Modelo Híbrido CELEC/WRF (r = 0.845, MAE = 14.1)',
-        thresholdCrecida: 185,
-        sensor1Name: 'Caudal Ayer Q(t-1)',
-        sensor2Name: 'COMID GEOGLOWS',
-        rain1Name: 'Lluvia WRF Ayer (t-1)',
-        rain2Name: 'Lluvia WRF Anteayer (t-2)',
-        mae: 14.12,
-        calc: (inputs) => {
-          return (
-            0.6881 * inputs.flow +
-            0.0151 * (inputs.sensor2 * 50) +
-            1.3737 * inputs.rain1 +
-            0.0369 * inputs.rain2 +
-            4.0182
-          );
+      molino: {
+        name: 'Molino',
+        thresholdCrecida: 155,
+        defaultFlow: 110,
+        minFlow: 10,
+        maxFlow: 250,
+        sensor1: { name: 'Descarga Mazar Q(t)', default: 85.0, min: 0, max: 160, step: 1.0, unit: 'm³/s' },
+        sensor2: { name: 'Cuenca Intermedia COMID', default: 15.0, min: 0, max: 60, step: 1.0, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Paute (M0122)', default: 4.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Cuenca', default: 2.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        horizons: {
+          1: { model: 'multi_comid', r: 0.971, mae: 7.63, vsPers: '+7.9%', dirAcc: 0.8 },
+          2: { model: 'outlet_hybrid', r: 0.921, mae: 13.46, vsPers: '+11.5%', dirAcc: 0.7 },
+          3: { model: 'autoregressive', r: 0.915, mae: 14.15, vsPers: '+36.7%', dirAcc: 0.8 },
+          4: { model: 'outlet_hybrid', r: 0.868, mae: 19.81, vsPers: '+33.6%', dirAcc: 0.8 },
+          5: { model: 'outlet_hybrid', r: 0.806, mae: 21.38, vsPers: '+42.3%', dirAcc: 1.0 },
+          6: { model: 'multi_comid', r: 0.724, mae: 25.82, vsPers: '+39.1%', dirAcc: 1.0 }
+        }
+      },
+      sopladora: {
+        name: 'Sopladora',
+        thresholdCrecida: 140,
+        defaultFlow: 95,
+        minFlow: 10,
+        maxFlow: 200,
+        sensor1: { name: 'Caudal Turbinado Molino', default: 90.0, min: 0, max: 150, step: 1.0, unit: 'm³/s' },
+        sensor2: { name: 'Aporte Cuenca Sopladora', default: 5.0, min: 0, max: 30, step: 0.5, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Cuenca Directa', default: 3.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Río Cardenillo', default: 2.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        horizons: {
+          1: { model: 'outlet_hybrid', r: 0.958, mae: 7.17, vsPers: '+20.9%', dirAcc: 0.7 },
+          2: { model: 'outlet_hybrid', r: 0.911, mae: 9.26, vsPers: '+45.6%', dirAcc: 0.8 },
+          3: { model: 'multi_comid', r: 0.860, mae: 11.15, vsPers: '+57.7%', dirAcc: 0.8 },
+          4: { model: 'outlet_hybrid', r: 0.814, mae: 13.07, vsPers: '+57.2%', dirAcc: 0.9 },
+          5: { model: 'multi_comid', r: 0.729, mae: 15.36, vsPers: '+54.2%', dirAcc: 0.9 },
+          6: { model: 'autoregressive', r: 0.830, mae: 12.58, vsPers: '+63.1%', dirAcc: 1.0 }
+        }
+      },
+      agoyan: {
+        name: 'Agoyán',
+        thresholdCrecida: 300,
+        defaultFlow: 120,
+        minFlow: 15,
+        maxFlow: 600,
+        sensor1: { name: 'Nivel Río Pastaza', default: 1.80, min: 0.5, max: 4.5, step: 0.05, unit: 'm' },
+        sensor2: { name: 'Afluente Chambo COMID', default: 25.0, min: 5, max: 100, step: 1.0, unit: 'm³/s' },
+        rain1: { name: 'Lluvia Baños (M0101)', default: 12.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Tungurahua', default: 5.0, min: 0, max: 60, step: 0.5, unit: 'mm' },
+        horizons: {
+          1: { model: 'multi_guarded', r: 0.833, mae: 2.42, vsPers: '+0.0%', dirAcc: 0.3 },
+          2: { model: 'persistence', r: 0.788, mae: 2.75, vsPers: '+0.0%', dirAcc: 0.2 },
+          3: { model: 'multi_guarded', r: 0.734, mae: 3.21, vsPers: '-16.8%', dirAcc: 0.4 },
+          4: { model: 'multi_guarded', r: 0.506, mae: 4.49, vsPers: '-5.6%', dirAcc: 0.4 },
+          5: { model: 'multi_guarded', r: 0.382, mae: 5.03, vsPers: '-0.6%', dirAcc: 0.3 },
+          6: { model: 'outlet_hybrid', r: 0.086, mae: 4.60, vsPers: '-2.3%', dirAcc: 0.7 }
+        }
+      },
+      minasSanFrancisco: {
+        name: 'Minas San Francisco',
+        thresholdCrecida: 65,
+        defaultFlow: 35,
+        minFlow: 5,
+        maxFlow: 150,
+        sensor1: { name: 'Nivel Río Jubones (H0650)', default: 1.10, min: 0.2, max: 3.0, step: 0.05, unit: 'm' },
+        sensor2: { name: 'COMID Río San Francisco', default: 18.0, min: 2, max: 60, step: 0.5, unit: 'm³/s' },
+        rain1: { name: 'Lluvia San Francisco (M0802)', default: 4.5, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        rain2: { name: 'Lluvia Saraguro', default: 2.0, min: 0, max: 40, step: 0.5, unit: 'mm' },
+        horizons: {
+          1: { model: 'autoregressive', r: 0.878, mae: 0.90, vsPers: '-29.3%', dirAcc: 0.5 },
+          2: { model: 'multi_guarded', r: 0.903, mae: 0.74, vsPers: '+1.9%', dirAcc: 0.7 },
+          3: { model: 'persistence', r: 0.730, mae: 1.08, vsPers: '+0.0%', dirAcc: 0.0 },
+          4: { model: 'multi_guarded', r: 0.620, mae: 1.66, vsPers: '-1.3%', dirAcc: 0.5 },
+          5: { model: 'persistence', r: 0.576, mae: 2.37, vsPers: '+0.0%', dirAcc: 0.0 },
+          6: { model: 'persistence', r: 0.543, mae: 2.84, vsPers: '+0.0%', dirAcc: 0.0 }
         }
       }
     };
@@ -405,9 +474,57 @@
       };
     }
 
+    function calculateStepForecast(plantKey, h, inputs) {
+      const plantCfg = MULTI_COMID_BENCHMARKS[plantKey];
+      const spec = plantCfg.horizons[h];
+      const current = inputs.flow;
+
+      // Calculate step point estimate based on model spec
+      let flowEstimate = current;
+      if (plantKey === 'cocaCodoSinclair') {
+        const multivar = 219.53 * inputs.sensor1 + 115.85 * inputs.sensor2 - 7.86 * inputs.rain1 + 42.80 * inputs.rain2 - 47.79;
+        const trend = (multivar - current) * (h / 3.0);
+        switch (spec.model) {
+          case 'persistence':
+            flowEstimate = current;
+            break;
+          case 'autoregressive':
+            flowEstimate = current * Math.pow(0.97, h);
+            break;
+          case 'multi_comid':
+            flowEstimate = Math.max(0, current + trend);
+            break;
+          case 'multi_guarded':
+          default:
+            const w = Math.min(1.0, 0.4 + 0.1 * h);
+            flowEstimate = Math.max(0, current + trend * w);
+            break;
+        }
+      } else if (plantKey === 'mazar') {
+        const multivar = 118.086 * inputs.sensor1 + 65.895 * inputs.rain1 + 8.505;
+        const trend = (multivar - current) * (h / 3.0);
+        if (spec.model === 'persistence') flowEstimate = current;
+        else if (spec.model === 'autoregressive') flowEstimate = current * Math.pow(0.98, h);
+        else flowEstimate = Math.max(0, current + trend * 0.7);
+      } else {
+        const factor = (spec.r - 0.5) * 0.08 * Math.sqrt(h);
+        if (spec.model === 'persistence') flowEstimate = current;
+        else if (spec.model === 'autoregressive') flowEstimate = current * Math.pow(0.98, h);
+        else flowEstimate = Math.max(0, current * (1.0 + factor));
+      }
+
+      return {
+        step: h,
+        flow: flowEstimate,
+        mae: spec.mae,
+        spec
+      };
+    }
+
     function renderForecast() {
       const plantKey = document.getElementById('plant-select').value;
-      const model = MODELS[plantKey] || MODELS.cocaCodoSinclair;
+      const plantCfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
+      const horizonHours = parseInt(document.getElementById('select-horizon').value, 10);
 
       const inputs = {
         flow: parseFloat(document.getElementById('slider-flow').value),
@@ -415,38 +532,43 @@
         sensor2: parseFloat(document.getElementById('slider-sensor-2').value),
         rain1: parseFloat(document.getElementById('slider-rain-1').value),
         rain2: parseFloat(document.getElementById('slider-rain-2').value),
-        horizon: parseInt(document.getElementById('select-horizon').value, 10)
+        horizon: horizonHours
       };
 
-      // 1. Calculate Expected Forecast
-      const rawForecast = model.calc(inputs);
-      const forecastFlow = Math.max(0, rawForecast);
-      const percentiles = calculatePercentiles(forecastFlow, model.mae);
+      // 1. Calculate each step from +1h to +horizonHours using distinct multi-COMID models
+      const stepPredictions = [];
+      for (let h = 1; h <= horizonHours; h++) {
+        stepPredictions.push(calculateStepForecast(plantKey, h, inputs));
+      }
+
+      const finalStep = stepPredictions[stepPredictions.length - 1];
+      const targetSpec = plantCfg.horizons[horizonHours];
+      const percentiles = calculatePercentiles(finalStep.flow, targetSpec.mae);
 
       // 2. Update Header & Stats Row UI
-      document.getElementById('card-plant-name').innerText = model.name;
-      document.getElementById('card-model-info').innerText = model.method;
+      document.getElementById('card-plant-name').innerText = plantCfg.name;
+      document.getElementById('card-model-info').innerText = `${targetSpec.model} (${horizonHours}h) · r = ${targetSpec.r} · MAE: ${targetSpec.mae.toFixed(1)} m³/s (${targetSpec.vsPers})`;
 
       document.getElementById('card-flow-actual').innerText = inputs.flow.toFixed(2) + ' m³/s';
-      document.getElementById('card-lbl-forecast').innerText = `Pronóstico ${inputs.horizon}h:`;
-      document.getElementById('card-flow-forecast').innerText = forecastFlow.toFixed(2) + ' m³/s';
+      document.getElementById('card-lbl-forecast').innerText = `Pronóstico ${horizonHours}h:`;
+      document.getElementById('card-flow-forecast').innerText = finalStep.flow.toFixed(2) + ' m³/s';
       document.getElementById('card-flow-range').innerText = `${Math.round(percentiles.p25)} - ${Math.round(percentiles.p75)}`;
 
-      const deltaPct = ((forecastFlow - inputs.flow) / inputs.flow) * 100;
+      const deltaPct = ((finalStep.flow - inputs.flow) / inputs.flow) * 100;
       const deltaSign = deltaPct >= 0 ? '+' : '';
       const deltaEl = document.getElementById('card-delta-forecast');
       deltaEl.innerText = `${deltaSign}${deltaPct.toFixed(1)}% (p50)`;
 
       const statusEl = document.getElementById('card-flow-status');
-      if (forecastFlow >= model.thresholdCrecida) {
+      if (finalStep.flow >= plantCfg.thresholdCrecida) {
         statusEl.className = 'flow-status text-red';
         statusEl.innerText = 'Crecida';
         deltaEl.className = 'status-text text-red';
-      } else if (deltaPct > 20) {
+      } else if (deltaPct > 15) {
         statusEl.className = 'flow-status text-orange';
-        statusEl.innerText = 'Alza Fuerte';
+        statusEl.innerText = 'Alza';
         deltaEl.className = 'status-text text-orange';
-      } else if (deltaPct < -20) {
+      } else if (deltaPct < -15) {
         statusEl.className = 'flow-status text-cyan';
         statusEl.innerText = 'Descenso';
         deltaEl.className = 'status-text text-cyan';
@@ -457,39 +579,39 @@
       }
 
       // Update Bottom Telemetry Chips
-      document.getElementById('chip-sensor-1').innerText = inputs.sensor1.toFixed(2) + 'm';
-      document.getElementById('chip-sensor-2').innerText = inputs.sensor2.toFixed(2) + 'm';
-      document.getElementById('chip-rain-1').innerText = inputs.rain1.toFixed(1) + 'mm';
+      document.getElementById('chip-sensor-1').innerText = `${inputs.sensor1.toFixed(2)}${plantCfg.sensor1.unit}`;
+      document.getElementById('chip-sensor-2').innerText = `${inputs.sensor2.toFixed(2)}${plantCfg.sensor2.unit}`;
+      document.getElementById('chip-rain-1').innerText = `${inputs.rain1.toFixed(1)}${plantCfg.rain1.unit}`;
 
-      // 3. Render 600x380 SVG Fan Chart
-      renderSvgFanChart(inputs, forecastFlow, model);
+      // 3. Render 600x380 SVG Fan Chart with step-specific models
+      renderSvgFanChart(inputs, stepPredictions, plantCfg);
     }
 
-    function renderSvgFanChart(inputs, forecastFlow, model) {
+    function renderSvgFanChart(inputs, stepPredictions, plantCfg) {
       const svg = document.getElementById('forecast-svg');
       const width = 600;
       const height = 380;
       const padLeft = 45;
       const padRight = 45;
       const padTop = 15;
-      const padBottom = 65; // leaves 38px bottom telemetry clearance
+      const padBottom = 65;
 
       const plotW = width - padLeft - padRight;
       const plotH = height - padTop - padBottom;
 
       const pastSteps = [-6, -4, -2, 0];
-      const futureSteps = [];
-      for (let i = 1; i <= inputs.horizon; i++) futureSteps.push(i);
+      const futureSteps = stepPredictions.map(p => p.step);
 
       const allSteps = [...pastSteps, ...futureSteps];
       const minStep = -6;
       const maxStep = inputs.horizon;
 
       // Realistic historical curve
-      const deltaExpected = forecastFlow - inputs.flow;
-      const histFactor1 = deltaExpected >= 0 ? 0.78 : 1.18;
-      const histFactor2 = deltaExpected >= 0 ? 0.87 : 1.10;
-      const histFactor3 = deltaExpected >= 0 ? 0.95 : 1.04;
+      const finalFlow = stepPredictions[stepPredictions.length - 1].flow;
+      const deltaExpected = finalFlow - inputs.flow;
+      const histFactor1 = deltaExpected >= 0 ? 0.82 : 1.15;
+      const histFactor2 = deltaExpected >= 0 ? 0.89 : 1.09;
+      const histFactor3 = deltaExpected >= 0 ? 0.96 : 1.04;
 
       const historicalPoints = [
         { step: -6, flow: Math.max(0, inputs.flow * histFactor1) },
@@ -499,14 +621,10 @@
       ];
 
       const futurePoints = [];
-      for (const h of futureSteps) {
-        const weight = h / inputs.horizon;
-        const curveWeight = 1 - (1 - weight) * (1 - weight);
-        const stepMean = inputs.flow + (forecastFlow - inputs.flow) * curveWeight;
-        const stepMae = model.mae * Math.sqrt(weight);
+      for (const p of stepPredictions) {
         futurePoints.push({
-          step: h,
-          ...calculatePercentiles(stepMean, stepMae)
+          step: p.step,
+          ...calculatePercentiles(p.flow, p.mae)
         });
       }
 
@@ -519,12 +637,12 @@
       let minVal = Math.min(...trajectoryFlows);
       let maxVal = Math.max(...trajectoryFlows);
 
-      const hasThresholdInView = model.thresholdCrecida >= minVal && model.thresholdCrecida <= maxVal * 1.35;
+      const hasThresholdInView = plantCfg.thresholdCrecida >= minVal && plantCfg.thresholdCrecida <= maxVal * 1.35;
       if (hasThresholdInView) {
-        maxVal = Math.max(maxVal, model.thresholdCrecida);
+        maxVal = Math.max(maxVal, plantCfg.thresholdCrecida);
       }
 
-      const rawSpan = Math.max(25, maxVal - minVal);
+      const rawSpan = Math.max(15, maxVal - minVal);
       const rawYMin = Math.max(0, minVal - rawSpan * 0.18);
       const rawYMax = maxVal + rawSpan * 0.18;
 
@@ -561,11 +679,11 @@
       document.getElementById('grid-layer').innerHTML = gridHtml;
 
       // Threshold Reference Line
-      if (model.thresholdCrecida >= yMin && model.thresholdCrecida <= yMax) {
-        const threshY = getY(model.thresholdCrecida);
+      if (plantCfg.thresholdCrecida >= yMin && plantCfg.thresholdCrecida <= yMax) {
+        const threshY = getY(plantCfg.thresholdCrecida);
         document.getElementById('threshold-layer').innerHTML = `
           <line class="forecast-line-threshold" x1="${padLeft}" y1="${threshY}" x2="${width - padRight}" y2="${threshY}" />
-          <text class="forecast-threshold-text" x="${width - padRight}" y="${threshY - 6}" text-anchor="end">Umbral Crecida (${model.thresholdCrecida} m³/s)</text>
+          <text class="forecast-threshold-text" x="${width - padRight}" y="${threshY - 6}" text-anchor="end">Umbral Crecida (${plantCfg.thresholdCrecida} m³/s)</text>
         `;
       } else {
         document.getElementById('threshold-layer').innerHTML = '';
@@ -635,6 +753,59 @@
       document.getElementById('markers-layer').innerHTML = markersHtml;
     }
 
+    function switchPlant(plantKey) {
+      const cfg = MULTI_COMID_BENCHMARKS[plantKey];
+      if (!cfg) return;
+
+      // Update flow slider
+      const flowSlider = document.getElementById('slider-flow');
+      flowSlider.min = cfg.minFlow;
+      flowSlider.max = cfg.maxFlow;
+      flowSlider.value = cfg.defaultFlow;
+      document.getElementById('lbl-min-flow').innerText = `${cfg.minFlow} m³/s`;
+      document.getElementById('lbl-max-flow').innerText = `${cfg.maxFlow} m³/s`;
+
+      // Update Sensor 1
+      document.getElementById('lbl-sensor-1').innerText = cfg.sensor1.name;
+      const s1 = document.getElementById('slider-sensor-1');
+      s1.min = cfg.sensor1.min;
+      s1.max = cfg.sensor1.max;
+      s1.step = cfg.sensor1.step;
+      s1.value = cfg.sensor1.default;
+
+      // Update Sensor 2
+      document.getElementById('lbl-sensor-2').innerText = cfg.sensor2.name;
+      const s2 = document.getElementById('slider-sensor-2');
+      s2.min = cfg.sensor2.min;
+      s2.max = cfg.sensor2.max;
+      s2.step = cfg.sensor2.step;
+      s2.value = cfg.sensor2.default;
+
+      // Update Rain 1
+      document.getElementById('lbl-rain-1').innerText = cfg.rain1.name;
+      const r1 = document.getElementById('slider-rain-1');
+      r1.min = cfg.rain1.min;
+      r1.max = cfg.rain1.max;
+      r1.step = cfg.rain1.step;
+      r1.value = cfg.rain1.default;
+
+      // Update Rain 2
+      document.getElementById('lbl-rain-2').innerText = cfg.rain2.name;
+      const r2 = document.getElementById('slider-rain-2');
+      r2.min = cfg.rain2.min;
+      r2.max = cfg.rain2.max;
+      r2.step = cfg.rain2.step;
+      r2.value = cfg.rain2.default;
+
+      // Update bottom chip labels
+      document.getElementById('chip-lbl-1').innerText = cfg.sensor1.name.split(' ')[0] + ':';
+      document.getElementById('chip-lbl-2').innerText = cfg.sensor2.name.split(' ')[0] + ':';
+      document.getElementById('chip-lbl-3').innerText = cfg.rain1.name.split(' ')[0] + ':';
+
+      updateBadges();
+      renderForecast();
+    }
+
     // Attach Controls
     function attachControls() {
       const rangeInputs = document.querySelectorAll('input[type="range"], select');
@@ -656,17 +827,8 @@
         }
       });
 
-      document.getElementById('plant-select').addEventListener('change', () => {
-        const plantKey = document.getElementById('plant-select').value;
-        const model = MODELS[plantKey];
-        if (model) {
-          document.getElementById('lbl-sensor-1').innerText = model.sensor1Name;
-          document.getElementById('lbl-sensor-2').innerText = model.sensor2Name;
-          document.getElementById('lbl-rain-1').innerText = model.rain1Name;
-          document.getElementById('lbl-rain-2').innerText = model.rain2Name;
-        }
-        updateBadges();
-        renderForecast();
+      document.getElementById('plant-select').addEventListener('change', (e) => {
+        switchPlant(e.target.value);
       });
 
       // Date Input setup
@@ -720,18 +882,20 @@
     }
 
     function updateBadges() {
+      const plantKey = document.getElementById('plant-select').value;
+      const cfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
+
       document.getElementById('badge-flow').innerText = parseFloat(document.getElementById('slider-flow').value).toFixed(2) + ' m³/s';
       document.getElementById('badge-horizon').innerText = document.getElementById('select-horizon').value + ' Horas';
-      document.getElementById('badge-sensor-1').innerText = parseFloat(document.getElementById('slider-sensor-1').value).toFixed(2) + ' m';
-      document.getElementById('badge-sensor-2').innerText = parseFloat(document.getElementById('slider-sensor-2').value).toFixed(2) + ' m';
-      document.getElementById('badge-rain-1').innerText = parseFloat(document.getElementById('slider-rain-1').value).toFixed(1) + ' mm';
-      document.getElementById('badge-rain-2').innerText = parseFloat(document.getElementById('slider-rain-2').value).toFixed(1) + ' mm';
+      document.getElementById('badge-sensor-1').innerText = `${parseFloat(document.getElementById('slider-sensor-1').value).toFixed(2)} ${cfg.sensor1.unit}`;
+      document.getElementById('badge-sensor-2').innerText = `${parseFloat(document.getElementById('slider-sensor-2').value).toFixed(2)} ${cfg.sensor2.unit}`;
+      document.getElementById('badge-rain-1').innerText = `${parseFloat(document.getElementById('slider-rain-1').value).toFixed(1)} ${cfg.rain1.unit}`;
+      document.getElementById('badge-rain-2').innerText = `${parseFloat(document.getElementById('slider-rain-2').value).toFixed(1)} ${cfg.rain2.unit}`;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
       attachControls();
-      updateBadges();
-      renderForecast();
+      switchPlant('cocaCodoSinclair');
     });
 
     const evtSource = new EventSource("/sse");

@@ -197,5 +197,41 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
       expect(finalPoint?.percentiles?.p75).toBeGreaterThan(600);
       expect(finalPoint?.percentiles?.p25).toBeLessThan(600);
     });
+
+    it('evaluates multi-COMID hourly models across 1h to 6h horizons for all plants', async () => {
+      // Test CCS at 1h (multi_guarded, MAE=10.82, r=0.997)
+      const resCcs1h = await service.predictPlantHourlyMultiComid('cocaCodoSinclair', {
+        horizonHours: 1,
+        currentFlow: 400
+      });
+      expect(resCcs1h.plantKey).toBe('cocaCodoSinclair');
+      expect(resCcs1h.horizonHours).toBe(1);
+      expect(resCcs1h.mae).toBe(10.82);
+      expect(resCcs1h.pearsonR).toBe(0.997);
+      expect(resCcs1h.modelSpec?.modelName).toBe('multi_guarded');
+      expect(resCcs1h.trajectory?.length).toBe(5); // 3 past + now + 1 future
+
+      // Test Mazar at 6h (outlet_hybrid, MAE=9.09, r=0.518)
+      const resMazar6h = await service.predictPlantHourlyMultiComid('mazar', {
+        horizonHours: 6,
+        currentFlow: 85
+      });
+      expect(resMazar6h.plantKey).toBe('mazar');
+      expect(resMazar6h.horizonHours).toBe(6);
+      expect(resMazar6h.mae).toBe(9.09);
+      expect(resMazar6h.pearsonR).toBe(0.518);
+      expect(resMazar6h.modelSpec?.modelName).toBe('outlet_hybrid');
+      expect(resMazar6h.trajectory?.length).toBe(10); // 3 past + now + 6 future
+
+      // Test Sopladora at 6h (autoregressive, MAE=12.58, r=0.830)
+      const resSopladora6h = await service.predictPlantHourlyMultiComid('sopladora', {
+        horizonHours: 6,
+        currentFlow: 95
+      });
+      expect(resSopladora6h.plantKey).toBe('sopladora');
+      expect(resSopladora6h.modelSpec?.modelName).toBe('autoregressive');
+      expect(resSopladora6h.mae).toBe(12.58);
+      expect(resSopladora6h.pearsonR).toBe(0.830);
+    });
   });
 });

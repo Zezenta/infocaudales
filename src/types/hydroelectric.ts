@@ -58,7 +58,17 @@ export interface HydroelectricPlant {
   };
 }
 
-export type PredictionHorizon = '1h' | '3h' | '24h';
+export type PredictionHorizon = '1h' | '2h' | '3h' | '4h' | '5h' | '6h' | '12h' | '24h' | '48h';
+
+export interface MultiComidModelSpec {
+  horizon: number;
+  modelName: 'multi_guarded' | 'multi_comid' | 'autoregressive' | 'outlet_hybrid' | 'persistence' | 'multi_ratio_guarded' | 'multi_comid_ratio';
+  n: number;
+  pearsonR: number;
+  mae: number;
+  vsPersistence: string;
+  directionAccuracy: number;
+}
 
 export interface PredictionPercentiles {
   p10: number;                      // 10th percentile (lower broad uncertainty bound)
@@ -69,11 +79,12 @@ export interface PredictionPercentiles {
 }
 
 export interface ForecastTrajectoryPoint {
-  step: number;                     // Hour step: negative for past (e.g. -6..0), positive for future (e.g. 1..3)
+  step: number;                     // Hour step: negative for past (e.g. -6..0), positive for future (e.g. 1..6)
   label: string;                    // Time label (e.g. '-3h', 'AHORA', '+1h', '+3h')
   isHistorical: boolean;            // True if observed historical data
   observedFlow?: number;            // Actual flow measured in m³/s
   percentiles?: PredictionPercentiles; // Statistical forecast fan spread
+  modelSpec?: MultiComidModelSpec;  // Exact model specification used for this hourly step
 }
 
 export interface PredictionResult {
@@ -83,11 +94,12 @@ export interface PredictionResult {
   percentiles?: PredictionPercentiles; // Statistical prediction percentiles
   trajectory?: ForecastTrajectoryPoint[]; // Full historical + forecast curve for fan charts
   horizon: PredictionHorizon;       // Forecast horizon
-  horizonHours: number;             // Numeric hours (1, 3, 24)
-  method: string;                   // Description of the model (e.g. 'Multivariate 3h (INAMHI Telemetry)')
+  horizonHours: number;             // Numeric hours (1, 2, 3, 4, 5, 6, 24)
+  method: string;                   // Description of the model
   pearsonR?: number;                // Empirical Pearson correlation coefficient
   mae?: number;                     // Mean Absolute Error in m³/s
   isFallback: boolean;              // True if any degraded sensor fallback was used
   components: Record<string, number | null | undefined>; // Intermediate inputs/variables
   calculatedAt: Date;
+  modelSpec?: MultiComidModelSpec;
 }
