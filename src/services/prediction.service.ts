@@ -117,7 +117,7 @@ export class PredictionService {
       return `${hh}:${mm}`;
     };
 
-    // 1. Past observed points (e.g. -6h, -4h, -2h)
+    // 1. Past observed points (e.g. -6h to -1h at 1-hour resolution)
     if (pastObservedFlows && pastObservedFlows.length > 0) {
       for (const p of pastObservedFlows) {
         trajectory.push({
@@ -128,11 +128,16 @@ export class PredictionService {
         });
       }
     } else {
-      trajectory.push(
-        { step: -6, label: formatTimeLabel(-6), isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.92) },
-        { step: -4, label: formatTimeLabel(-4), isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.96) },
-        { step: -2, label: formatTimeLabel(-2), isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.98) }
-      );
+      for (let s = -6; s <= -1; s++) {
+        const weight = (s + 6) / 6.0;
+        const factor = 0.92 + (1.0 - 0.92) * weight;
+        trajectory.push({
+          step: s,
+          label: formatTimeLabel(s),
+          isHistorical: true,
+          observedFlow: Math.max(0, currentFlow * factor)
+        });
+      }
     }
 
     // 2. Current Point (T0)

@@ -584,26 +584,31 @@
       const plotW = width - padLeft - padRight;
       const plotH = height - padTop - padBottom;
 
-      const pastSteps = [-6, -4, -2, 0];
+      const pastSteps = [-6, -5, -4, -3, -2, -1, 0];
       const futureSteps = stepPredictions.map(p => p.step);
 
       const allSteps = [...pastSteps, ...futureSteps];
       const minStep = -6;
       const maxStep = inputs.horizon;
 
-      // Realistic historical curve
+      // Realistic historical curve with hourly resolution
       const finalFlow = stepPredictions[stepPredictions.length - 1].flow;
       const deltaExpected = finalFlow - inputs.flow;
-      const histFactor1 = deltaExpected >= 0 ? 0.82 : 1.15;
-      const histFactor2 = deltaExpected >= 0 ? 0.89 : 1.09;
-      const histFactor3 = deltaExpected >= 0 ? 0.96 : 1.04;
+      const startFactor = deltaExpected >= 0 ? 0.82 : 1.15;
 
-      const historicalPoints = [
-        { step: -6, flow: Math.max(0, inputs.flow * histFactor1) },
-        { step: -4, flow: Math.max(0, inputs.flow * histFactor2) },
-        { step: -2, flow: Math.max(0, inputs.flow * histFactor3) },
-        { step: 0, flow: inputs.flow }
-      ];
+      const historicalPoints = [];
+      for (let s = -6; s <= 0; s++) {
+        if (s === 0) {
+          historicalPoints.push({ step: 0, flow: inputs.flow });
+        } else {
+          const weight = (s + 6) / 6.0;
+          const factor = startFactor + (1.0 - startFactor) * Math.sin(weight * Math.PI / 2);
+          historicalPoints.push({
+            step: s,
+            flow: Math.max(0, inputs.flow * factor)
+          });
+        }
+      }
 
       const futurePoints = [];
       for (const p of stepPredictions) {

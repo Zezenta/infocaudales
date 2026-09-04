@@ -187,10 +187,13 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
         baseDate: fixedDate
       });
 
-      expect(trajectory.length).toBe(7); // 3 past (-6h, -4h, -2h) + 1 current (0 / 14:00) + 3 future (15:00, 16:00, 17:00)
+      expect(trajectory.length).toBe(10); // 6 past (-6h..-1h) + 1 current (0 / 14:00) + 3 future (15:00, 16:00, 17:00)
       
       const pastPoint = trajectory.find(t => t.step === -6);
       expect(pastPoint?.label).toBe('08:00');
+
+      const intermediatePast = trajectory.find(t => t.step === -3);
+      expect(intermediatePast?.label).toBe('11:00');
 
       const nowPoint = trajectory.find(t => t.step === 0);
       expect(nowPoint?.label).toBe('14:00');
@@ -214,7 +217,7 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
       expect(resCcs1h.mae).toBe(10.82);
       expect(resCcs1h.pearsonR).toBe(0.997);
       expect(resCcs1h.modelSpec?.modelName).toBe('multi_guarded');
-      expect(resCcs1h.trajectory?.length).toBe(5); // 3 past + now + 1 future
+      expect(resCcs1h.trajectory?.length).toBe(8); // 6 past + 1 now + 1 future
 
       // Test Mazar at 6h (outlet_hybrid, MAE=9.09, r=0.518)
       const resMazar6h = await service.predictPlantHourlyMultiComid('mazar', {
@@ -226,7 +229,7 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
       expect(resMazar6h.mae).toBe(9.09);
       expect(resMazar6h.pearsonR).toBe(0.518);
       expect(resMazar6h.modelSpec?.modelName).toBe('outlet_hybrid');
-      expect(resMazar6h.trajectory?.length).toBe(10); // 3 past + now + 6 future
+      expect(resMazar6h.trajectory?.length).toBe(13); // 6 past + 1 now + 6 future
 
       // Test Sopladora at 6h (autoregressive, MAE=12.58, r=0.830)
       const resSopladora6h = await service.predictPlantHourlyMultiComid('sopladora', {
