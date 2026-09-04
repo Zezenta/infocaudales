@@ -178,21 +178,26 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
     });
 
     it('builds fan chart trajectory with historical points and future expanding uncertainty cone', () => {
+      const fixedDate = new Date('2026-09-04T14:00:00');
       const trajectory = service.buildForecastTrajectory({
         currentFlow: 450,
         forecastFlow: 600,
         horizonHours: 3,
-        mae: 27.2
+        mae: 27.2,
+        baseDate: fixedDate
       });
 
-      expect(trajectory.length).toBe(7); // 3 past (-6h, -4h, -2h) + 1 current (0 / AHORA) + 3 future (+1h, +2h, +3h)
+      expect(trajectory.length).toBe(7); // 3 past (-6h, -4h, -2h) + 1 current (0 / 14:00) + 3 future (15:00, 16:00, 17:00)
       
+      const pastPoint = trajectory.find(t => t.step === -6);
+      expect(pastPoint?.label).toBe('08:00');
+
       const nowPoint = trajectory.find(t => t.step === 0);
-      expect(nowPoint?.label).toBe('AHORA');
+      expect(nowPoint?.label).toBe('14:00');
       expect(nowPoint?.observedFlow).toBe(450);
 
       const finalPoint = trajectory.find(t => t.step === 3);
-      expect(finalPoint?.label).toBe('+3h');
+      expect(finalPoint?.label).toBe('17:00');
       expect(finalPoint?.percentiles?.p50).toBe(600);
       expect(finalPoint?.percentiles?.p75).toBeGreaterThan(600);
       expect(finalPoint?.percentiles?.p25).toBeLessThan(600);

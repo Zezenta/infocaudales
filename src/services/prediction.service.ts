@@ -104,33 +104,42 @@ export class PredictionService {
     plantKey?: string;
     stepPredictions?: Array<{ step: number; flow: number; mae?: number; modelSpec?: MultiComidModelSpec }>;
     pastObservedFlows?: Array<{ step: number; flow: number }>;
+    baseDate?: Date | string;
   }): ForecastTrajectoryPoint[] {
-    const { currentFlow, forecastFlow, horizonHours, mae = 25.0, plantKey, stepPredictions, pastObservedFlows } = options;
+    const { currentFlow, forecastFlow, horizonHours, mae = 25.0, plantKey, stepPredictions, pastObservedFlows, baseDate } = options;
     const trajectory: ForecastTrajectoryPoint[] = [];
+    const base = baseDate ? new Date(baseDate) : new Date();
+
+    const formatTimeLabel = (stepHours: number): string => {
+      const d = new Date(base.getTime() + stepHours * 3600000);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    };
 
     // 1. Past observed points (e.g. -6h, -4h, -2h)
     if (pastObservedFlows && pastObservedFlows.length > 0) {
       for (const p of pastObservedFlows) {
         trajectory.push({
           step: p.step,
-          label: `${p.step}h`,
+          label: formatTimeLabel(p.step),
           isHistorical: true,
           observedFlow: p.flow
         });
       }
     } else {
       trajectory.push(
-        { step: -6, label: '-6h', isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.92) },
-        { step: -4, label: '-4h', isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.96) },
-        { step: -2, label: '-2h', isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.98) }
+        { step: -6, label: formatTimeLabel(-6), isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.92) },
+        { step: -4, label: formatTimeLabel(-4), isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.96) },
+        { step: -2, label: formatTimeLabel(-2), isHistorical: true, observedFlow: Math.max(0, currentFlow * 0.98) }
       );
     }
 
-    // 2. Current Point (T0 / AHORA)
+    // 2. Current Point (T0)
     const currentPills = this.calculatePredictionPercentiles(currentFlow, 0);
     trajectory.push({
       step: 0,
-      label: 'AHORA',
+      label: formatTimeLabel(0),
       isHistorical: true,
       observedFlow: currentFlow,
       percentiles: currentPills
@@ -164,7 +173,7 @@ export class PredictionService {
 
       trajectory.push({
         step: h,
-        label: `+${h}h`,
+        label: formatTimeLabel(h),
         isHistorical: false,
         percentiles,
         modelSpec
