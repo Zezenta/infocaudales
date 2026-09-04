@@ -731,25 +731,69 @@
       const medPts = [{ x: getX(0), y: getY(inputs.flow) }, ...futurePoints.map(p => ({ x: getX(p.step), y: getY(p.p50) }))];
       document.getElementById('line-median').setAttribute('d', buildSmoothPath(medPts));
 
-      // Markers & End Badges
+      // Markers & Value Labels Layer
       let markersHtml = '';
+
+      // 1. Historical Points & Value Labels
       for (const p of historicalPoints) {
-        markersHtml += `<circle class="forecast-point-historical" cx="${getX(p.step)}" cy="${getY(p.flow)}" r="3.5" />`;
-      }
-      for (const p of futurePoints) {
-        markersHtml += `<circle class="forecast-point-future" cx="${getX(p.step)}" cy="${getY(p.p50)}" r="3" />`;
+        const cx = getX(p.step);
+        const cy = getY(p.flow);
+        const isNow = p.step === 0;
+        const val = Math.round(p.flow);
+
+        // Point circle
+        markersHtml += `<circle class="${isNow ? 'forecast-point-future' : 'forecast-point-historical'}" cx="${cx}" cy="${cy}" r="${isNow ? '4' : '3.5'}" fill="${isNow ? '#00b0ff' : '#00e5ff'}" />`;
+
+        // Small value label above circle (or below if close to top edge)
+        const textY = (cy - 7 < padTop + 10) ? (cy + 13) : (cy - 7);
+        const fontColor = isNow ? '#00b0ff' : '#94a3b8';
+        const fontWeight = isNow ? 'bold' : '500';
+        const fontSize = isNow ? '9.5' : '8.5';
+
+        markersHtml += `
+          <text class="forecast-point-label" x="${cx}" y="${textY}" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace" font-size="${fontSize}" font-weight="${fontWeight}" fill="${fontColor}" stroke="#080c14" stroke-width="2.5px" paint-order="stroke fill" stroke-linejoin="round">${val}</text>
+        `;
       }
 
-      // End target forecast badge
+      // 2. Future Forecast Points & Labels (steps +1h to +5h)
+      for (let i = 0; i < futurePoints.length - 1; i++) {
+        const p = futurePoints[i];
+        const cx = getX(p.step);
+        const cy = getY(p.p50);
+        const val = Math.round(p.p50);
+
+        // Point circle
+        markersHtml += `<circle class="forecast-point-future" cx="${cx}" cy="${cy}" r="3" fill="#00e5ff" />`;
+
+        // Small value label
+        const textY = (cy - 7 < padTop + 10) ? (cy + 13) : (cy - 7);
+        markersHtml += `
+          <text class="forecast-point-label" x="${cx}" y="${textY}" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="500" fill="#38bdf8" stroke="#080c14" stroke-width="2.5px" paint-order="stroke fill" stroke-linejoin="round">${val}</text>
+        `;
+      }
+
+      // 3. Final Target Point (+6h) & End Badge (bounded safely within canvas)
       const lastFuture = futurePoints[futurePoints.length - 1];
       const endX = getX(lastFuture.step);
       const endY = getY(lastFuture.p50);
+      const lastVal = Math.round(lastFuture.p50);
+
+      // Final point circle
+      markersHtml += `<circle class="forecast-point-future" cx="${endX}" cy="${endY}" r="4" fill="#00b0ff" />`;
+
+      // Badge centered above the final point
+      const badgeW = 46;
+      const badgeH = 18;
+      const badgeX = Math.min(width - padRight + 20 - badgeW, Math.max(endX - badgeW / 2, 0));
+      const badgeY = (endY - 22 < padTop) ? (endY + 8) : (endY - 22);
+
       markersHtml += `
-        <g transform="translate(${endX + 6}, ${endY})">
-          <rect x="0" y="-10" width="50" height="20" rx="4" fill="#080c14" stroke="#00b0ff" stroke-width="1.5" />
-          <text x="25" y="4" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace" font-size="10.5" font-weight="bold" fill="#00b0ff">${Math.round(lastFuture.p50)}</text>
+        <g transform="translate(${badgeX}, ${badgeY})">
+          <rect x="0" y="0" width="${badgeW}" height="${badgeH}" rx="4" fill="#080c14" stroke="#00b0ff" stroke-width="1.3" />
+          <text x="${badgeW / 2}" y="12.5" text-anchor="middle" font-family="'DejaVu Sans Mono', monospace" font-size="9.5" font-weight="bold" fill="#00b0ff">${lastVal}</text>
         </g>
       `;
+
       document.getElementById('markers-layer').innerHTML = markersHtml;
     }
 
