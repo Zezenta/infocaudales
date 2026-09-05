@@ -450,6 +450,14 @@
       `;
     }
 
+    function formatVal(val, maxDecimals = 2) {
+      if (val === null || val === undefined || isNaN(val)) return '0';
+      if (Math.abs(val - Math.round(val)) < 0.005) {
+        return Math.round(val).toString();
+      }
+      return parseFloat(val.toFixed(maxDecimals)).toString();
+    }
+
     function renderPlants() {
       const container = document.getElementById('plants-list');
       container.innerHTML = '';
@@ -475,10 +483,10 @@
         const currentGen = plant.genHistory[plant.genHistory.length - 1];
         
         const rawCaudal = plant.caudalHistory[plant.caudalHistory.length - 1];
-        const currentCaudal = typeof rawCaudal === 'number' ? rawCaudal.toFixed(2) : rawCaudal;
+        const currentCaudal = typeof rawCaudal === 'number' ? formatVal(rawCaudal) : rawCaudal;
         
         const rawCota = plant.cotaHistory ? plant.cotaHistory[plant.cotaHistory.length - 1] : null;
-        const currentCota = typeof rawCota === 'number' ? rawCota.toFixed(2) : rawCota;
+        const currentCota = typeof rawCota === 'number' ? formatVal(rawCota) : rawCota;
 
         const genChartSvg = createSparkline(plant.genHistory, 'spark-line-gen', 'gen-gradient', 0, plant.maxMW, true);
         const caudalChartSvg = createSparkline(

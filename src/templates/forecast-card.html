@@ -172,7 +172,7 @@
             <!-- Column 1: Caudal Actual (T0) -->
             <div class="stats-col">
               <span class="section-label">Caudal Actual:</span>
-              <span class="flow-value text-cyan" id="card-flow-actual">480.00 m³/s</span>
+              <span class="flow-value text-cyan" id="card-flow-actual">480 m³/s</span>
               <span class="status-text" style="color: #64748b !important;" id="card-flow-source">T₀ CELEC EP</span>
             </div>
 
@@ -181,7 +181,7 @@
             <!-- Column 2: Pronóstico Horizon (p50) -->
             <div class="stats-col">
               <span class="section-label" id="card-lbl-forecast">Pronóstico 6h:</span>
-              <span class="generation-value text-cyan" id="card-flow-forecast">479.18 m³/s</span>
+              <span class="generation-value text-cyan" id="card-flow-forecast">479 m³/s</span>
               <span class="status-text text-green" id="card-delta-forecast">-0.2% (p50)</span>
             </div>
 
@@ -448,6 +448,14 @@
       }
     };
 
+    function formatNumber(val, maxDecimals = 2) {
+      if (val === null || val === undefined || isNaN(val)) return '0';
+      if (Math.abs(val - Math.round(val)) < 0.005) {
+        return Math.round(val).toString();
+      }
+      return parseFloat(val.toFixed(maxDecimals)).toString();
+    }
+
     function calculatePercentiles(mean, mae) {
       const sigma = 1.2533 * mae;
       return {
@@ -532,17 +540,17 @@
 
       // 2. Update Header & Stats Row UI
       document.getElementById('card-plant-name').innerText = plantCfg.name;
-      document.getElementById('card-model-info').innerText = `${targetSpec.model} (${horizonHours}h) · r = ${targetSpec.r} · MAE: ${targetSpec.mae.toFixed(1)} m³/s (${targetSpec.vsPers})`;
+      document.getElementById('card-model-info').innerText = `${targetSpec.model} (${horizonHours}h) · r = ${targetSpec.r} · MAE: ${formatNumber(targetSpec.mae, 1)} m³/s (${targetSpec.vsPers})`;
 
-      document.getElementById('card-flow-actual').innerText = inputs.flow.toFixed(2) + ' m³/s';
+      document.getElementById('card-flow-actual').innerText = `${formatNumber(inputs.flow)} m³/s`;
       document.getElementById('card-lbl-forecast').innerText = `Pronóstico ${horizonHours}h:`;
-      document.getElementById('card-flow-forecast').innerText = finalStep.flow.toFixed(2) + ' m³/s';
+      document.getElementById('card-flow-forecast').innerText = `${formatNumber(finalStep.flow)} m³/s`;
       document.getElementById('card-flow-range').innerText = `${Math.round(percentiles.p25)} - ${Math.round(percentiles.p75)}`;
 
       const deltaPct = ((finalStep.flow - inputs.flow) / inputs.flow) * 100;
-      const deltaSign = deltaPct >= 0 ? '+' : '';
+      const deltaSign = deltaPct >= 0 ? '+' : '-';
       const deltaEl = document.getElementById('card-delta-forecast');
-      deltaEl.innerText = `${deltaSign}${deltaPct.toFixed(1)}% (p50)`;
+      deltaEl.innerText = `${deltaSign}${formatNumber(Math.abs(deltaPct), 1)}% (p50)`;
 
       const statusEl = document.getElementById('card-flow-status');
       if (finalStep.flow >= plantCfg.thresholdCrecida) {
@@ -564,9 +572,9 @@
       }
 
       // Update Bottom Telemetry Chips
-      document.getElementById('chip-sensor-1').innerText = `${inputs.sensor1.toFixed(2)}${plantCfg.sensor1.unit}`;
-      document.getElementById('chip-sensor-2').innerText = `${inputs.sensor2.toFixed(2)}${plantCfg.sensor2.unit}`;
-      document.getElementById('chip-rain-1').innerText = `${inputs.rain1.toFixed(1)}${plantCfg.rain1.unit}`;
+      document.getElementById('chip-sensor-1').innerText = `${formatNumber(inputs.sensor1)}${plantCfg.sensor1.unit}`;
+      document.getElementById('chip-sensor-2').innerText = `${formatNumber(inputs.sensor2)}${plantCfg.sensor2.unit}`;
+      document.getElementById('chip-rain-1').innerText = `${formatNumber(inputs.rain1, 1)}${plantCfg.rain1.unit}`;
 
       // 3. Render 600x380 SVG Fan Chart with step-specific models
       renderSvgFanChart(inputs, stepPredictions, plantCfg);
@@ -941,11 +949,11 @@
       const plantKey = document.getElementById('plant-select').value;
       const cfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
 
-      document.getElementById('badge-flow').innerText = parseFloat(document.getElementById('slider-flow').value).toFixed(2) + ' m³/s';
-      document.getElementById('badge-sensor-1').innerText = `${parseFloat(document.getElementById('slider-sensor-1').value).toFixed(2)} ${cfg.sensor1.unit}`;
-      document.getElementById('badge-sensor-2').innerText = `${parseFloat(document.getElementById('slider-sensor-2').value).toFixed(2)} ${cfg.sensor2.unit}`;
-      document.getElementById('badge-rain-1').innerText = `${parseFloat(document.getElementById('slider-rain-1').value).toFixed(1)} ${cfg.rain1.unit}`;
-      document.getElementById('badge-rain-2').innerText = `${parseFloat(document.getElementById('slider-rain-2').value).toFixed(1)} ${cfg.rain2.unit}`;
+      document.getElementById('badge-flow').innerText = `${formatNumber(parseFloat(document.getElementById('slider-flow').value))} m³/s`;
+      document.getElementById('badge-sensor-1').innerText = `${formatNumber(parseFloat(document.getElementById('slider-sensor-1').value))} ${cfg.sensor1.unit}`;
+      document.getElementById('badge-sensor-2').innerText = `${formatNumber(parseFloat(document.getElementById('slider-sensor-2').value))} ${cfg.sensor2.unit}`;
+      document.getElementById('badge-rain-1').innerText = `${formatNumber(parseFloat(document.getElementById('slider-rain-1').value), 1)} ${cfg.rain1.unit}`;
+      document.getElementById('badge-rain-2').innerText = `${formatNumber(parseFloat(document.getElementById('slider-rain-2').value), 1)} ${cfg.rain2.unit}`;
     }
 
     window.addEventListener('DOMContentLoaded', () => {

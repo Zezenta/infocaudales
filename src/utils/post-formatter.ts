@@ -2,6 +2,17 @@ import { HydroelectricPlant } from '../types/hydroelectric.js';
 import { TelemetryData } from '../services/report-generator.service.js';
 
 /**
+ * Formats a number cleanly, omitting trailing decimals if it is an integer.
+ */
+export function formatVal(val: number, maxDecimals: number = 2): string {
+  if (val === null || val === undefined || isNaN(val)) return '0';
+  if (Math.abs(val - Math.round(val)) < 0.005) {
+    return Math.round(val).toString();
+  }
+  return parseFloat(val.toFixed(maxDecimals)).toString();
+}
+
+/**
  * Builds the exact social media text payload based on plant type and rules.
  */
 export function buildMessageText(
@@ -22,10 +33,10 @@ export function buildMessageText(
     deltaCaudal = ((telemetry.flow - flow3hAgo) / flow3hAgo) * 100;
   }
   const signoCaudal = telemetry.flow >= flow3hAgo ? '+' : '-';
-  const caudalStr = `🌊Caudal: ${telemetry.flow.toFixed(2)} m³/s\n${signoCaudal}${Math.abs(deltaCaudal).toFixed(2)}% desde hace 3h`;
+  const caudalStr = `🌊Caudal: ${formatVal(telemetry.flow)} m³/s\n${signoCaudal}${formatVal(Math.abs(deltaCaudal))}% desde hace 3h`;
 
   const trabajoEnergia = (telemetry.gen / maxEnergyMW) * 100;
-  let genStr = `🔋Generación: ${telemetry.gen.toFixed(2)} MWh\nAl ${trabajoEnergia.toFixed(2)}% de capacidad máxima`;
+  let genStr = `🔋Generación: ${formatVal(telemetry.gen)} MWh\nAl ${formatVal(trabajoEnergia)}% de capacidad máxima`;
   if (telemetry.turbines !== undefined && maxTurbines > 0) {
     genStr += `\nTurbinas Activas: ${telemetry.turbines}/${maxTurbines}`;
   }
@@ -46,7 +57,7 @@ export function buildMessageText(
   if (plantKey === 'cocaCodoSinclair') {
     let ccsExtra = '';
     if (nationalDemandMW && nationalDemandMW > 0) {
-      const pctGrid = ((telemetry.gen / nationalDemandMW) * 100).toFixed(2);
+      const pctGrid = formatVal((telemetry.gen / nationalDemandMW) * 100);
       ccsExtra = `\n\nEstá generando el ${pctGrid}% de la energía usada en Ecuador en este momento.`;
     } else {
       ccsExtra = `\n\nEstá generando energía para el sistema eléctrico nacional en este momento.`;
@@ -56,8 +67,8 @@ export function buildMessageText(
 
   let cotaStr = '';
   if (telemetry.cota !== undefined && minLevelMasl !== undefined) {
-    const distMin = (telemetry.cota - minLevelMasl).toFixed(2);
-    cotaStr = `💧Cota: ${telemetry.cota.toFixed(2)} msnm\nA ${distMin} m de la cota mínima\n\n`;
+    const distMin = formatVal(telemetry.cota - minLevelMasl);
+    cotaStr = `💧Cota: ${formatVal(telemetry.cota)} msnm\nA ${distMin} m de la cota mínima\n\n`;
   }
 
   return `${header}\n\n${cotaStr}${caudalStr}\n\n${genStr}`;
