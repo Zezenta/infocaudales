@@ -333,3 +333,105 @@ export async function generateDailyReport(outputPath: string, liveData?: any): P
     await page.close();
   }
 }
+
+export async function generateForecastCard(
+  plantKey: string,
+  options: {
+    currentFlow: number;
+    sensor1?: number;
+    sensor2?: number;
+    rain1?: number;
+    rain2?: number;
+    date?: Date;
+  }
+): Promise<Buffer> {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+
+  try {
+    await page.setViewport({
+      width: 1200,
+      height: 900,
+      deviceScaleFactor: 2
+    });
+
+    const projectRoot = getProjectRoot();
+    const htmlPath = path.join(projectRoot, 'src', 'templates', 'forecast-card.html');
+    const fileUrl = `file://${htmlPath}`;
+
+    await page.goto(fileUrl, { waitUntil: 'networkidle0' });
+
+    await page.evaluate((key, opts) => {
+      // 1. Select plant
+      const plantSelect = document.getElementById('plant-select') as HTMLSelectElement;
+      if (plantSelect) {
+        plantSelect.value = key;
+        // @ts-ignore
+        if (typeof switchPlant === 'function') switchPlant(key);
+      }
+
+      // 2. Set flow slider
+      const flowSlider = document.getElementById('slider-flow') as HTMLInputElement;
+      if (flowSlider && opts.currentFlow !== undefined) {
+        flowSlider.value = String(opts.currentFlow);
+      }
+
+      // 3. Set optional sensor sliders if provided
+      if (opts.sensor1 !== undefined) {
+        const s1 = document.getElementById('slider-sensor-1') as HTMLInputElement;
+        if (s1) s1.value = String(opts.sensor1);
+      }
+      if (opts.sensor2 !== undefined) {
+        const s2 = document.getElementById('slider-sensor-2') as HTMLInputElement;
+        if (s2) s2.value = String(opts.sensor2);
+      }
+      if (opts.rain1 !== undefined) {
+        const r1 = document.getElementById('slider-rain-1') as HTMLInputElement;
+        if (r1) r1.value = String(opts.rain1);
+      }
+      if (opts.rain2 !== undefined) {
+        const r2 = document.getElementById('slider-rain-2') as HTMLInputElement;
+        if (r2) r2.value = String(opts.rain2);
+      }
+
+      // 4. Set date input if provided
+      if (opts.date) {
+        const dt = new Date(opts.date);
+        const tzOffset = 300 * 60000;
+        const localISO = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16);
+        const dateInput = document.getElementById('date-input') as HTMLInputElement;
+        if (dateInput) {
+          dateInput.value = localISO;
+          const day = String(dt.getDate()).padStart(2, '0');
+          const month = String(dt.getMonth() + 1).padStart(2, '0');
+          const year = dt.getFullYear();
+          const hours = String(dt.getHours()).padStart(2, '0');
+          const mins = String(dt.getMinutes()).padStart(2, '0');
+          const cardTs = document.getElementById('card-timestamp');
+          if (cardTs) cardTs.innerText = `${day}/${month}/${year} ${hours}:${mins}`;
+        }
+      }
+
+      // @ts-ignore
+      if (typeof updateBadges === 'function') updateBadges();
+      // @ts-ignore
+      if (typeof renderForecast === 'function') renderForecast();
+    }, plantKey, options);
+
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
+
+    const cardElement = await page.$('#forecast-card-container');
+    if (!cardElement) {
+      throw new Error('Card element #forecast-card-container not found on page');
+    }
+
+    const imageBuffer = await cardElement.screenshot({
+      type: 'png',
+      omitBackground: true
+    });
+
+    return Buffer.from(imageBuffer);
+  } finally {
+    await page.close();
+  }
+}

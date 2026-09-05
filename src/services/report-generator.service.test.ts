@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, it, expect, afterAll } from 'vitest';
-import { generateReportCard, generateDailyReport, closeBrowser, TelemetryData } from './report-generator.service.js';
+import { generateReportCard, generateDailyReport, generateForecastCard, closeBrowser, TelemetryData } from './report-generator.service.js';
 import { CelecService } from './celec.service.js';
 import { CenaceService } from './cenace.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
@@ -288,5 +288,71 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     await generateDailyReport(filePath, liveData);
     expect(fs.existsSync(filePath)).toBe(true);
     console.log(`[Test Daily Report] Successfully generated and verified daily report file: ${filePath}`);
+  }, 120000);
+
+  it('should generate current forecast cards for all 6 hydroelectric plants using real live telemetry and save to generated/', async () => {
+    const celec = new CelecService();
+    const generatedDir = path.join(__dirname, '..', '..', 'generated');
+    if (!fs.existsSync(generatedDir)) {
+      fs.mkdirSync(generatedDir, { recursive: true });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    const dateStr = `${year}-${month}-${day}`;
+    const timeStr = `${hours}-${minutes}-${seconds}`;
+
+    const plantKeys = ['cocaCodoSinclair', 'mazar', 'molino', 'sopladora', 'agoyan', 'minasSanFrancisco'];
+
+    const { hora } = celec.getEcuadorDateParts(now);
+    const targetIdx = 24 - hora;
+
+    for (const key of plantKeys) {
+      const plant = hydroelectricPlants[key];
+      let realFlow = plant.visualData?.defaultFlow || 100;
+
+      try {
+        const flowPoints = await celec.fetchFlow(plant, now);
+        if (flowPoints && flowPoints.length > 0) {
+          const safeIdx = Math.min(Math.max(0, targetIdx), flowPoints.length - 1);
+          if (flowPoints[safeIdx]?.value !== null && flowPoints[safeIdx]?.value !== undefined) {
+            realFlow = flowPoints[safeIdx].value!;
+          } else {
+            // Find latest non-null value
+            for (let i = safeIdx; i < flowPoints.length; i++) {
+              if (flowPoints[i]?.value !== null && flowPoints[i]?.value !== undefined) {
+                realFlow = flowPoints[i].value!;
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[Test Forecast Card] Failed to fetch live flow for ${plant.name}. Using baseline: ${realFlow}`);
+      }
+
+      console.log(`[Test Forecast Card] 🔮 Generating forecast card for ${plant.name} with live flow: ${realFlow.toFixed(2)} m³/s...`);
+
+      const pngBuffer = await generateForecastCard(key, {
+        currentFlow: realFlow,
+        date: now
+      });
+
+      expect(pngBuffer).toBeInstanceOf(Buffer);
+      expect(pngBuffer.length).toBeGreaterThan(1000);
+
+      const filename = `forecast_${key}_${dateStr}_${timeStr}.png`;
+      const filePath = path.join(generatedDir, filename);
+
+      fs.writeFileSync(filePath, pngBuffer);
+      expect(fs.existsSync(filePath)).toBe(true);
+      console.log(`[Test Forecast Card] 💾 Saved forecast card to: ${filePath} (${pngBuffer.length} bytes)`);
+    }
   }, 120000);
 });
