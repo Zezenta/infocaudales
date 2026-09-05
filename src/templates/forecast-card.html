@@ -578,7 +578,7 @@
       const height = 380;
       const padLeft = 45;
       const padRight = 45;
-      const padTop = 18;
+      const padTop = 24;
       const padBottom = 65;
 
       const plotW = width - padLeft - padRight;
@@ -657,8 +657,8 @@
         gridHtml += `<line class="forecast-grid-line" x1="${padLeft}" y1="${yPos}" x2="${width - padRight}" y2="${yPos}" />`;
         gridHtml += `<text class="forecast-axis-text" x="${padLeft - 6}" y="${yPos + 4}" text-anchor="end">${Math.round(flowVal)}</text>`;
       }
-      // Y-Axis Unit at the top
-      gridHtml += `<text class="forecast-axis-text" x="${padLeft - 6}" y="${padTop - 6}" text-anchor="end" font-size="8.5" font-weight="bold" fill="#64748b">m³/s</text>`;
+      // Y-Axis Unit at the top with clean separation
+      gridHtml += `<text class="forecast-axis-text" x="${padLeft - 6}" y="${padTop - 10}" text-anchor="end" font-size="8.5" font-weight="bold" fill="#64748b">m³/s</text>`;
 
       // Vertical X Steps & Now Line
       const dateInputVal = document.getElementById('date-input').value;
