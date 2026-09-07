@@ -96,16 +96,16 @@ export function buildForecastPostText(
 
   let header = '';
   if (plantKey === 'cocaCodoSinclair') {
-    header = `🔮 Pronóstico Coca Codo Sinclair (+${forecast.horizonHours}h)\n#CocaCodoSinclair #CCS`;
+    header = `Pronóstico Coca Codo Sinclair (+${forecast.horizonHours}h)\n#CocaCodoSinclair #CCS`;
   } else {
     const plantHashtag = `#${plant.name.replace(/\s+/g, '')}`;
     const pauteHashtag = plant.isPauteComplex ? ' #Paute' : '';
-    header = `🔮 Pronóstico ${plantHashtag}${pauteHashtag} (+${forecast.horizonHours}h)`;
+    header = `Pronóstico ${plantHashtag}${pauteHashtag} (+${forecast.horizonHours}h)`;
   }
 
-  const flowLine = `🌊 Caudal actual: ${formatVal(forecast.currentFlow)} m³/s\n🎯 Proyección (${forecast.horizonHours}h): ${formatVal(forecast.targetFlow)} m³/s (${deltaFormatted})`;
-  const probLine = `🛡️ Rango esperado 50%: ${formatVal(forecast.p25)} - ${formatVal(forecast.p75)} m³/s`;
-  const modelLine = `📊 Modelo: ${forecast.modelName} (MAE: ${formatVal(forecast.mae, 1)} m³/s)`;
+  const flowLine = `Caudal actual: ${formatVal(forecast.currentFlow)} m³/s\nProyección (${forecast.horizonHours}h): ${formatVal(forecast.targetFlow)} m³/s (${deltaFormatted})`;
+  const probLine = `Rango esperado 50%: ${formatVal(forecast.p25)} - ${formatVal(forecast.p75)} m³/s`;
+  const modelLine = `Modelo: ${forecast.modelName} (MAE: ${formatVal(forecast.mae, 1)} m³/s)`;
 
   return `${header}\n\n${flowLine}\n${probLine}\n${modelLine}\n\n#Ecuador #Energía #Hidrología`;
 }
@@ -116,7 +116,7 @@ export function buildForecastPostText(
  */
 export function buildWeeklyAccuracyReportText(summary: import('../services/forecast-history.service.js').WeeklyAccuracyReportSummary): string {
   if (summary.totalForecastsResolved === 0) {
-    return `📊 Reporte Semanal de Precisión Hidrológica (Modelos 6h)\n\n` +
+    return `Reporte Semanal de Precisión Hidrológica (Modelos 6h)\n\n` +
       `No se registraron suficientes pronósticos concluidos en los últimos 7 días para evaluar.\n\n` +
       `#Ecuador #Energía #Hidrología`;
   }
@@ -125,22 +125,30 @@ export function buildWeeklyAccuracyReportText(summary: import('../services/forec
   const p25Pct = formatVal(summary.overallP25P75Coverage * 100, 1);
   const maeVal = formatVal(summary.overallMae, 1);
 
-  let bestPlantStr = '';
-  if (summary.mostAccuratePlant && summary.plants[summary.mostAccuratePlant]) {
-    const best = summary.plants[summary.mostAccuratePlant];
-    bestPlantStr = `🏆 Central más precisa: ${best.plantName} (MAE: ${formatVal(best.observedMae, 1)} m³/s)\n\n`;
+  let highlightsStr = '';
+  const best = summary.mostAccuratePlant ? summary.plants[summary.mostAccuratePlant] : null;
+  const worst = summary.leastAccuratePlant ? summary.plants[summary.leastAccuratePlant] : null;
+
+  if (best) {
+    highlightsStr += `Mayor precisión: ${best.plantName} (MAE: ${formatVal(best.observedMae, 1)} m³/s)\n`;
+  }
+  if (worst && worst.plantKey !== best?.plantKey) {
+    highlightsStr += `Menor precisión: ${worst.plantName} (MAE: ${formatVal(worst.observedMae, 1)} m³/s)\n`;
+  }
+  if (highlightsStr) {
+    highlightsStr += '\n';
   }
 
   const plantLines = Object.values(summary.plants).map(p => {
     return `• ${p.plantName}: MAE ${formatVal(p.observedMae, 1)} m³/s | Tendencia: ${formatVal(p.directionalAccuracy * 100, 0)}%`;
   }).join('\n');
 
-  return `📊 Reporte Semanal de Calibración & Precisión (Modelos 6h)\n\n` +
+  return `Reporte Semanal de Calibración y Precisión (Modelos 6h)\n\n` +
     `Evaluación de los pronósticos emitidos esta semana:\n` +
-    `🎯 Acierto de Tendencia: ${dirAccPct}%\n` +
-    `📈 Error Medio (MAE): ${maeVal} m³/s\n` +
-    `🛡️ Cobertura Rango 50%: ${p25Pct}%\n\n` +
-    `${bestPlantStr}` +
+    `Acierto de Tendencia: ${dirAccPct}%\n` +
+    `Error Medio (MAE): ${maeVal} m³/s\n` +
+    `Cobertura Rango 50%: ${p25Pct}%\n\n` +
+    `${highlightsStr}` +
     `Desempeño por central:\n${plantLines}\n\n` +
     `Transparencia y calibración continua de modelos multi-COMID.\n` +
     `#Ecuador #Energía #Hidrología`;

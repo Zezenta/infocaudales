@@ -50,6 +50,7 @@ export interface WeeklyAccuracyReportSummary {
   overallP10P90Coverage: number;
   plants: Record<string, WeeklyPlantAccuracyMetrics>;
   mostAccuratePlant: string | null;
+  leastAccuratePlant: string | null;
 }
 
 /**
@@ -220,7 +221,8 @@ export function calculateWeeklyAccuracyMetrics(
       overallP25P75Coverage: 0,
       overallP10P90Coverage: 0,
       plants: {},
-      mostAccuratePlant: null
+      mostAccuratePlant: null,
+      leastAccuratePlant: null
     };
   }
 
@@ -256,7 +258,9 @@ export function calculateWeeklyAccuracyMetrics(
 
   const plantMetrics: Record<string, WeeklyPlantAccuracyMetrics> = {};
   let bestScore = Infinity;
+  let worstScore = -Infinity;
   let mostAccuratePlant: string | null = null;
+  let leastAccuratePlant: string | null = null;
 
   for (const [key, group] of Object.entries(plantStats)) {
     const count = group.records.length;
@@ -318,11 +322,15 @@ export function calculateWeeklyAccuracyMetrics(
       horizons: horizonsResult
     };
 
-    // Rank most accurate by ratio of observed MAE relative to baseline MAE expected
+    // Rank most and least accurate by ratio of observed MAE relative to baseline MAE expected
     const score = obsMae / Math.max(1, expMae);
     if (score < bestScore) {
       bestScore = score;
       mostAccuratePlant = key;
+    }
+    if (score > worstScore) {
+      worstScore = score;
+      leastAccuratePlant = key;
     }
   }
 
@@ -335,6 +343,7 @@ export function calculateWeeklyAccuracyMetrics(
     overallP25P75Coverage: parseFloat((totalP25P75Covered / rows.length).toFixed(3)),
     overallP10P90Coverage: parseFloat((totalP10P90Covered / rows.length).toFixed(3)),
     plants: plantMetrics,
-    mostAccuratePlant
+    mostAccuratePlant,
+    leastAccuratePlant
   };
 }
