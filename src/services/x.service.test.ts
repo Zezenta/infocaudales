@@ -9,6 +9,10 @@ dotenv.config();
 
 describe('XService (X SDK API Integration)', () => {
   it('should post a test image and text to X', async () => {
+    if (process.env.TEST_LIVE_X !== 'true') {
+      console.log('[X Test] Skipping live tweet posting test (set TEST_LIVE_X=true to enable).');
+      return;
+    }
     const xService = new XService();
     const generatedDir = path.join(__dirname, '..', '..', 'generated');
     let testImagePath = path.join(generatedDir, 'testimage.png');
