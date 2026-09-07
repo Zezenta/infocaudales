@@ -73,3 +73,75 @@ export function buildMessageText(
 
   return `${header}\n\n${cotaStr}${caudalStr}\n\n${genStr}`;
 }
+
+/**
+ * Builds the exact social media text for an individual 6-hour hydrological forecast post.
+ */
+export function buildForecastPostText(
+  plant: HydroelectricPlant,
+  plantKey: string,
+  forecast: {
+    currentFlow: number;
+    targetFlow: number;
+    p25: number;
+    p75: number;
+    horizonHours: number;
+    modelName: string;
+    mae: number;
+  }
+): string {
+  const deltaPct = ((forecast.targetFlow - forecast.currentFlow) / Math.max(0.1, forecast.currentFlow)) * 100;
+  const deltaSign = deltaPct >= 0 ? '+' : '-';
+  const deltaFormatted = `${deltaSign}${formatVal(Math.abs(deltaPct), 1)}%`;
+
+  let header = '';
+  if (plantKey === 'cocaCodoSinclair') {
+    header = `🔮 Pronóstico Coca Codo Sinclair (+${forecast.horizonHours}h)\n#CocaCodoSinclair #CCS`;
+  } else {
+    const plantHashtag = `#${plant.name.replace(/\s+/g, '')}`;
+    const pauteHashtag = plant.isPauteComplex ? ' #Paute' : '';
+    header = `🔮 Pronóstico ${plantHashtag}${pauteHashtag} (+${forecast.horizonHours}h)`;
+  }
+
+  const flowLine = `🌊 Caudal actual: ${formatVal(forecast.currentFlow)} m³/s\n🎯 Proyección (${forecast.horizonHours}h): ${formatVal(forecast.targetFlow)} m³/s (${deltaFormatted})`;
+  const probLine = `🛡️ Rango esperado 50%: ${formatVal(forecast.p25)} - ${formatVal(forecast.p75)} m³/s`;
+  const modelLine = `📊 Modelo: ${forecast.modelName} (MAE: ${formatVal(forecast.mae, 1)} m³/s)`;
+
+  return `${header}\n\n${flowLine}\n${probLine}\n${modelLine}\n\n#Ecuador #Energía #Hidrología`;
+}
+
+/**
+ * Builds the text-only weekly accuracy and calibration summary post for Sundays.
+ * Editable template for easy customization.
+ */
+export function buildWeeklyAccuracyReportText(summary: import('../services/forecast-history.service.js').WeeklyAccuracyReportSummary): string {
+  if (summary.totalForecastsResolved === 0) {
+    return `📊 Reporte Semanal de Precisión Hidrológica (Modelos 6h)\n\n` +
+      `No se registraron suficientes pronósticos concluidos en los últimos 7 días para evaluar.\n\n` +
+      `#Ecuador #Energía #Hidrología`;
+  }
+
+  const dirAccPct = formatVal(summary.overallDirectionalAccuracy * 100, 1);
+  const p25Pct = formatVal(summary.overallP25P75Coverage * 100, 1);
+  const maeVal = formatVal(summary.overallMae, 1);
+
+  let bestPlantStr = '';
+  if (summary.mostAccuratePlant && summary.plants[summary.mostAccuratePlant]) {
+    const best = summary.plants[summary.mostAccuratePlant];
+    bestPlantStr = `🏆 Central más precisa: ${best.plantName} (MAE: ${formatVal(best.observedMae, 1)} m³/s)\n\n`;
+  }
+
+  const plantLines = Object.values(summary.plants).map(p => {
+    return `• ${p.plantName}: MAE ${formatVal(p.observedMae, 1)} m³/s | Tendencia: ${formatVal(p.directionalAccuracy * 100, 0)}%`;
+  }).join('\n');
+
+  return `📊 Reporte Semanal de Calibración & Precisión (Modelos 6h)\n\n` +
+    `Evaluación de los pronósticos emitidos esta semana:\n` +
+    `🎯 Acierto de Tendencia: ${dirAccPct}%\n` +
+    `📈 Error Medio (MAE): ${maeVal} m³/s\n` +
+    `🛡️ Cobertura Rango 50%: ${p25Pct}%\n\n` +
+    `${bestPlantStr}` +
+    `Desempeño por central:\n${plantLines}\n\n` +
+    `Transparencia y calibración continua de modelos multi-COMID.\n` +
+    `#Ecuador #Energía #Hidrología`;
+}

@@ -21,9 +21,16 @@ import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
 import { CelecService, CelecPointValue } from './services/celec.service.js';
 import { CenaceService } from './services/cenace.service.js';
-import { generateReportCard, generateDailyReport, TelemetryData } from './services/report-generator.service.js';
+import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
+import { PredictionService } from './services/prediction.service.js';
 import { XService } from './services/x.service.js';
-import { buildMessageText } from './utils/post-formatter.js';
+import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText } from './utils/post-formatter.js';
+import {
+  recordForecastBatch,
+  reconcileForecastsWithCelec,
+  calculateWeeklyAccuracyMetrics,
+  ForecastLogRecord
+} from './services/forecast-history.service.js';
 import { readCenaceHistory, saveCenaceHistory, recordCenaceBaseline, getCcsYesterdayHourlyCurve } from './utils/cenace-history.js';
 import { db } from './utils/db.js';
 import { systemLogger } from './utils/logger.js';
@@ -50,6 +57,7 @@ console.error = (message?: any, ...optionalParams: any[]) => {
 const celecService = new CelecService();
 const cenaceService = new CenaceService();
 const xService = new XService();
+const predictionService = new PredictionService();
 
 class DataPendingError extends Error {
   constructor(message: string) {
@@ -613,11 +621,174 @@ async function publishDailyConsolidatedReport() {
   }
 }
 
+// --- HYDROLOGICAL FORECASTS & ACCURACY EVALUATION ---
+
+export const FORECAST_SCHEDULE_ROTATION: Record<number, { morning: string; afternoon: string }> = {
+  1: { morning: 'cocaCodoSinclair', afternoon: 'mazar' },              // Lunes
+  2: { morning: 'molino', afternoon: 'agoyan' },                       // Martes
+  3: { morning: 'sopladora', afternoon: 'minasSanFrancisco' },         // Miércoles
+  4: { morning: 'cocaCodoSinclair', afternoon: 'mazar' },              // Jueves
+  5: { morning: 'molino', afternoon: 'agoyan' },                       // Viernes
+  6: { morning: 'sopladora', afternoon: 'minasSanFrancisco' },         // Sábado
+  0: { morning: 'cocaCodoSinclair', afternoon: '' }                    // Domingo
+};
+
+export async function publishForecastForPlant(plantKey: string): Promise<void> {
+  const plant = hydroelectricPlants[plantKey];
+  if (!plant) {
+    throw new Error(`[Forecast] Hydroelectric plant ${plantKey} not found in configuration.`);
+  }
+
+  console.log(`\n[Forecast] Starting forecast publication pipeline for: ${plant.name} (${plantKey})...`);
+  const now = new Date();
+
+  // 1. Fetch current live telemetry (flow)
+  let telemetry = await fetchTelemetry(plantKey, false);
+  let currentFlow = telemetry?.flow;
+  if (currentFlow === null || currentFlow === undefined || isNaN(currentFlow)) {
+    console.warn(`[Forecast] Live flow telemetry unavailable for ${plant.name}. Querying CELEC directly...`);
+    const flowPoints = await celecService.fetchFlow(plant, now);
+    if (flowPoints && flowPoints.length > 0) {
+      for (const pt of flowPoints) {
+        if (pt.value !== null && pt.value !== undefined && pt.value >= 0) {
+          currentFlow = pt.value;
+          break;
+        }
+      }
+    }
+  }
+
+  if (currentFlow === null || currentFlow === undefined || isNaN(currentFlow)) {
+    throw new Error(`[Forecast] Unable to retrieve valid flow for ${plant.name}. Forecast publication aborted.`);
+  }
+
+  console.log(`[Forecast] Current flow for ${plant.name}: ${currentFlow} m³/s. Generating 6h multi-COMID forecast...`);
+
+  // 2. Generate 6h multi-COMID predictions
+  const prediction = await predictionService.predictPlantFlow(plantKey, {
+    horizon: '6h',
+    currentFlow,
+    targetDate: now
+  });
+
+  // 3. Save forecast trajectory steps to SQLite for weekly evaluation
+  const batch: Omit<ForecastLogRecord, 'id' | 'actualFlow' | 'resolvedAt'>[] = [];
+  for (let h = 1; h <= 6; h++) {
+    const stepPoint = prediction.trajectory.find(t => t.step === h);
+    const p50 = stepPoint?.percentiles?.p50 ?? prediction.forecastFlow;
+    const p10 = stepPoint?.percentiles?.p10 ?? (prediction.percentiles?.p10 ?? p50);
+    const p25 = stepPoint?.percentiles?.p25 ?? (prediction.percentiles?.p25 ?? p50);
+    const p75 = stepPoint?.percentiles?.p75 ?? (prediction.percentiles?.p75 ?? p50);
+    const p90 = stepPoint?.percentiles?.p90 ?? (prediction.percentiles?.p90 ?? p50);
+    const modelSpec = stepPoint?.modelSpec ?? prediction.modelSpec;
+
+    batch.push({
+      plantKey,
+      issuedAt: now.getTime(),
+      targetTime: now.getTime() + h * 3600 * 1000,
+      horizonHours: h,
+      modelName: modelSpec?.modelName || 'multi_guarded',
+      initialFlow: currentFlow,
+      predictedFlow: p50,
+      p10,
+      p25,
+      p75,
+      p90,
+      maeExpected: modelSpec?.mae || prediction.mae
+    });
+  }
+  recordForecastBatch(batch);
+
+  // 4. Generate high-resolution Forecast PNG card
+  console.log(`[Forecast] Generating 600x600 PNG forecast card for ${plant.name}...`);
+  const imageBuffer = await generateForecastCard(plantKey, {
+    currentFlow,
+    date: now
+  });
+
+  // 5. Format social media post text
+  const messageText = buildForecastPostText(plant, plantKey, {
+    currentFlow,
+    targetFlow: prediction.forecastFlow,
+    p25: prediction.percentiles.p25,
+    p75: prediction.percentiles.p75,
+    horizonHours: 6,
+    modelName: prediction.modelSpec?.modelName || 'multi_guarded',
+    mae: prediction.mae
+  });
+
+  console.log(`\n📱 [Forecast Post Text]\n${messageText}\n`);
+
+  // 6. Post to X
+  console.log(`[Forecast] Publishing forecast card for ${plant.name} to X...`);
+  await xService.postTweet(messageText, imageBuffer);
+  console.log(`[Forecast] Successfully published forecast for ${plant.name}!`);
+}
+
+export async function publishForecastTurn(slot: 'morning' | 'afternoon'): Promise<void> {
+  const ecTime = new Date(Date.now() - 5 * 3600 * 1000);
+  const dayOfWeek = ecTime.getUTCDay(); // 0: Sun, 1: Mon, ... 6: Sat
+  const plantKey = FORECAST_SCHEDULE_ROTATION[dayOfWeek]?.[slot];
+
+  if (!plantKey) {
+    console.log(`[Forecast] No scheduled plant for day ${dayOfWeek} slot ${slot}. Skipping.`);
+    return;
+  }
+
+  // First reconcile past forecasts with real observations
+  try {
+    await reconcileForecastsWithCelec(celecService);
+  } catch (err: any) {
+    console.warn(`[Forecast] Telemetry reconciliation error before turn: ${err?.message || err}`);
+  }
+
+  try {
+    await publishForecastForPlant(plantKey);
+  } catch (err: any) {
+    console.error(`[Forecast] Failed forecast publication turn for ${plantKey}:`, err?.message || err);
+  }
+}
+
+export async function publishWeeklyAccuracyReport(): Promise<void> {
+  console.log('\n[CronJob] [Weekly Accuracy Report] Starting Sunday accuracy evaluation...');
+
+  // 1. Reconcile any pending forecasts first
+  try {
+    await reconcileForecastsWithCelec(celecService);
+  } catch (err: any) {
+    console.warn('[Weekly Accuracy Report] Non-fatal error during telemetry reconciliation:', err?.message || err);
+  }
+
+  // 2. Calculate accuracy metrics for the past 7 days
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 3600 * 1000;
+  const summary = calculateWeeklyAccuracyMetrics(sevenDaysAgo, now);
+
+  // 3. Format text-only report
+  const reportText = buildWeeklyAccuracyReportText(summary);
+  console.log('\n📱 [Weekly Accuracy Report Text]\n' + reportText + '\n');
+
+  // 4. Post text report to X
+  try {
+    await xService.postText(reportText);
+    console.log('[CronJob] [Weekly Accuracy Report] Published successfully to X!');
+  } catch (err: any) {
+    console.error('[CronJob] [Weekly Accuracy Report] Error posting to X:', err?.message || err);
+  }
+}
+
+// --- CRON JOBS SETUP ---
+
 const hourlyCenaceLogJob = new CronJob(
   '0 * * * *',
   async () => {
     console.log('\n[CronJob] Running hourly Coca Codo Sinclair baseline recording...');
     await recordCenaceBaseline(cenaceService);
+    try {
+      await reconcileForecastsWithCelec(celecService);
+    } catch (err: any) {
+      console.warn('[CronJob] Hourly forecast reconciliation failed:', err?.message || err);
+    }
   },
   null,
   true,
@@ -634,11 +805,50 @@ const dailyReportCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+// 06:30 AM (Morning Forecast - 1 plant per weekly rotation)
+const morningForecastCronJob = new CronJob(
+  '30 6 * * *',
+  async () => {
+    console.log('[CronJob] Running Morning Forecast Publishing Cycle (06:30 AM)...');
+    await publishForecastTurn('morning');
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
+// 16:30 PM (Afternoon Forecast - 1 plant per weekly rotation)
+const afternoonForecastCronJob = new CronJob(
+  '30 16 * * *',
+  async () => {
+    console.log('[CronJob] Running Afternoon Forecast Publishing Cycle (16:30 PM)...');
+    await publishForecastTurn('afternoon');
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
+// Sunday 20:30 PM (Weekly Accuracy Report - Text Only)
+const sundayAccuracyCronJob = new CronJob(
+  '30 20 * * 0',
+  async () => {
+    console.log('[CronJob] Running Sunday Weekly Accuracy Report (20:30 PM)...');
+    await publishWeeklyAccuracyReport();
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
 morningCronJob.start();
 afternoonCronJob.start();
 eveningCronJob.start();
 hourlyCenaceLogJob.start();
 dailyReportCronJob.start();
+morningForecastCronJob.start();
+afternoonForecastCronJob.start();
+sundayAccuracyCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
@@ -662,4 +872,27 @@ if (process.env.FORCE_DAILY_REPORT === 'true') {
       console.error('[FORCE DAILY REPORT] Forced daily report publication failed:', err?.message || err);
     }
   }, 10000);
+}
+
+if (process.env.FORCE_FORECAST === 'true') {
+  const target = process.env.FORCE_FORECAST_PLANT || 'cocaCodoSinclair';
+  console.log(`[FORCE FORECAST] Triggering forecast publication for ${target} in 5 seconds...`);
+  setTimeout(async () => {
+    try {
+      await publishForecastForPlant(target);
+    } catch (err: any) {
+      console.error(`[FORCE FORECAST] Forced forecast publication failed for ${target}:`, err?.message || err);
+    }
+  }, 5000);
+}
+
+if (process.env.FORCE_ACCURACY_REPORT === 'true') {
+  console.log('[FORCE ACCURACY REPORT] Triggering weekly accuracy report in 8 seconds...');
+  setTimeout(async () => {
+    try {
+      await publishWeeklyAccuracyReport();
+    } catch (err: any) {
+      console.error('[FORCE ACCURACY REPORT] Forced weekly accuracy report failed:', err?.message || err);
+    }
+  }, 8000);
 }
