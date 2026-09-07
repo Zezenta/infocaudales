@@ -145,7 +145,7 @@ export function buildWeeklyAccuracyReportText(summary: import('../services/forec
   }).join('\n');
 
   return `📊 Reporte Semanal de Calibración y Precisión (Modelos 6h)\n\n` +
-    `Evaluación de los pronósticos emitidos esta semana:\n` +
+    `Evaluación de los pronósticos experimentales emitidos esta semana:\n` +
     `Acierto de Tendencia: ${dirAccPct}%\n` +
     `Error Medio (MAE): ${maeVal} m³/s\n` +
     `Cobertura Rango 50%: ${p25Pct}%\n\n` +
