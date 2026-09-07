@@ -376,9 +376,11 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
 
 console.log('--------------------------------------------------');
 console.log('🤖 Infocaudales Bot Started');
-console.log('CENACE Hourly Logging: Every hour on the hour');
-console.log('Publishing Schedule: 7:15 AM, 1:15 PM, 7:15 PM (America/Guayaquil)');
-console.log('Daily Report Schedule: 8:30 AM (America/Guayaquil)');
+console.log('Hourly Recording & Reconciliation: Every hour at xx:15 (America/Guayaquil)');
+console.log('Telemetry Reports Schedule: 7:15 AM, 1:15 PM, 7:15 PM (America/Guayaquil)');
+console.log('Daily Consolidated Report: 8:30 AM (America/Guayaquil)');
+console.log('Hydrological Forecasts: 6:30 AM, 16:30 PM (America/Guayaquil)');
+console.log('Sunday Accuracy Report: Sundays at 20:30 PM (America/Guayaquil)');
 console.log('--------------------------------------------------');
 
 // 7:15 AM (Morning Run - 4 plants)
@@ -780,9 +782,9 @@ export async function publishWeeklyAccuracyReport(): Promise<void> {
 // --- CRON JOBS SETUP ---
 
 const hourlyCenaceLogJob = new CronJob(
-  '0 * * * *',
+  '15 * * * *',
   async () => {
-    console.log('\n[CronJob] Running hourly Coca Codo Sinclair baseline recording...');
+    console.log('\n[CronJob] Running hourly Coca Codo Sinclair baseline recording and forecast reconciliation (xx:15)...');
     await recordCenaceBaseline(cenaceService);
     try {
       await reconcileForecastsWithCelec(celecService);
