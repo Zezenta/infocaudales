@@ -106,8 +106,9 @@ export function buildForecastPostText(
   const flowLine = `🌊 Caudal actual: ${formatVal(forecast.currentFlow)} m³/s\nProyección (${forecast.horizonHours}h): ${formatVal(forecast.targetFlow)} m³/s (${deltaFormatted})`;
   const probLine = `Rango esperado 50%: ${formatVal(forecast.p25)} - ${formatVal(forecast.p75)} m³/s`;
   const modelLine = `Modelo: ${forecast.modelName} (MAE: ${formatVal(forecast.mae, 1)} m³/s)`;
+  const disclaimerLine = `Importante: Este es un pronóstico estimado basado en modelos experimentales. No es un pronóstico oficial ni debería de tomarse como tal.`;
 
-  return `${header}\n\n${flowLine}\n${probLine}\n${modelLine}\n\n#Ecuador #Energía #Hidrología`;
+  return `${header}\n\n${flowLine}\n${probLine}\n${modelLine}\n\n${disclaimerLine}\n\n#Ecuador #Energía #Hidrología`;
 }
 
 /**
@@ -150,7 +151,6 @@ export function buildWeeklyAccuracyReportText(summary: import('../services/forec
     `Cobertura Rango 50%: ${p25Pct}%\n\n` +
     `${highlightsStr}` +
     `Desempeño por central:\n${plantLines}\n\n` +
-    `Transparencia y calibración continua de modelos multi-COMID.\n` +
     `#Ecuador #Energía #Hidrología`;
 }
 
