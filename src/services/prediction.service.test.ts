@@ -178,7 +178,7 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
     });
 
     it('builds fan chart trajectory with historical points and future expanding uncertainty cone', () => {
-      const fixedDate = new Date('2026-09-04T14:00:00');
+      const fixedDate = new Date('2026-09-04T14:00:00-05:00');
       const trajectory = service.buildForecastTrajectory({
         currentFlow: 450,
         forecastFlow: 600,
