@@ -188,6 +188,16 @@ export class PredictionService {
     return trajectory;
   }
 
+  // ============================================================================================
+  // ⚠️ MODELOS FÍSICOS, DE CASCADA Y HORIZONTES DIARIOS (NO UTILIZADOS EN EL PIPELINE ACTUAL DE 6H)
+  //
+  // AVISO: Las siguientes funciones fueron desarrolladas para horizontes diarios de 24 horas,
+  // análisis físico con estaciones terrestres del INAMHI y balances de túneles en cascada.
+  // Actualmente NO se utilizan en el pipeline automatizado de publicación de pronósticos a 6 horas
+  // (el cual opera con el motor Multi-COMID 'predictPlantHourlyMultiComid').
+  // Se preservan intactas para investigación, simulaciones de cascada y futuros horizontes a 24h.
+  // ============================================================================================
+
   /**
    * Evaluates Coca Codo Sinclair (CCS) flow forecast for a 3-hour future horizon.
    * Model: Multivariate Linear Regression on Quijos/Salado levels & lagged precipitation.
@@ -452,6 +462,11 @@ export class PredictionService {
       calculatedAt: new Date()
     };
   }
+
+  // ============================================================================================
+  // 🚀 MOTOR PRINCIPAL ACTIVO: PRONÓSTICOS HORARIOS MULTI-COMID (1H A 6H)
+  // Utilizado por el pipeline automatizado de cronjobs y tarjetas de pronóstico
+  // ============================================================================================
 
   /**
    * Evaluates the hourly multi-COMID forecast for any plant for horizons 1h through 6h,
