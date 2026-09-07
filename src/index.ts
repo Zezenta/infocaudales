@@ -24,7 +24,7 @@ import { CenaceService } from './services/cenace.service.js';
 import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
 import { PredictionService } from './services/prediction.service.js';
 import { XService } from './services/x.service.js';
-import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText } from './utils/post-formatter.js';
+import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from './utils/post-formatter.js';
 import {
   recordForecastBatch,
   reconcileForecastsWithCelec,
@@ -773,12 +773,21 @@ export async function publishWeeklyAccuracyReport(): Promise<void> {
   const reportText = buildWeeklyAccuracyReportText(summary);
   console.log('\n📱 [Weekly Accuracy Report Text]\n' + reportText + '\n');
 
-  // 4. Post text report to X
+  // 4. Post text report to X with fallback to compact version
   try {
     await xService.postText(reportText);
     console.log('[CronJob] [Weekly Accuracy Report] Published successfully to X!');
   } catch (err: any) {
-    console.error('[CronJob] [Weekly Accuracy Report] Error posting to X:', err?.message || err);
+    console.warn('[CronJob] [Weekly Accuracy Report] Error posting full report to X:', err?.message || err);
+    console.log('[CronJob] [Weekly Accuracy Report] Attempting fallback to compact version (<280 chars)...');
+    try {
+      const compactText = buildCompactWeeklyAccuracyReportText(summary);
+      console.log('\n📱 [Weekly Accuracy Report Fallback Text]\n' + compactText + '\n');
+      await xService.postText(compactText);
+      console.log('[CronJob] [Weekly Accuracy Report] Compact fallback report published successfully to X!');
+    } catch (fallbackErr: any) {
+      console.error('[CronJob] [Weekly Accuracy Report] Error posting compact fallback report to X:', fallbackErr?.message || fallbackErr);
+    }
   }
 }
 

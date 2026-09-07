@@ -153,3 +153,34 @@ export function buildWeeklyAccuracyReportText(summary: import('../services/forec
     `Transparencia y calibración continua de modelos multi-COMID.\n` +
     `#Ecuador #Energía #Hidrología`;
 }
+
+/**
+ * Builds a compact fallback text (< 280 chars) for weekly accuracy reports
+ * in case standard/long-form post delivery fails.
+ */
+export function buildCompactWeeklyAccuracyReportText(summary: import('../services/forecast-history.service.js').WeeklyAccuracyReportSummary): string {
+  if (summary.totalForecastsResolved === 0) {
+    return `📊 Reporte Semanal de Precisión Hidrológica (6h)\n\n` +
+      `Sin suficientes pronósticos concluidos en los últimos 7 días para evaluar.\n\n` +
+      `#Ecuador #Energía #Hidrología`;
+  }
+
+  const dirAccPct = formatVal(summary.overallDirectionalAccuracy * 100, 0);
+  const p25Pct = formatVal(summary.overallP25P75Coverage * 100, 0);
+  const maeVal = formatVal(summary.overallMae, 1);
+
+  let topPlantStr = '';
+  const best = summary.mostAccuratePlant ? summary.plants[summary.mostAccuratePlant] : null;
+  if (best) {
+    topPlantStr = `• Mayor precisión: ${best.plantName} (MAE: ${formatVal(best.observedMae, 1)} m³/s)\n`;
+  }
+
+  return `📊 Reporte Semanal de Precisión (Modelos 6h)\n\n` +
+    `Métricas de la semana:\n` +
+    `• Acierto Tendencia: ${dirAccPct}%\n` +
+    `• Error Medio (MAE): ${maeVal} m³/s\n` +
+    `• Cobertura Rango 50%: ${p25Pct}%\n` +
+    `${topPlantStr}\n` +
+    `#Ecuador #Energía #Hidrología`;
+}
+

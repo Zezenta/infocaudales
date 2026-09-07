@@ -9,6 +9,7 @@ import {
   ForecastLogRecord
 } from './forecast-history.service.js';
 import { CelecService } from './celec.service.js';
+import { buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from '../utils/post-formatter.js';
 
 describe('ForecastHistoryService (SQLite Persistence & Metrics)', () => {
   const baseTime = 1788580800000; // Fixed epoch time (e.g. 2026-09-04 12:00 UTC)
@@ -205,4 +206,53 @@ describe('ForecastHistoryService (SQLite Persistence & Metrics)', () => {
     expect(metrics.totalForecastsResolved).toBe(1);
     expect(metrics.plants.sopladora.observedMae).toBe(0.5); // |95 - 94.5| = 0.5
   });
+
+  it('should generate both full and compact fallback weekly report text under 280 characters', () => {
+    // Generate sample summary metrics
+    const summary = {
+      windowStart: baseTime - 7 * 24 * 3600 * 1000,
+      windowEnd: baseTime,
+      totalForecastsResolved: 24,
+      overallMae: 12.45,
+      overallDirectionalAccuracy: 0.833,
+      overallP25P75Coverage: 0.625,
+      overallP10P90Coverage: 0.916,
+      plants: {
+        cocaCodoSinclair: {
+          plantKey: 'cocaCodoSinclair',
+          plantName: 'Coca Codo Sinclair',
+          totalEvaluations: 4,
+          observedMae: 14.2,
+          expectedMae: 25.0,
+          directionalAccuracy: 0.75,
+          p25p75Coverage: 0.50,
+          p10p90Coverage: 1.00
+        },
+        mazar: {
+          plantKey: 'mazar',
+          plantName: 'Mazar',
+          totalEvaluations: 4,
+          observedMae: 5.1,
+          expectedMae: 6.0,
+          directionalAccuracy: 1.0,
+          p25p75Coverage: 0.75,
+          p10p90Coverage: 1.00
+        }
+      },
+      mostAccuratePlant: 'mazar',
+      leastAccuratePlant: 'cocaCodoSinclair'
+    };
+
+    const fullText = buildWeeklyAccuracyReportText(summary);
+    expect(fullText).toContain('📊 Reporte Semanal de Calibración y Precisión');
+    expect(fullText).toContain('Mazar');
+    expect(fullText).toContain('Coca Codo Sinclair');
+
+    const compactText = buildCompactWeeklyAccuracyReportText(summary);
+    expect(compactText).toContain('📊 Reporte Semanal de Precisión');
+    expect(compactText).toContain('Mazar');
+    // Ensure the compact version is strictly below the 280-character Twitter limit
+    expect(compactText.length).toBeLessThanOrEqual(280);
+  });
 });
+
