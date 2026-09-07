@@ -1,5 +1,5 @@
 import { db } from '../utils/db.js';
-import { CelecService } from './celec.service.js';
+import { CelecService, CelecPointValue } from './celec.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 import { predictionLogger } from '../utils/logger.js';
 
@@ -152,20 +152,17 @@ export async function reconcileForecastsWithCelec(
       for (const item of items) {
         if (!item.id) continue;
         const targetDate = new Date(item.targetTime);
-        const targetHour = targetDate.getHours();
-
-        // Match closest hour point
-        let closestPoint = flowPoints.find(p => p.hour === targetHour);
-        if (!closestPoint) {
-          // Fallback to closest timestamp distance (< 90 minutes)
-          let minDiff = Infinity;
-          for (const p of flowPoints) {
-            const pTime = new Date(p.date).getTime();
-            const diff = Math.abs(pTime - item.targetTime);
-            if (diff < minDiff && diff <= 90 * 60 * 1000) {
-              minDiff = diff;
-              closestPoint = p;
-            }
+        let closestPoint: CelecPointValue | undefined = undefined;
+        let minDiff = Infinity;
+        for (const p of flowPoints) {
+          const rawTime = p.timestamp || (p as any).date;
+          if (!rawTime) continue;
+          const pTime = new Date(rawTime).getTime();
+          if (isNaN(pTime)) continue;
+          const diff = Math.abs(pTime - item.targetTime);
+          if (diff < minDiff && diff <= 90 * 60 * 1000) {
+            minDiff = diff;
+            closestPoint = p;
           }
         }
 

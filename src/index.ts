@@ -644,18 +644,22 @@ export async function publishForecastForPlant(plantKey: string): Promise<void> {
   console.log(`\n[Forecast] Starting forecast publication pipeline for: ${plant.name} (${plantKey})...`);
   const now = new Date();
 
-  // 1. Fetch current live telemetry (flow)
-  let telemetry = await fetchTelemetry(plantKey, false);
-  let currentFlow = telemetry?.flow;
-  if (currentFlow === null || currentFlow === undefined || isNaN(currentFlow)) {
-    console.warn(`[Forecast] Live flow telemetry unavailable for ${plant.name}. Querying CELEC directly...`);
-    const flowPoints = await celecService.fetchFlow(plant, now);
-    if (flowPoints && flowPoints.length > 0) {
-      for (const pt of flowPoints) {
-        if (pt.value !== null && pt.value !== undefined && pt.value >= 0) {
-          currentFlow = pt.value;
-          break;
-        }
+  // 1. Fetch current live flow directly from CELEC
+  const flowPoints = await celecService.fetchFlow(plant, now);
+  const { hora } = celecService.getEcuadorDateParts(now);
+  const targetIdx = Math.max(0, 24 - hora);
+  const flowResult = extractCelecPoint(flowPoints, targetIdx, false);
+  
+  let currentFlow = flowResult.value;
+
+  // Contingency for Coca Codo Sinclair: if read flow is 0 m³/s, find latest non-zero flow of the day
+  if (plantKey === 'cocaCodoSinclair' && currentFlow === 0 && flowPoints) {
+    for (let i = targetIdx; i < flowPoints.length; i++) {
+      const pVal = flowPoints[i]?.value;
+      if (pVal !== null && pVal !== undefined && pVal > 0) {
+        currentFlow = pVal;
+        console.log(`[Forecast] Contingency applied: using non-zero flow (${currentFlow} m³/s) for Coca Codo Sinclair.`);
+        break;
       }
     }
   }
@@ -675,8 +679,9 @@ export async function publishForecastForPlant(plantKey: string): Promise<void> {
 
   // 3. Save forecast trajectory steps to SQLite for weekly evaluation
   const batch: Omit<ForecastLogRecord, 'id' | 'actualFlow' | 'resolvedAt'>[] = [];
+  const trajectory = prediction.trajectory || [];
   for (let h = 1; h <= 6; h++) {
-    const stepPoint = prediction.trajectory.find(t => t.step === h);
+    const stepPoint = trajectory.find(t => t.step === h);
     const p50 = stepPoint?.percentiles?.p50 ?? prediction.forecastFlow;
     const p10 = stepPoint?.percentiles?.p10 ?? (prediction.percentiles?.p10 ?? p50);
     const p25 = stepPoint?.percentiles?.p25 ?? (prediction.percentiles?.p25 ?? p50);
@@ -696,7 +701,7 @@ export async function publishForecastForPlant(plantKey: string): Promise<void> {
       p25,
       p75,
       p90,
-      maeExpected: modelSpec?.mae || prediction.mae
+      maeExpected: modelSpec?.mae ?? prediction.mae ?? 0
     });
   }
   recordForecastBatch(batch);
@@ -712,11 +717,11 @@ export async function publishForecastForPlant(plantKey: string): Promise<void> {
   const messageText = buildForecastPostText(plant, plantKey, {
     currentFlow,
     targetFlow: prediction.forecastFlow,
-    p25: prediction.percentiles.p25,
-    p75: prediction.percentiles.p75,
+    p25: prediction.percentiles?.p25 ?? prediction.forecastFlow,
+    p75: prediction.percentiles?.p75 ?? prediction.forecastFlow,
     horizonHours: 6,
     modelName: prediction.modelSpec?.modelName || 'multi_guarded',
-    mae: prediction.mae
+    mae: prediction.mae ?? 0
   });
 
   console.log(`\n📱 [Forecast Post Text]\n${messageText}\n`);

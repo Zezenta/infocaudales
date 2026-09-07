@@ -99,7 +99,7 @@ export interface PredictionResult {
   pearsonR?: number;                // Empirical Pearson correlation coefficient
   mae?: number;                     // Mean Absolute Error in m³/s
   isFallback: boolean;              // True if any degraded sensor fallback was used
-  components: Record<string, number | null | undefined>; // Intermediate inputs/variables
+  components: Record<string, number | string | null | undefined>; // Intermediate inputs/variables
   calculatedAt: Date;
   modelSpec?: MultiComidModelSpec;
 }

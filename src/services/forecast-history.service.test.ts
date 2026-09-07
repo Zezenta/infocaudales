@@ -185,13 +185,10 @@ describe('ForecastHistoryService (SQLite Persistence & Metrics)', () => {
       }
     ]);
 
-    const targetHour = new Date(targetTime).getHours();
-
     const mockCelec = {
       fetchFlow: async () => [
         {
-          date: new Date(targetTime).toISOString(),
-          hour: targetHour,
+          timestamp: new Date(targetTime).toISOString(),
           value: 94.5
         }
       ]
