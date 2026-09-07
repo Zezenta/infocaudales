@@ -116,29 +116,31 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     let totalNationalMWh = 0;
     let systemHourly: number[] = new Array(24).fill(1000);
 
-    try {
-      const cenaceData = await cenace.fetchYesterdayOperationalData();
-      if (cenaceData.plantsDailyTotalMWh.cocaCodoSinclair) {
-        ccsYesterdayMWh = cenaceData.plantsDailyTotalMWh.cocaCodoSinclair;
-      }
-      if (cenaceData.compositionMWh) {
-        totalNationalMWh = Object.values(cenaceData.compositionMWh).reduce((a: any, b: any) => a + b, 0);
-      }
-      const rawCurve = cenaceData.generationCurve || [];
-      if (rawCurve.length > 0) {
-        systemHourly = [];
-        if (rawCurve.length >= 48) {
-          for (let i = 0; i < 24; i++) {
-            systemHourly.push(rawCurve[i * 2].totalHydroMW || 1000);
-          }
-        } else {
-          for (let i = 0; i < 24; i++) {
-            systemHourly.push(rawCurve[i]?.totalHydroMW || 1000);
+    if (process.env.TEST_LIVE_TELEMETRY === 'true') {
+      try {
+        const cenaceData = await cenace.fetchYesterdayOperationalData();
+        if (cenaceData.plantsDailyTotalMWh.cocaCodoSinclair) {
+          ccsYesterdayMWh = cenaceData.plantsDailyTotalMWh.cocaCodoSinclair;
+        }
+        if (cenaceData.compositionMWh) {
+          totalNationalMWh = Object.values(cenaceData.compositionMWh).reduce((a: any, b: any) => a + b, 0);
+        }
+        const rawCurve = cenaceData.generationCurve || [];
+        if (rawCurve.length > 0) {
+          systemHourly = [];
+          if (rawCurve.length >= 48) {
+            for (let i = 0; i < 24; i++) {
+              systemHourly.push(rawCurve[i * 2].totalHydroMW || 1000);
+            }
+          } else {
+            for (let i = 0; i < 24; i++) {
+              systemHourly.push(rawCurve[i]?.totalHydroMW || 1000);
+            }
           }
         }
+      } catch (err) {
+        console.warn('[Test Daily Report] Failed to fetch live CENACE yesterday totals. Using baseline curve.', err);
       }
-    } catch (err) {
-      console.warn('[Test Daily Report] Failed to fetch live CENACE yesterday totals. Using baseline curve.', err);
     }
 
     const sumSystem = systemHourly.reduce((a, b) => a + b, 0) || 1;
@@ -147,22 +149,24 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
 
     // Fetch CCS caudal history
     let ccsFlowHistory = [280, 290, 310, 340, 380, 420, 450, 460, 440, 410, 390, 380, 370, 390, 410, 430, 460, 470, 450, 420, 390, 350, 320, 300];
-    try {
-      const ccsFlowPointsRaw = await celec.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday);
-      if (ccsFlowPointsRaw && ccsFlowPointsRaw.length > 0) {
-        const reversed = [...ccsFlowPointsRaw].reverse();
-        const arr = new Array(24).fill(620);
-        for (let i = 0; i < 24; i++) {
-          if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
-            arr[i] = reversed[i].value;
-          } else if (i > 0) {
-            arr[i] = arr[i - 1];
+    if (process.env.TEST_LIVE_TELEMETRY === 'true') {
+      try {
+        const ccsFlowPointsRaw = await celec.fetchFlow(hydroelectricPlants.cocaCodoSinclair, yesterday);
+        if (ccsFlowPointsRaw && ccsFlowPointsRaw.length > 0) {
+          const reversed = [...ccsFlowPointsRaw].reverse();
+          const arr = new Array(24).fill(620);
+          for (let i = 0; i < 24; i++) {
+            if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
+              arr[i] = reversed[i].value;
+            } else if (i > 0) {
+              arr[i] = arr[i - 1];
+            }
           }
+          ccsFlowHistory = arr;
         }
-        ccsFlowHistory = arr;
+      } catch (err) {
+        console.warn('[Test Daily Report] Failed to fetch CELEC flow for Coca Codo Sinclair.');
       }
-    } catch (err) {
-      console.warn('[Test Daily Report] Failed to fetch CELEC flow for Coca Codo Sinclair.');
     }
 
     const ccsMaxMW = hydroelectricPlants.cocaCodoSinclair.physicalData?.maxEnergyMW || 1500;
@@ -189,50 +193,15 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
       const maxMW = plant.physicalData?.maxEnergyMW || 100;
 
       let genHistory = item.defaultGen;
-      try {
-        const genPointsRaw = await celec.fetchDailyEnergy(plant, yesterday);
-        if (genPointsRaw && genPointsRaw.length > 0) {
-          const reversed = [...genPointsRaw].reverse();
-          const arr = new Array(24).fill(plant.visualData?.defaultGen || 50);
-          for (let i = 0; i < 24; i++) {
-            if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
-              arr[i] = reversed[i].value;
-            } else if (i > 0) {
-              arr[i] = arr[i - 1];
-            }
-          }
-          genHistory = arr;
-        }
-      } catch (err) {
-        // use defaultGen
-      }
-
       let caudalHistory = item.defaultCaudal;
-      try {
-        const flowPointsRaw = await celec.fetchFlow(plant, yesterday);
-        if (flowPointsRaw && flowPointsRaw.length > 0) {
-          const reversed = [...flowPointsRaw].reverse();
-          const arr = new Array(24).fill(item.defFlow);
-          for (let i = 0; i < 24; i++) {
-            if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
-              arr[i] = reversed[i].value;
-            } else if (i > 0) {
-              arr[i] = arr[i - 1];
-            }
-          }
-          caudalHistory = arr;
-        }
-      } catch (err) {
-        // use defaultCaudal
-      }
-
       let cotaHistory = item.defaultCota;
-      if (plant.physicalData?.minLevelMasl !== undefined) {
+
+      if (process.env.TEST_LIVE_TELEMETRY === 'true') {
         try {
-          const levelPointsRaw = await celec.fetchLevel(plant, yesterday);
-          if (levelPointsRaw && levelPointsRaw.length > 0) {
-            const reversed = [...levelPointsRaw].reverse();
-            const arr = new Array(24).fill(item.defCota);
+          const genPointsRaw = await celec.fetchDailyEnergy(plant, yesterday);
+          if (genPointsRaw && genPointsRaw.length > 0) {
+            const reversed = [...genPointsRaw].reverse();
+            const arr = new Array(24).fill(plant.visualData?.defaultGen || 50);
             for (let i = 0; i < 24; i++) {
               if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
                 arr[i] = reversed[i].value;
@@ -240,12 +209,52 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
                 arr[i] = arr[i - 1];
               }
             }
-            cotaHistory = arr;
+            genHistory = arr;
           }
         } catch (err) {
-          // use defaultCota
+          // use defaultGen
         }
-      } else {
+
+        try {
+          const flowPointsRaw = await celec.fetchFlow(plant, yesterday);
+          if (flowPointsRaw && flowPointsRaw.length > 0) {
+            const reversed = [...flowPointsRaw].reverse();
+            const arr = new Array(24).fill(item.defFlow);
+            for (let i = 0; i < 24; i++) {
+              if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
+                arr[i] = reversed[i].value;
+              } else if (i > 0) {
+                arr[i] = arr[i - 1];
+              }
+            }
+            caudalHistory = arr;
+          }
+        } catch (err) {
+          // use defaultCaudal
+        }
+
+        if (plant.physicalData?.minLevelMasl !== undefined) {
+          try {
+            const levelPointsRaw = await celec.fetchLevel(plant, yesterday);
+            if (levelPointsRaw && levelPointsRaw.length > 0) {
+              const reversed = [...levelPointsRaw].reverse();
+              const arr = new Array(24).fill(item.defCota);
+              for (let i = 0; i < 24; i++) {
+                if (reversed[i] && reversed[i].value !== null && reversed[i].value !== undefined) {
+                  arr[i] = reversed[i].value;
+                } else if (i > 0) {
+                  arr[i] = arr[i - 1];
+                }
+              }
+              cotaHistory = arr;
+            }
+          } catch (err) {
+            // use defaultCota
+          }
+        } else {
+          cotaHistory = undefined as any;
+        }
+      } else if (plant.physicalData?.minLevelMasl === undefined) {
         cotaHistory = undefined as any;
       }
 
@@ -317,24 +326,26 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
       const plant = hydroelectricPlants[key];
       let realFlow = plant.visualData?.defaultFlow || 100;
 
-      try {
-        const flowPoints = await celec.fetchFlow(plant, now);
-        if (flowPoints && flowPoints.length > 0) {
-          const safeIdx = Math.min(Math.max(0, targetIdx), flowPoints.length - 1);
-          if (flowPoints[safeIdx]?.value !== null && flowPoints[safeIdx]?.value !== undefined) {
-            realFlow = flowPoints[safeIdx].value!;
-          } else {
-            // Find latest non-null value
-            for (let i = safeIdx; i < flowPoints.length; i++) {
-              if (flowPoints[i]?.value !== null && flowPoints[i]?.value !== undefined) {
-                realFlow = flowPoints[i].value!;
-                break;
+      if (process.env.TEST_LIVE_TELEMETRY === 'true') {
+        try {
+          const flowPoints = await celec.fetchFlow(plant, now);
+          if (flowPoints && flowPoints.length > 0) {
+            const safeIdx = Math.min(Math.max(0, targetIdx), flowPoints.length - 1);
+            if (flowPoints[safeIdx]?.value !== null && flowPoints[safeIdx]?.value !== undefined) {
+              realFlow = flowPoints[safeIdx].value!;
+            } else {
+              // Find latest non-null value
+              for (let i = safeIdx; i < flowPoints.length; i++) {
+                if (flowPoints[i]?.value !== null && flowPoints[i]?.value !== undefined) {
+                  realFlow = flowPoints[i].value!;
+                  break;
+                }
               }
             }
           }
+        } catch (err) {
+          console.warn(`[Test Forecast Card] Failed to fetch live flow for ${plant.name}. Using baseline: ${realFlow}`);
         }
-      } catch (err) {
-        console.warn(`[Test Forecast Card] Failed to fetch live flow for ${plant.name}. Using baseline: ${realFlow}`);
       }
 
       console.log(`[Test Forecast Card] 🔮 Generating forecast card for ${plant.name} with live flow: ${realFlow.toFixed(2)} m³/s...`);
