@@ -130,10 +130,10 @@ export function buildWeeklyAccuracyReportText(summary: import('../services/forec
   const worst = summary.leastAccuratePlant ? summary.plants[summary.leastAccuratePlant] : null;
 
   if (best) {
-    highlightsStr += `🏆 Mayor precisión: ${best.plantName} (MAE: ${formatVal(best.observedMae, 1)} m³/s)\n`;
+    highlightsStr += `Mayor precisión: ${best.plantName} (MAE: ${formatVal(best.observedMae, 1)} m³/s)\n`;
   }
   if (worst && worst.plantKey !== best?.plantKey) {
-    highlightsStr += `⚠️ Menor precisión: ${worst.plantName} (MAE: ${formatVal(worst.observedMae, 1)} m³/s)\n`;
+    highlightsStr += `Menor precisión: ${worst.plantName} (MAE: ${formatVal(worst.observedMae, 1)} m³/s)\n`;
   }
   if (highlightsStr) {
     highlightsStr += '\n';
@@ -143,11 +143,11 @@ export function buildWeeklyAccuracyReportText(summary: import('../services/forec
     return `• ${p.plantName}: MAE ${formatVal(p.observedMae, 1)} m³/s | Tendencia: ${formatVal(p.directionalAccuracy * 100, 0)}%`;
   }).join('\n');
 
-  return `📊 Reporte Semanal de Calibración & Precisión (Modelos 6h)\n\n` +
+  return `📊 Reporte Semanal de Calibración y Precisión (Modelos 6h)\n\n` +
     `Evaluación de los pronósticos emitidos esta semana:\n` +
-    `🎯 Acierto de Tendencia: ${dirAccPct}%\n` +
-    `📈 Error Medio (MAE): ${maeVal} m³/s\n` +
-    `🛡️ Cobertura Rango 50%: ${p25Pct}%\n\n` +
+    `Acierto de Tendencia: ${dirAccPct}%\n` +
+    `Error Medio (MAE): ${maeVal} m³/s\n` +
+    `Cobertura Rango 50%: ${p25Pct}%\n\n` +
     `${highlightsStr}` +
     `Desempeño por central:\n${plantLines}\n\n` +
     `Transparencia y calibración continua de modelos multi-COMID.\n` +
