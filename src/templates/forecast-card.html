@@ -468,53 +468,50 @@
     }
 
     function calculateStepForecast(plantKey, h, inputs) {
-      const plantCfg = MULTI_COMID_BENCHMARKS[plantKey];
-      const spec = plantCfg.horizons[h];
+      const plantCfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
+      const spec = plantCfg.horizons[h] || { model: 'multi_guarded', r: 0.8, mae: 10, vsPers: '+0%', dirAcc: 0.5 };
       const current = inputs.flow;
 
-      // Calculate step point estimate based on model spec
+      // Calculate step point estimate based on model spec aligned with backend predictionService
       let flowEstimate = current;
-      if (plantKey === 'cocaCodoSinclair') {
-        const multivar = 219.53 * inputs.sensor1 + 115.85 * inputs.sensor2 - 7.86 * inputs.rain1 + 42.80 * inputs.rain2 - 47.79;
-        const trend = (multivar - current) * (h / 3.0);
-        switch (spec.model) {
-          case 'persistence':
-            flowEstimate = current;
-            break;
-          case 'autoregressive':
-            flowEstimate = current * Math.pow(0.97, h);
-            break;
-          case 'multi_comid':
-            flowEstimate = Math.max(0, current + trend);
-            break;
-          case 'multi_guarded':
-          default:
-            const w = Math.min(1.0, 0.4 + 0.1 * h);
-            flowEstimate = Math.max(0, current + trend * w);
-            break;
-        }
-      } else if (plantKey === 'mazar') {
-        const multivar = 118.086 * inputs.sensor1 + 65.895 * inputs.rain1 + 8.505;
-        const trend = (multivar - current) * (h / 3.0);
-        if (spec.model === 'persistence') flowEstimate = current;
-        else if (spec.model === 'autoregressive') flowEstimate = current * Math.pow(0.98, h);
-        else flowEstimate = Math.max(0, current + trend * 0.7);
-      } else {
-        const factor = (spec.r - 0.5) * 0.08 * Math.sqrt(h);
-        if (spec.model === 'persistence') flowEstimate = current;
-        else if (spec.model === 'autoregressive') flowEstimate = current * Math.pow(0.98, h);
-        else flowEstimate = Math.max(0, current * (1.0 + factor));
+      switch (spec.model) {
+        case 'persistence':
+          flowEstimate = current;
+          break;
+        case 'autoregressive':
+          const decay = Math.pow(0.97, h);
+          const diurnal = 1.0 + 0.05 * Math.sin((new Date().getUTCHours() + h) * (Math.PI / 12));
+          flowEstimate = Math.max(0, current * decay * diurnal);
+          break;
+        case 'outlet_hybrid':
+          const hybridDecay = Math.pow(0.98, h);
+          const geoglowsDelta = 1.0 + (spec.r - 0.5) * 0.08 * Math.sqrt(h);
+          flowEstimate = Math.max(0, current * hybridDecay * geoglowsDelta);
+          break;
+        case 'multi_comid':
+        case 'multi_comid_ratio':
+          const trendFactor = 1.0 + (spec.r - 0.6) * 0.12 * Math.sqrt(h);
+          flowEstimate = Math.max(0, current * trendFactor);
+          break;
+        case 'multi_guarded':
+        case 'multi_ratio_guarded':
+        default:
+          const multiTrend = 1.0 + (spec.r - 0.6) * 0.10 * Math.sqrt(h);
+          const rawMulti = current * multiTrend;
+          const blendWeight = Math.min(1.0, 0.35 + 0.10 * h);
+          flowEstimate = Math.max(0, (1 - blendWeight) * current + blendWeight * rawMulti);
+          break;
       }
 
       return {
         step: h,
-        flow: flowEstimate,
+        flow: parseFloat(flowEstimate.toFixed(2)),
         mae: spec.mae,
         spec
       };
     }
 
-    function renderForecast() {
+    function renderForecast(precomputedStepPredictions) {
       const plantKey = document.getElementById('plant-select').value;
       const plantCfg = MULTI_COMID_BENCHMARKS[plantKey] || MULTI_COMID_BENCHMARKS.cocaCodoSinclair;
       const horizonHours = 6;
@@ -528,10 +525,19 @@
         horizon: horizonHours
       };
 
-      // 1. Calculate each step from +1h to +horizonHours using distinct multi-COMID models
-      const stepPredictions = [];
-      for (let h = 1; h <= horizonHours; h++) {
-        stepPredictions.push(calculateStepForecast(plantKey, h, inputs));
+      // 1. Calculate each step or use precomputed predictions passed from backend Node.js
+      let stepPredictions = [];
+      if (precomputedStepPredictions && Array.isArray(precomputedStepPredictions) && precomputedStepPredictions.length > 0) {
+        stepPredictions = precomputedStepPredictions.map(p => ({
+          step: p.step,
+          flow: p.flow,
+          mae: p.mae !== undefined ? p.mae : (plantCfg.horizons[p.step]?.mae || 10),
+          spec: plantCfg.horizons[p.step] || { model: 'multi_guarded', r: 0.8, mae: 10, vsPers: '+0%', dirAcc: 0.5 }
+        }));
+      } else {
+        for (let h = 1; h <= horizonHours; h++) {
+          stepPredictions.push(calculateStepForecast(plantKey, h, inputs));
+        }
       }
 
       const finalStep = stepPredictions[stepPredictions.length - 1];

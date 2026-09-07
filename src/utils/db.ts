@@ -8,7 +8,9 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const DB_PATH = path.join(dataDir, 'infocaudales.db');
+const isTestEnv = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+const defaultDbName = isTestEnv ? 'infocaudales.test.db' : 'infocaudales.db';
+const DB_PATH = process.env.DB_PATH || path.join(dataDir, defaultDbName);
 export const db = new Database(DB_PATH);
 
 // Initialize Database Schema

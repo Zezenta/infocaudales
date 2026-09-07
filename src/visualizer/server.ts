@@ -237,20 +237,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.url === '/forecast-card.css') {
-    const forecastCssPath = path.join(TEMPLATE_DIR, 'forecast-card.css');
-    fs.readFile(forecastCssPath, 'utf8', (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error loading forecast CSS');
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'text/css' });
-      res.end(data);
-    });
-    return;
-  }
-  
   // Serve Font files
   if (req.url && req.url.startsWith('/fonts/')) {
     const fontName = path.basename(req.url);
@@ -294,7 +280,7 @@ fs.watch(TEMPLATE_DIR, (eventType, filename) => {
   if (!filename) return;
   
   // Only trigger for the actual template files
-  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html', 'forecast-card.css'];
+  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html'];
   if (!watchedFiles.includes(filename)) {
     return;
   }

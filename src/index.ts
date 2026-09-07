@@ -710,7 +710,12 @@ export async function publishForecastForPlant(plantKey: string): Promise<void> {
   console.log(`[Forecast] Generating 600x600 PNG forecast card for ${plant.name}...`);
   const imageBuffer = await generateForecastCard(plantKey, {
     currentFlow,
-    date: now
+    date: now,
+    stepPredictions: trajectory.filter(t => !t.isHistorical && t.step > 0).map(t => ({
+      step: t.step,
+      flow: t.percentiles?.p50 ?? prediction.forecastFlow,
+      mae: t.modelSpec?.mae ?? prediction.mae ?? 0
+    }))
   });
 
   // 5. Format social media post text

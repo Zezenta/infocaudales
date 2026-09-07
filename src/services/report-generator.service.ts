@@ -343,6 +343,7 @@ export async function generateForecastCard(
     rain1?: number;
     rain2?: number;
     date?: Date;
+    stepPredictions?: Array<{ step: number; flow: number; mae?: number; modelSpec?: any }>;
   }
 ): Promise<Buffer> {
   const browser = await getBrowser();
@@ -394,19 +395,20 @@ export async function generateForecastCard(
         if (r2) r2.value = String(opts.rain2);
       }
 
-      // 4. Set date input if provided
+      // 4. Set date input if provided with strict Ecuador timezone (UTC-5)
       if (opts.date) {
         const dt = new Date(opts.date);
         const tzOffset = 300 * 60000;
-        const localISO = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16);
+        const ecDate = new Date(dt.getTime() - tzOffset);
+        const localISO = ecDate.toISOString().slice(0, 16);
         const dateInput = document.getElementById('date-input') as HTMLInputElement;
         if (dateInput) {
           dateInput.value = localISO;
-          const day = String(dt.getDate()).padStart(2, '0');
-          const month = String(dt.getMonth() + 1).padStart(2, '0');
-          const year = dt.getFullYear();
-          const hours = String(dt.getHours()).padStart(2, '0');
-          const mins = String(dt.getMinutes()).padStart(2, '0');
+          const day = String(ecDate.getUTCDate()).padStart(2, '0');
+          const month = String(ecDate.getUTCMonth() + 1).padStart(2, '0');
+          const year = ecDate.getUTCFullYear();
+          const hours = String(ecDate.getUTCHours()).padStart(2, '0');
+          const mins = String(ecDate.getUTCMinutes()).padStart(2, '0');
           const cardTs = document.getElementById('card-timestamp');
           if (cardTs) cardTs.innerText = `${day}/${month}/${year} ${hours}:${mins}`;
         }
@@ -415,7 +417,7 @@ export async function generateForecastCard(
       // @ts-ignore
       if (typeof updateBadges === 'function') updateBadges();
       // @ts-ignore
-      if (typeof renderForecast === 'function') renderForecast();
+      if (typeof renderForecast === 'function') renderForecast(opts.stepPredictions);
     }, plantKey, options);
 
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
