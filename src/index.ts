@@ -742,13 +742,6 @@ export async function publishForecastTurn(slot: 'morning' | 'afternoon'): Promis
     return;
   }
 
-  // First reconcile past forecasts with real observations
-  try {
-    await reconcileForecastsWithCelec(celecService);
-  } catch (err: any) {
-    console.warn(`[Forecast] Telemetry reconciliation error before turn: ${err?.message || err}`);
-  }
-
   try {
     await publishForecastForPlant(plantKey);
   } catch (err: any) {
