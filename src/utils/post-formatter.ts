@@ -96,14 +96,14 @@ export function buildForecastPostText(
 
   let header = '';
   if (plantKey === 'cocaCodoSinclair') {
-    header = `Pronóstico Coca Codo Sinclair (+${forecast.horizonHours}h)\n#CocaCodoSinclair #CCS`;
+    header = `🔮 Pronóstico Coca Codo Sinclair (+${forecast.horizonHours}h)\n#CocaCodoSinclair #CCS`;
   } else {
     const plantHashtag = `#${plant.name.replace(/\s+/g, '')}`;
     const pauteHashtag = plant.isPauteComplex ? ' #Paute' : '';
-    header = `Pronóstico ${plantHashtag}${pauteHashtag} (+${forecast.horizonHours}h)`;
+    header = `🔮 Pronóstico ${plantHashtag}${pauteHashtag} (+${forecast.horizonHours}h)`;
   }
 
-  const flowLine = `Caudal actual: ${formatVal(forecast.currentFlow)} m³/s\nProyección (${forecast.horizonHours}h): ${formatVal(forecast.targetFlow)} m³/s (${deltaFormatted})`;
+  const flowLine = `🌊 Caudal actual: ${formatVal(forecast.currentFlow)} m³/s\nProyección (${forecast.horizonHours}h): ${formatVal(forecast.targetFlow)} m³/s (${deltaFormatted})`;
   const probLine = `Rango esperado 50%: ${formatVal(forecast.p25)} - ${formatVal(forecast.p75)} m³/s`;
   const modelLine = `Modelo: ${forecast.modelName} (MAE: ${formatVal(forecast.mae, 1)} m³/s)`;
 
