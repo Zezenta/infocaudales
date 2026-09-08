@@ -114,8 +114,7 @@ export class PredictionService {
       const d = new Date(base.getTime() + stepHours * 3600000);
       const ecDate = new Date(d.getTime() - 5 * 3600000);
       const hh = String(ecDate.getUTCHours()).padStart(2, '0');
-      const mm = String(ecDate.getUTCMinutes()).padStart(2, '0');
-      return `${hh}:${mm}`;
+      return `${hh}:00`;
     };
 
     // 1. Past observed points (e.g. -6h to -1h at 1-hour resolution)
