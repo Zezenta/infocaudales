@@ -86,3 +86,12 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     }
   }
 };
+
+export const ALL_HYDRO_PLANTS_PINS: PlantPin[] = [
+  { lat: -0.21, lon: -77.70, label: 'Coca Codo Sinclair' },
+  { lat: -2.54, lon: -78.63, label: 'Mazar' },
+  { lat: -2.58, lon: -78.58, label: 'Molino' },
+  { lat: -2.61, lon: -78.54, label: 'Sopladora' },
+  { lat: -1.40, lon: -78.36, label: 'Agoyán' },
+  { lat: -3.34, lon: -79.48, label: 'Minas San Francisco' }
+];

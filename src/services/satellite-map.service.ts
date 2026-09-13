@@ -44,6 +44,7 @@ export class SatelliteMapService {
   private readonly geoserverGlobalUrl = 'https://services.geoglows.org/geoserver/wms';
   private readonly geoserverGoesUrl = 'https://services.geoglows.org/geoserver/goes/wms';
   private readonly nasaGibsUrl = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
+  private readonly tileCache = new Map<string, Buffer>();
 
   /**
    * Fetches available GOES-16 satellite timestamps from GEOGLOWS GeoServer GetCapabilities.
@@ -181,10 +182,15 @@ export class SatelliteMapService {
   }
 
   /**
-   * Fetches a single map tile / snapshot buffer from WMS.
+   * Fetches a single map tile / snapshot buffer from WMS (with in-memory cache).
    */
   public async fetchMapTile(options: FetchMapTileOptions): Promise<Buffer> {
     const { url, params } = this.buildWmsUrl(options);
+    const cacheKey = `${url}_${JSON.stringify(params)}`;
+
+    if (this.tileCache.has(cacheKey)) {
+      return this.tileCache.get(cacheKey)!;
+    }
 
     try {
       const response = await axios.get(url, {
@@ -194,13 +200,55 @@ export class SatelliteMapService {
       });
 
       if (response.status === 200 && response.data) {
-        return Buffer.from(response.data);
+        const buf = Buffer.from(response.data);
+        this.tileCache.set(cacheKey, buf);
+        return buf;
       }
       throw new Error(`Invalid response status: ${response.status}`);
     } catch (error: any) {
       systemLogger.error(`[SatelliteMapService] Failed to fetch map tile: ${error?.message || error}`);
       throw error;
     }
+  }
+
+  /**
+   * Asynchronously preloads frames for all 4 layer options in the background.
+   */
+  public preloadAllOptionsBackground(options: { limit?: number; plantKeys?: string[] } = {}): void {
+    const limit = options.limit || 18;
+    const plantKeys = options.plantKeys || ['ecuador', 'cocaCodoSinclair', 'mazar', 'agoyan', 'minasSanFrancisco'];
+    const layerConfigs: Array<{ source: SatelliteSource; layers: string }> = [
+      { source: 'geoserver', layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias' },
+      { source: 'nasa_gibs', layers: 'GOES-East_ABI_Band13_Clean_Infrared' },
+      { source: 'geoserver', layers: 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias' },
+      { source: 'geoserver', layers: 'wrf:wrf_precipitation_daily,ecuador:provincias' }
+    ];
+
+    setTimeout(async () => {
+      systemLogger.info(`[SatelliteMapService] Starting background tile cache preload for ${layerConfigs.length} layers...`);
+      try {
+        const timestamps = await this.fetchGoesTimestamps({ limit });
+        for (const config of layerConfigs) {
+          for (const plantKey of plantKeys) {
+            for (const t of timestamps) {
+              try {
+                await this.fetchMapTile({
+                  source: config.source,
+                  layers: config.layers,
+                  plantKey,
+                  time: t,
+                  width: 800,
+                  height: 800
+                });
+              } catch (err) {}
+            }
+          }
+        }
+        systemLogger.info(`[SatelliteMapService] Background tile cache preloading completed (${this.tileCache.size} tiles cached in RAM).`);
+      } catch (err: any) {
+        systemLogger.warn(`[SatelliteMapService] Background preloader warning: ${err?.message || err}`);
+      }
+    }, 100);
   }
 
   /**

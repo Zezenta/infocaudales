@@ -5,6 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Infocaudales • Visualizador Satelital y Lluvias</title>
   <link rel="stylesheet" href="/rain-map.css">
+  <style>
+    /* Glowing pulse animation for map pins */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 0.3; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+    .pulsing-circle {
+      transform-origin: center;
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    .preload-bar-container {
+      width: 100%;
+      height: 4px;
+      background: #1e293b;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .preload-bar-fill {
+      height: 100%;
+      background: #38bdf8;
+      width: 0%;
+      transition: width 0.2s ease-out;
+    }
+  </style>
 </head>
 <body>
 
@@ -33,7 +59,8 @@
       
       <!-- Video Card Canvas -->
       <div class="video-card-wrapper" id="videoCard">
-        <img id="satelliteLayer" class="satellite-image-layer" src="" alt="Capa Satelital" />
+        <!-- Canvas for instant hardware-accelerated playback -->
+        <canvas id="satelliteCanvas" width="800" height="800" class="satellite-image-layer"></canvas>
         
         <!-- Live SVG Overlay (Matches Exact Video Format) -->
         <svg id="svgOverlay" class="overlay-layer" width="800" height="800" xmlns="http://www.w3.org/2000/svg">
@@ -55,9 +82,12 @@
           <rect id="badgeRect" x="650" y="16" width="130" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
           <text id="overlayBadge" x="715" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">INAMHI / NOAA</text>
 
-          <!-- Dynamic Plant Pin Marker -->
-          <g id="pinGroup" transform="translate(430, 436)" style="display: none;">
-            <circle cx="0" cy="0" r="16" fill="#ef4444" fill-opacity="0.35" />
+          <!-- Layer for Multiple Hydroelectric Plants Pins -->
+          <g id="allPinsLayer"></g>
+
+          <!-- Dynamic Single Plant Pin Marker -->
+          <g id="singlePinGroup" transform="translate(430, 436)" style="display: none;">
+            <circle cx="0" cy="0" r="16" fill="#ef4444" fill-opacity="0.35" class="pulsing-circle" />
             <circle cx="0" cy="0" r="6" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
             <rect id="pinBox" x="12" y="-13" width="120" height="26" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#ef4444" stroke-width="1" />
             <text id="pinLabel" x="20" y="4" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
@@ -78,6 +108,11 @@
           <input type="range" id="scrubSlider" class="scrub-slider" min="0" max="17" value="17" step="1">
           <span id="frameCounter" class="time-badge">18 / 18</span>
         </div>
+
+        <div class="preload-bar-container">
+          <div id="preloadBar" class="preload-bar-fill"></div>
+        </div>
+
         <div class="playback-buttons">
           <div class="btn-group">
             <button id="prevBtn" class="btn">⏮ Anterior</button>
@@ -89,7 +124,8 @@
             </select>
           </div>
           <div class="btn-group">
-            <span id="currentTimeDisplay" class="time-badge" style="color: #38bdf8;">--:-- ECT</span>
+            <span id="preloadStatusText" style="font-size: 12px; color: #94a3b8;">📥 Precargando...</span>
+            <span id="currentTimeDisplay" class="time-badge" style="color: #38bdf8; margin-left: 12px;">--:-- ECT</span>
           </div>
         </div>
       </div>
@@ -125,6 +161,14 @@
             <option value="wrf_daily">🌦️ WRF Pronóstico Numérico de Lluvia</option>
           </select>
         </div>
+
+        <!-- Pins Toggle -->
+        <div class="form-group" style="margin-top: 10px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
+            <input type="checkbox" id="showAllPinsCheckbox" checked>
+            📍 Mostrar Pines de Todas las Centrales
+          </label>
+        </div>
       </div>
 
       <!-- Styling & Overlay Editor -->
@@ -142,11 +186,11 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Marcador de Presa / Captación</label>
+          <label class="form-label">Marcador Individual de Presa / Captación</label>
           <div class="grid-2col">
             <input type="text" id="pinLabelInput" class="form-input" placeholder="Etiqueta del Pin" value="Captación CCS">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);">
-              <input type="checkbox" id="showPinCheckbox" checked> Mostrar Pin
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+              <input type="checkbox" id="showSinglePinCheckbox" checked> Pin Enfocado
             </label>
           </div>
         </div>
@@ -192,23 +236,32 @@
     let playSpeedMs = 250;
     let currentGeometry = null;
     let geometriesMap = {};
+    let allHydroPins = [];
+
+    // Preloaded Frame Images Map: Key `${plantKey}_${layer}_${time}` -> Image
+    const frameImageCache = new Map();
 
     // DOM Elements
-    const satelliteLayer = document.getElementById('satelliteLayer');
+    const canvas = document.getElementById('satelliteCanvas');
+    const ctx = canvas.getContext('2d');
     const scrubSlider = document.getElementById('scrubSlider');
     const playBtn = document.getElementById('playBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const frameCounter = document.getElementById('frameCounter');
     const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+    const preloadBar = document.getElementById('preloadBar');
+    const preloadStatusText = document.getElementById('preloadStatusText');
     const speedSelect = document.getElementById('speedSelect');
     const basinSelect = document.getElementById('basinSelect');
     const layerSelect = document.getElementById('layerSelect');
     const customTitleInput = document.getElementById('customTitleInput');
     const customBadgeInput = document.getElementById('customBadgeInput');
     const pinLabelInput = document.getElementById('pinLabelInput');
-    const showPinCheckbox = document.getElementById('showPinCheckbox');
-    const pinGroup = document.getElementById('pinGroup');
+    const showSinglePinCheckbox = document.getElementById('showSinglePinCheckbox');
+    const showAllPinsCheckbox = document.getElementById('showAllPinsCheckbox');
+    const singlePinGroup = document.getElementById('singlePinGroup');
+    const allPinsLayer = document.getElementById('allPinsLayer');
     const pinBox = document.getElementById('pinBox');
     const pinLabel = document.getElementById('pinLabel');
     const overlayTitle = document.getElementById('overlayTitle');
@@ -226,12 +279,35 @@
 
     // Format ISO string to Ecuador local time
     function formatEcuadorTime(isoStr) {
-      if (!isoStr) return '--:-- ECT';
+      if (!isoStr) return { dateStr: '', timeStr: '', full: '--:-- ECT' };
       const dt = new Date(isoStr);
       const ecDt = new Date(dt.getTime() - 5 * 3600 * 1000);
       const dateStr = ecDt.toISOString().slice(0, 10);
       const timeStr = ecDt.toISOString().slice(11, 16);
       return { dateStr, timeStr, full: `${dateStr}  ${timeStr} ECT` };
+    }
+
+    // Render All Hydroelectric Pins on Map
+    function renderAllPins() {
+      allPinsLayer.innerHTML = '';
+      if (!showAllPinsCheckbox.checked || !currentGeometry) return;
+
+      const bbox = currentGeometry.bbox;
+      allHydroPins.forEach((pin, i) => {
+        const { x, y } = projectGeoToPixel(pin.lat, pin.lon, bbox);
+        if (x >= -10 && x <= 810 && y >= -10 && y <= 810) {
+          const textW = Math.max(70, pin.label.length * 7 + 14);
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${x}, ${y})`);
+          g.innerHTML = `
+            <circle cx="0" cy="0" r="14" fill="#38bdf8" fill-opacity="0.3" class="pulsing-circle" />
+            <circle cx="0" cy="0" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
+            <rect x="10" y="-11" width="${textW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1" />
+            <text x="16" y="4" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
+          `;
+          allPinsLayer.appendChild(g);
+        }
+      });
     }
 
     // Update Overlay UI
@@ -245,33 +321,102 @@
         currentTimeDisplay.textContent = full;
       }
 
-      // Pin update
-      if (currentGeometry && currentGeometry.plantLocation && showPinCheckbox.checked) {
+      // Single Focused Pin
+      if (currentGeometry && currentGeometry.plantLocation && showSinglePinCheckbox.checked) {
         const { lat, lon, label } = currentGeometry.plantLocation;
         const { x, y } = projectGeoToPixel(lat, lon, currentGeometry.bbox);
         if (x >= 0 && x <= 800 && y >= 0 && y <= 800) {
-          pinGroup.setAttribute('transform', `translate(${x}, ${y})`);
+          singlePinGroup.setAttribute('transform', `translate(${x}, ${y})`);
           pinLabel.textContent = pinLabelInput.value || label;
           const textW = Math.max(90, (pinLabel.textContent.length * 8) + 16);
           pinBox.setAttribute('width', textW);
-          pinGroup.style.display = 'block';
+          singlePinGroup.style.display = 'block';
         } else {
-          pinGroup.style.display = 'none';
+          singlePinGroup.style.display = 'none';
         }
       } else {
-        pinGroup.style.display = 'none';
+        singlePinGroup.style.display = 'none';
+      }
+
+      // All Pins
+      renderAllPins();
+    }
+
+    // Preload Sequence for Current View
+    async function preloadSequence() {
+      if (!timestamps.length) return;
+      const plantKey = basinSelect.value;
+      const layer = layerSelect.value;
+
+      preloadStatusText.textContent = `📥 Precargando 0/${timestamps.length}...`;
+      preloadBar.style.width = '0%';
+
+      let loadedCount = 0;
+      const loadPromises = timestamps.map((t, idx) => {
+        const cacheKey = `${plantKey}_${layer}_${t}`;
+        if (frameImageCache.has(cacheKey)) {
+          loadedCount++;
+          const pct = Math.round((loadedCount / timestamps.length) * 100);
+          preloadBar.style.width = `${pct}%`;
+          preloadStatusText.textContent = `⚡ Listo (${loadedCount}/${timestamps.length})`;
+          return Promise.resolve(frameImageCache.get(cacheKey));
+        }
+
+        return new Promise((resolve) => {
+          const img = new Image();
+          const url = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+          img.onload = () => {
+            frameImageCache.set(cacheKey, img);
+            loadedCount++;
+            const pct = Math.round((loadedCount / timestamps.length) * 100);
+            preloadBar.style.width = `${pct}%`;
+            preloadStatusText.textContent = `📥 ${loadedCount}/${timestamps.length} (${pct}%)`;
+            if (idx === currentFrameIdx) {
+              drawCanvasFrame(img);
+            }
+            resolve(img);
+          };
+          img.onerror = () => {
+            loadedCount++;
+            resolve(null);
+          };
+          img.src = url;
+        });
+      });
+
+      await Promise.all(loadPromises);
+      preloadStatusText.textContent = `✅ Listo (${timestamps.length} frames en RAM)`;
+      preloadBar.style.width = '100%';
+    }
+
+    // Draw Image directly to HTML5 Canvas (60fps smooth)
+    function drawCanvasFrame(img) {
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.clearRect(0, 0, 800, 800);
+        ctx.drawImage(img, 0, 0, 800, 800);
       }
     }
 
-    // Load Frame Image
+    // Render Current Frame Instantly from Memory
     function renderCurrentFrame() {
       if (!timestamps.length) return;
       const t = timestamps[currentFrameIdx];
       const plantKey = basinSelect.value;
       const layer = layerSelect.value;
+      const cacheKey = `${plantKey}_${layer}_${t}`;
 
-      const url = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
-      satelliteLayer.src = url;
+      const cachedImg = frameImageCache.get(cacheKey);
+      if (cachedImg) {
+        drawCanvasFrame(cachedImg);
+      } else {
+        // Fallback: direct load
+        const directImg = new Image();
+        directImg.onload = () => {
+          frameImageCache.set(cacheKey, directImg);
+          drawCanvasFrame(directImg);
+        };
+        directImg.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+      }
 
       scrubSlider.value = currentFrameIdx;
       frameCounter.textContent = `${currentFrameIdx + 1} / ${timestamps.length}`;
@@ -281,18 +426,21 @@
     // Fetch Timestamps & Geometries
     async function loadData() {
       try {
-        const [geoRes, timeRes] = await Promise.all([
+        const [geoRes, timeRes, pinsRes] = await Promise.all([
           fetch('/api/basin-geometries').then(r => r.json()),
-          fetch('/api/satellite-timestamps?limit=18').then(r => r.json())
+          fetch('/api/satellite-timestamps?limit=18').then(r => r.json()),
+          fetch('/api/all-hydro-pins').then(r => r.json())
         ]);
 
         geometriesMap = geoRes;
         timestamps = timeRes.timestamps || [];
+        allHydroPins = pinsRes || [];
+
         scrubSlider.max = Math.max(0, timestamps.length - 1);
         currentFrameIdx = scrubSlider.max;
 
         onBasinChange();
-        renderCurrentFrame();
+        preloadSequence();
       } catch (err) {
         console.error('Error loading initial data:', err);
       }
@@ -306,21 +454,25 @@
       if (key === 'ecuador') {
         customTitleInput.value = '🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador';
         customBadgeInput.value = 'INAMHI / NOAA';
-        showPinCheckbox.checked = false;
+        showSinglePinCheckbox.checked = false;
+        showAllPinsCheckbox.checked = true;
       } else {
         customTitleInput.value = `⚡ ${currentGeometry.name} • GOES-16 IR`;
         customBadgeInput.value = currentGeometry.subtitle || 'Cuenca Alta';
-        showPinCheckbox.checked = Boolean(currentGeometry.plantLocation);
+        showSinglePinCheckbox.checked = Boolean(currentGeometry.plantLocation);
+        showAllPinsCheckbox.checked = false;
         if (currentGeometry.plantLocation) {
           pinLabelInput.value = currentGeometry.plantLocation.label;
         }
       }
       updateOverlay();
+      preloadSequence();
       renderCurrentFrame();
     }
 
-    // Playback Engine
+    // Playback Engine (Smooth 60fps Loop)
     function startPlayback() {
+      if (isPlaying) return;
       isPlaying = true;
       playBtn.textContent = '⏸ Pausar';
       playBtn.classList.remove('btn-primary');
@@ -333,10 +485,12 @@
     }
 
     function stopPlayback() {
+      if (!isPlaying) return;
       isPlaying = false;
       playBtn.textContent = '▶ Reproducir';
       playBtn.classList.add('btn-primary');
       clearInterval(playInterval);
+      playInterval = null;
     }
 
     playBtn.addEventListener('click', () => {
@@ -371,11 +525,16 @@
     });
 
     basinSelect.addEventListener('change', onBasinChange);
-    layerSelect.addEventListener('change', renderCurrentFrame);
+    layerSelect.addEventListener('change', () => {
+      preloadSequence();
+      renderCurrentFrame();
+    });
+
     customTitleInput.addEventListener('input', updateOverlay);
     customBadgeInput.addEventListener('input', updateOverlay);
     pinLabelInput.addEventListener('input', updateOverlay);
-    showPinCheckbox.addEventListener('change', updateOverlay);
+    showSinglePinCheckbox.addEventListener('change', updateOverlay);
+    showAllPinsCheckbox.addEventListener('change', updateOverlay);
 
     // Compilation Action
     async function triggerCompile(format = 'mp4') {
@@ -399,7 +558,6 @@
         const data = await res.json();
         if (data.success) {
           const filePath = format === 'mp4' ? data.result.mp4Path : data.result.gifPath;
-          const fileName = filePath.split('/').pop();
           exportStatus.className = 'status-box active success';
           exportStatus.innerHTML = `✅ ¡Compilación completada! Archivo guardado en: <code>${filePath}</code>`;
         } else {

@@ -2,7 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
-import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, ALL_HYDRO_PLANTS_PINS } from '../data/basin-geometries.js';
 import { SatelliteMapService } from '../services/satellite-map.service.js';
 import { VideoCompilerService } from '../services/video-compiler.service.js';
 
@@ -13,6 +13,9 @@ const CSS_FILE = path.join(TEMPLATE_DIR, 'hydro-card.css');
 
 const satelliteMapService = new SatelliteMapService();
 const videoCompilerService = new VideoCompilerService(satelliteMapService);
+
+// Preload recent frames in RAM cache in the background
+satelliteMapService.preloadAllOptionsBackground();
 
 // Keep track of active SSE connections
 const clients: Set<http.ServerResponse> = new Set();
@@ -175,6 +178,13 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/api/basin-geometries') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(BASIN_GEOMETRIES));
+    return;
+  }
+
+  // All Hydroelectric Plants Pins API
+  if (req.method === 'GET' && req.url === '/api/all-hydro-pins') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(ALL_HYDRO_PLANTS_PINS));
     return;
   }
 
