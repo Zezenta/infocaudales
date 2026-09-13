@@ -207,6 +207,60 @@ describe('ForecastHistoryService (SQLite Persistence & Metrics)', () => {
     expect(metrics.plants.sopladora.observedMae).toBe(0.5); // |95 - 94.5| = 0.5
   });
 
+  it('should ignore zero flow values from CELEC and auto-repair when valid positive flow arrives', async () => {
+    const now = new Date();
+    const issuedAt = now.getTime() - 2 * 3600 * 1000;
+    const targetTime = now.getTime() - 1 * 3600 * 1000;
+
+    recordForecastBatch([
+      {
+        plantKey: 'cocaCodoSinclair',
+        issuedAt,
+        targetTime,
+        horizonHours: 1,
+        modelName: 'multi_guarded',
+        initialFlow: 214,
+        predictedFlow: 217.82,
+        p10: 200,
+        p25: 210,
+        p75: 225,
+        p90: 235,
+        maeExpected: 10.82
+      }
+    ]);
+
+    // 1. First run: CELEC returns 0.0 -> Should NOT reconcile
+    const mockCelecZero = {
+      fetchFlow: async () => [
+        {
+          timestamp: new Date(targetTime).toISOString(),
+          value: 0.0
+        }
+      ]
+    } as unknown as CelecService;
+
+    const res1 = await reconcileForecastsWithCelec(mockCelecZero, now.getTime());
+    expect(res1.resolvedCount).toBe(0);
+    expect(res1.pendingCount).toBe(1);
+
+    // 2. Second run: CELEC has now published the real consolidated flow 210.0 m³/s
+    const mockCelecReal = {
+      fetchFlow: async () => [
+        {
+          timestamp: new Date(targetTime).toISOString(),
+          value: 210.0
+        }
+      ]
+    } as unknown as CelecService;
+
+    const res2 = await reconcileForecastsWithCelec(mockCelecReal, now.getTime());
+    expect(res2.resolvedCount).toBe(1);
+    expect(res2.pendingCount).toBe(0);
+
+    const metrics = calculateWeeklyAccuracyMetrics(issuedAt - 1000, now.getTime());
+    expect(metrics.plants.cocaCodoSinclair.observedMae).toBeCloseTo(7.82, 2);
+  });
+
   it('should generate both full and compact fallback weekly report text under 280 characters', () => {
     // Generate sample summary metrics
     const summary = {
