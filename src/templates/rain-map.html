@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infocaudales • Visualizador Satelital y Lluvias</title>
+  <link rel="stylesheet" href="/rain-map.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="brand-icon">🛰️</span>
+      <div>
+        <div class="brand-title">INFOCAUDALES • SATÉLITE & RADAR</div>
+        <div class="brand-subtitle">Visualizador & Editor de Animaciones Satelitales (GOES-16 IR)</div>
+      </div>
+    </div>
+    <nav class="header-links">
+      <a href="/" class="nav-link">📊 Tarjetas</a>
+      <a href="/daily" class="nav-link">📑 Reporte Diario</a>
+      <a href="/forecast" class="nav-link">🔮 Pronósticos</a>
+      <a href="/rain" class="nav-link active">🛰️ Satélite & Lluvia</a>
+    </nav>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="main-container">
+    
+    <!-- Left: 800x800 Video Viewport -->
+    <section class="viewport-section">
+      
+      <!-- Video Card Canvas -->
+      <div class="video-card-wrapper" id="videoCard">
+        <img id="satelliteLayer" class="satellite-image-layer" src="" alt="Capa Satelital" />
+        
+        <!-- Live SVG Overlay (Matches Exact Video Format) -->
+        <svg id="svgOverlay" class="overlay-layer" width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#090d16" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="#090d16" stop-opacity="0.5"/>
+            </linearGradient>
+            <linearGradient id="bottomBarGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#090d16" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#090d16" stop-opacity="0.95"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Top Header Bar -->
+          <rect x="0" y="0" width="800" height="60" fill="url(#topBarGrad)"/>
+          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador</text>
+          
+          <rect id="badgeRect" x="650" y="16" width="130" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text id="overlayBadge" x="715" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">INAMHI / NOAA</text>
+
+          <!-- Dynamic Plant Pin Marker -->
+          <g id="pinGroup" transform="translate(430, 436)" style="display: none;">
+            <circle cx="0" cy="0" r="16" fill="#ef4444" fill-opacity="0.35" />
+            <circle cx="0" cy="0" r="6" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+            <rect id="pinBox" x="12" y="-13" width="120" height="26" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#ef4444" stroke-width="1" />
+            <text id="pinLabel" x="20" y="4" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
+          </g>
+
+          <!-- Bottom Footer Bar -->
+          <rect x="0" y="740" width="800" height="60" fill="url(#bottomBarGrad)"/>
+          <circle cx="30" cy="770" r="7" fill="#22c55e" />
+          <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
+          <text x="776" y="776" text-anchor="end" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@infocaudales</text>
+        </svg>
+      </div>
+
+      <!-- Player Timeline & Controls -->
+      <div class="player-controls">
+        <div class="timeline-row">
+          <button id="playBtn" class="btn btn-primary">▶ Reproducir</button>
+          <input type="range" id="scrubSlider" class="scrub-slider" min="0" max="17" value="17" step="1">
+          <span id="frameCounter" class="time-badge">18 / 18</span>
+        </div>
+        <div class="playback-buttons">
+          <div class="btn-group">
+            <button id="prevBtn" class="btn">⏮ Anterior</button>
+            <button id="nextBtn" class="btn">Siguiente ⏭</button>
+            <select id="speedSelect" class="form-select" style="width: auto; padding: 6px 10px;">
+              <option value="250">Velocidad: 4 fps (1x)</option>
+              <option value="125">Velocidad: 8 fps (2x)</option>
+              <option value="500">Velocidad: 2 fps (0.5x)</option>
+            </select>
+          </div>
+          <div class="btn-group">
+            <span id="currentTimeDisplay" class="time-badge" style="color: #38bdf8;">--:-- ECT</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right: Configuration & Styling Panel -->
+    <aside class="control-sidebar">
+
+      <!-- Basin & Geometry Selector -->
+      <div class="control-panel">
+        <h3 class="panel-title">📍 Cuenca / Región</h3>
+        
+        <div class="form-group">
+          <label class="form-label" for="basinSelect">Seleccionar Región o Hidroeléctrica</label>
+          <select id="basinSelect" class="form-select">
+            <option value="ecuador">🇪🇨 Ecuador Continental (Nacional)</option>
+            <option value="cocaCodoSinclair">⚡ Coca Codo Sinclair (Quijos/Salado)</option>
+            <option value="mazar">🏔️ Complejo Paute / Mazar</option>
+            <option value="molino">🌊 Complejo Paute / Molino</option>
+            <option value="sopladora">⚡ Complejo Paute / Sopladora</option>
+            <option value="agoyan">💧 Cuenca Pastaza / Agoyán</option>
+            <option value="minasSanFrancisco">🏞️ Cuenca Jubones / Minas San Francisco</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="layerSelect">Capa Meteorológica / Satelital</label>
+          <select id="layerSelect" class="form-select">
+            <option value="goes16_inamhi">🛰️ GOES-16 IR Limpio (Banda 13 - INAMHI/NOAA)</option>
+            <option value="nasa_gibs">🌍 NASA GIBS (GOES-East Banda 13)</option>
+            <option value="persiann_24h">🌧️ PERSIANN-PDIR Precipitación Acumulada 24h</option>
+            <option value="wrf_daily">🌦️ WRF Pronóstico Numérico de Lluvia</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Styling & Overlay Editor -->
+      <div class="control-panel">
+        <h3 class="panel-title">🎨 Personalización de Overlays</h3>
+
+        <div class="form-group">
+          <label class="form-label" for="customTitleInput">Título Superior</label>
+          <input type="text" id="customTitleInput" class="form-input" value="🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="customBadgeInput">Badge de Subtítulo / Fuente</label>
+          <input type="text" id="customBadgeInput" class="form-input" value="INAMHI / NOAA">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Marcador de Presa / Captación</label>
+          <div class="grid-2col">
+            <input type="text" id="pinLabelInput" class="form-input" placeholder="Etiqueta del Pin" value="Captación CCS">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);">
+              <input type="checkbox" id="showPinCheckbox" checked> Mostrar Pin
+            </label>
+          </div>
+        </div>
+
+        <!-- Scale Colorbar Legend Preview -->
+        <div class="color-legend-card">
+          <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; color: var(--text-secondary);">Escala Térmica Convectiva (Topes Nubosos)</div>
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span>+30°C (Cálido)</span>
+            <span>-20°C (Nubes)</span>
+            <span>-50°C (Tormenta)</span>
+            <span>-80°C (Extremo)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compilation & Video Export -->
+      <div class="control-panel">
+        <h3 class="panel-title">🎬 Compilación y Exportación</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+          Compila los fotogramas cargados en un video MP4 optimizado para Twitter (H.264) o un GIF animado.
+        </p>
+
+        <div class="grid-2col">
+          <button id="compileMp4Btn" class="btn btn-success">📹 Compilar MP4</button>
+          <button id="compileGifBtn" class="btn">🖼️ Compilar GIF</button>
+        </div>
+
+        <div id="exportStatus" class="status-box"></div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <script>
+    // State
+    let timestamps = [];
+    let currentFrameIdx = 0;
+    let isPlaying = false;
+    let playInterval = null;
+    let playSpeedMs = 250;
+    let currentGeometry = null;
+    let geometriesMap = {};
+
+    // DOM Elements
+    const satelliteLayer = document.getElementById('satelliteLayer');
+    const scrubSlider = document.getElementById('scrubSlider');
+    const playBtn = document.getElementById('playBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const frameCounter = document.getElementById('frameCounter');
+    const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+    const speedSelect = document.getElementById('speedSelect');
+    const basinSelect = document.getElementById('basinSelect');
+    const layerSelect = document.getElementById('layerSelect');
+    const customTitleInput = document.getElementById('customTitleInput');
+    const customBadgeInput = document.getElementById('customBadgeInput');
+    const pinLabelInput = document.getElementById('pinLabelInput');
+    const showPinCheckbox = document.getElementById('showPinCheckbox');
+    const pinGroup = document.getElementById('pinGroup');
+    const pinBox = document.getElementById('pinBox');
+    const pinLabel = document.getElementById('pinLabel');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlayBadge = document.getElementById('overlayBadge');
+    const overlayTime = document.getElementById('overlayTime');
+    const exportStatus = document.getElementById('exportStatus');
+
+    // Geo to Pixel Projection
+    function projectGeoToPixel(lat, lon, bbox, width = 800, height = 800) {
+      const [minLon, minLat, maxLon, maxLat] = bbox;
+      const x = Math.round(((lon - minLon) / (maxLon - minLon)) * width);
+      const y = Math.round(((maxLat - lat) / (maxLat - minLat)) * height);
+      return { x, y };
+    }
+
+    // Format ISO string to Ecuador local time
+    function formatEcuadorTime(isoStr) {
+      if (!isoStr) return '--:-- ECT';
+      const dt = new Date(isoStr);
+      const ecDt = new Date(dt.getTime() - 5 * 3600 * 1000);
+      const dateStr = ecDt.toISOString().slice(0, 10);
+      const timeStr = ecDt.toISOString().slice(11, 16);
+      return { dateStr, timeStr, full: `${dateStr}  ${timeStr} ECT` };
+    }
+
+    // Update Overlay UI
+    function updateOverlay() {
+      overlayTitle.textContent = customTitleInput.value;
+      overlayBadge.textContent = customBadgeInput.value;
+
+      if (timestamps.length > 0 && timestamps[currentFrameIdx]) {
+        const { full } = formatEcuadorTime(timestamps[currentFrameIdx]);
+        overlayTime.textContent = full;
+        currentTimeDisplay.textContent = full;
+      }
+
+      // Pin update
+      if (currentGeometry && currentGeometry.plantLocation && showPinCheckbox.checked) {
+        const { lat, lon, label } = currentGeometry.plantLocation;
+        const { x, y } = projectGeoToPixel(lat, lon, currentGeometry.bbox);
+        if (x >= 0 && x <= 800 && y >= 0 && y <= 800) {
+          pinGroup.setAttribute('transform', `translate(${x}, ${y})`);
+          pinLabel.textContent = pinLabelInput.value || label;
+          const textW = Math.max(90, (pinLabel.textContent.length * 8) + 16);
+          pinBox.setAttribute('width', textW);
+          pinGroup.style.display = 'block';
+        } else {
+          pinGroup.style.display = 'none';
+        }
+      } else {
+        pinGroup.style.display = 'none';
+      }
+    }
+
+    // Load Frame Image
+    function renderCurrentFrame() {
+      if (!timestamps.length) return;
+      const t = timestamps[currentFrameIdx];
+      const plantKey = basinSelect.value;
+      const layer = layerSelect.value;
+
+      const url = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+      satelliteLayer.src = url;
+
+      scrubSlider.value = currentFrameIdx;
+      frameCounter.textContent = `${currentFrameIdx + 1} / ${timestamps.length}`;
+      updateOverlay();
+    }
+
+    // Fetch Timestamps & Geometries
+    async function loadData() {
+      try {
+        const [geoRes, timeRes] = await Promise.all([
+          fetch('/api/basin-geometries').then(r => r.json()),
+          fetch('/api/satellite-timestamps?limit=18').then(r => r.json())
+        ]);
+
+        geometriesMap = geoRes;
+        timestamps = timeRes.timestamps || [];
+        scrubSlider.max = Math.max(0, timestamps.length - 1);
+        currentFrameIdx = scrubSlider.max;
+
+        onBasinChange();
+        renderCurrentFrame();
+      } catch (err) {
+        console.error('Error loading initial data:', err);
+      }
+    }
+
+    // Handlers
+    function onBasinChange() {
+      const key = basinSelect.value;
+      currentGeometry = geometriesMap[key] || { key, name: key, bbox: [-81.5, -5.2, -75.0, 1.8] };
+
+      if (key === 'ecuador') {
+        customTitleInput.value = '🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador';
+        customBadgeInput.value = 'INAMHI / NOAA';
+        showPinCheckbox.checked = false;
+      } else {
+        customTitleInput.value = `⚡ ${currentGeometry.name} • GOES-16 IR`;
+        customBadgeInput.value = currentGeometry.subtitle || 'Cuenca Alta';
+        showPinCheckbox.checked = Boolean(currentGeometry.plantLocation);
+        if (currentGeometry.plantLocation) {
+          pinLabelInput.value = currentGeometry.plantLocation.label;
+        }
+      }
+      updateOverlay();
+      renderCurrentFrame();
+    }
+
+    // Playback Engine
+    function startPlayback() {
+      isPlaying = true;
+      playBtn.textContent = '⏸ Pausar';
+      playBtn.classList.remove('btn-primary');
+      playBtn.classList.add('btn');
+
+      playInterval = setInterval(() => {
+        currentFrameIdx = (currentFrameIdx + 1) % timestamps.length;
+        renderCurrentFrame();
+      }, playSpeedMs);
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      playBtn.textContent = '▶ Reproducir';
+      playBtn.classList.add('btn-primary');
+      clearInterval(playInterval);
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (isPlaying) stopPlayback();
+      else startPlayback();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      stopPlayback();
+      currentFrameIdx = (currentFrameIdx - 1 + timestamps.length) % timestamps.length;
+      renderCurrentFrame();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      stopPlayback();
+      currentFrameIdx = (currentFrameIdx + 1) % timestamps.length;
+      renderCurrentFrame();
+    });
+
+    scrubSlider.addEventListener('input', (e) => {
+      stopPlayback();
+      currentFrameIdx = parseInt(e.target.value, 10);
+      renderCurrentFrame();
+    });
+
+    speedSelect.addEventListener('change', (e) => {
+      playSpeedMs = parseInt(e.target.value, 10);
+      if (isPlaying) {
+        stopPlayback();
+        startPlayback();
+      }
+    });
+
+    basinSelect.addEventListener('change', onBasinChange);
+    layerSelect.addEventListener('change', renderCurrentFrame);
+    customTitleInput.addEventListener('input', updateOverlay);
+    customBadgeInput.addEventListener('input', updateOverlay);
+    pinLabelInput.addEventListener('input', updateOverlay);
+    showPinCheckbox.addEventListener('change', updateOverlay);
+
+    // Compilation Action
+    async function triggerCompile(format = 'mp4') {
+      exportStatus.className = 'status-box active loading';
+      exportStatus.innerHTML = `⏳ Compilando animación en formato <strong>${format.toUpperCase()}</strong>...`;
+
+      try {
+        const payload = {
+          plantKey: basinSelect.value,
+          createMp4: format === 'mp4',
+          createGif: format === 'gif',
+          framerate: 4
+        };
+
+        const res = await fetch('/api/compile-rain-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          const filePath = format === 'mp4' ? data.result.mp4Path : data.result.gifPath;
+          const fileName = filePath.split('/').pop();
+          exportStatus.className = 'status-box active success';
+          exportStatus.innerHTML = `✅ ¡Compilación completada! Archivo guardado en: <code>${filePath}</code>`;
+        } else {
+          throw new Error(data.error || 'Error en la compilación');
+        }
+      } catch (err) {
+        exportStatus.className = 'status-box active';
+        exportStatus.style.background = 'rgba(239, 68, 68, 0.15)';
+        exportStatus.style.border = '1px solid #ef4444';
+        exportStatus.style.color = '#f87171';
+        exportStatus.textContent = `❌ Falló la compilación: ${err.message}`;
+      }
+    }
+
+    document.getElementById('compileMp4Btn').addEventListener('click', () => triggerCompile('mp4'));
+    document.getElementById('compileGifBtn').addEventListener('click', () => triggerCompile('gif'));
+
+    // Server-Sent Events for Live Reloading
+    const evtSource = new EventSource('/sse');
+    evtSource.onmessage = (event) => {
+      if (event.data === 'reload') {
+        console.log('[LiveReload] Template updated. Refreshing...');
+        window.location.reload();
+      }
+    };
+
+    // Initialize
+    loadData();
+  </script>
+</body>
+</html>

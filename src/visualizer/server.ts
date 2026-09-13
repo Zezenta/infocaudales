@@ -2,11 +2,17 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
+import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
+import { SatelliteMapService } from '../services/satellite-map.service.js';
+import { VideoCompilerService } from '../services/video-compiler.service.js';
 
 const PORT = 3000;
 const TEMPLATE_DIR = path.join(__dirname, '..', 'templates');
 const HTML_FILE = path.join(TEMPLATE_DIR, 'hydro-card.html');
 const CSS_FILE = path.join(TEMPLATE_DIR, 'hydro-card.css');
+
+const satelliteMapService = new SatelliteMapService();
+const videoCompilerService = new VideoCompilerService(satelliteMapService);
 
 // Keep track of active SSE connections
 const clients: Set<http.ServerResponse> = new Set();
@@ -165,6 +171,108 @@ const server = http.createServer((req, res) => {
     return;
   }
   
+  // Basin Geometries API
+  if (req.method === 'GET' && req.url === '/api/basin-geometries') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(BASIN_GEOMETRIES));
+    return;
+  }
+
+  // Satellite Timestamps API
+  if (req.method === 'GET' && req.url && req.url.startsWith('/api/satellite-timestamps')) {
+    const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+    const limit = parseInt(urlObj.searchParams.get('limit') || '18', 10);
+
+    satelliteMapService.fetchGoesTimestamps({ limit })
+      .then(timestamps => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ timestamps }));
+      })
+      .catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      });
+    return;
+  }
+
+  // Satellite Single Frame Proxy API (handles CORS & layers)
+  if (req.method === 'GET' && req.url && req.url.startsWith('/api/satellite-frame')) {
+    const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+    const time = urlObj.searchParams.get('time') || undefined;
+    const plantKey = urlObj.searchParams.get('plantKey') || 'ecuador';
+    const layer = urlObj.searchParams.get('layer') || 'goes16_inamhi';
+    const width = parseInt(urlObj.searchParams.get('width') || '800', 10);
+    const height = parseInt(urlObj.searchParams.get('height') || '800', 10);
+
+    let source: 'geoserver' | 'nasa_gibs' = 'geoserver';
+    let layers: string | undefined = undefined;
+
+    if (layer === 'nasa_gibs') {
+      source = 'nasa_gibs';
+      layers = 'GOES-East_ABI_Band13_Clean_Infrared';
+    } else if (layer === 'persiann_24h') {
+      layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+    } else if (layer === 'wrf_daily') {
+      layers = 'wrf:wrf_precipitation_daily,ecuador:provincias';
+    } else {
+      layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+    }
+
+    satelliteMapService.fetchMapTile({
+      source,
+      layers,
+      plantKey,
+      time,
+      width,
+      height
+    })
+      .then(buffer => {
+        res.writeHead(200, {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=300'
+        });
+        res.end(buffer);
+      })
+      .catch(err => {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end(`Error loading satellite frame: ${err.message}`);
+      });
+    return;
+  }
+
+  // Compile Rain Video on demand API
+  if (req.method === 'POST' && req.url === '/api/compile-rain-video') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const plantKey = payload.plantKey || 'ecuador';
+        const createMp4 = payload.createMp4 !== false;
+        const createGif = payload.createGif !== false;
+        const framerate = payload.framerate || 4;
+
+        console.log(`[Visualizer] Compiling rain video for ${plantKey}...`);
+        const result = await videoCompilerService.generateBasinAnimation({
+          plantKey,
+          createMp4,
+          createGif,
+          framerate
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, result }));
+      } catch (error: any) {
+        console.error('[Visualizer] Error compiling rain video:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: error.message }));
+      }
+    });
+    return;
+  }
+
   // Serve the HTML file
   if (req.url === '/' || req.url === '/index.html') {
     fs.readFile(HTML_FILE, 'utf8', (err, data) => {
@@ -209,6 +317,21 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Serve Rain Map & Satellite Visualizer HTML
+  if (req.url === '/rain' || req.url === '/rain-maps' || req.url === '/rain-map.html') {
+    const rainHtmlPath = path.join(TEMPLATE_DIR, 'rain-map.html');
+    fs.readFile(rainHtmlPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading rain map HTML');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+  }
+
   // Serve the CSS files
   if (req.url === '/hydro-card.css') {
     fs.readFile(CSS_FILE, 'utf8', (err, data) => {
@@ -229,6 +352,20 @@ const server = http.createServer((req, res) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('Error loading daily report CSS');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/css' });
+      res.end(data);
+    });
+    return;
+  }
+
+  if (req.url === '/rain-map.css') {
+    const rainCssPath = path.join(TEMPLATE_DIR, 'rain-map.css');
+    fs.readFile(rainCssPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading rain map CSS');
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/css' });
@@ -280,7 +417,7 @@ fs.watch(TEMPLATE_DIR, (eventType, filename) => {
   if (!filename) return;
   
   // Only trigger for the actual template files
-  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html'];
+  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html', 'rain-map.html', 'rain-map.css'];
   if (!watchedFiles.includes(filename)) {
     return;
   }
@@ -304,5 +441,6 @@ server.listen(PORT, () => {
   console.log(`\n🚀 Hydro Telemetry Visualizer Server running at:`);
   console.log(`   👉 Telemetry Cards: http://localhost:${PORT}`);
   console.log(`   👉 Forecast Fan Chart: http://localhost:${PORT}/forecast`);
+  console.log(`   👉 Satellite & Rain Maps: http://localhost:${PORT}/rain`);
   console.log(`\nWatching files in: ${TEMPLATE_DIR} for changes (live reloading active)`);
 });
