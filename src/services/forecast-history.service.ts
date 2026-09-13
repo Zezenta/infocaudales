@@ -98,7 +98,7 @@ export function getUnresolvedForecasts(upToTimeMs: number = Date.now()): Forecas
       actual_flow as actualFlow,
       resolved_at as resolvedAt
     FROM forecast_logs
-    WHERE actual_flow IS NULL AND target_time <= ?
+    WHERE (actual_flow IS NULL OR actual_flow <= 0) AND target_time <= ?
     ORDER BY target_time ASC
   `).all(upToTimeMs) as ForecastLogRecord[];
 
@@ -167,7 +167,8 @@ export async function reconcileForecastsWithCelec(
           }
         }
 
-        if (closestPoint && closestPoint.value !== null && closestPoint.value !== undefined) {
+        // Only reconcile if CELEC reported a strictly positive valid flow (> 0 m³/s)
+        if (closestPoint && closestPoint.value !== null && closestPoint.value !== undefined && closestPoint.value > 0) {
           resolveForecastActual(item.id, closestPoint.value, Date.now());
           resolvedCount++;
         }
