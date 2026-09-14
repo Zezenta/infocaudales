@@ -95,10 +95,12 @@ export class VideoCompilerService {
   }): string {
     const { frame, geometry, width, height } = options;
     const title = geometry.key === 'ecuador'
-      ? '🛰️ Satélite en Vivo • Nubes y Tormentas'
-      : `⚡ ${geometry.name} • Monitoreo de Lluvias`;
+      ? 'Vista Satelital En Vivo'
+      : `⚡ ${geometry.name} • Vista Satelital`;
 
-    const subtitleBadge = geometry.subtitle || 'Satélite GOES-16';
+    const subtitleBadge = geometry.key === 'ecuador'
+      ? 'GOES-16 • Banda 13 IR (10.3 µm)'
+      : (geometry.subtitle || 'GOES-16 • Banda 13 IR');
 
     // Collect all relevant pins for this view
     const pinsToRender: PlantPin[] = [];
@@ -116,48 +118,53 @@ export class VideoCompilerService {
     for (const pin of pinsToRender) {
       const { x, y } = this.projectGeoToPixel(pin.lat, pin.lon, frame.bbox, width, height);
       if (x >= 0 && x <= width && y >= 0 && y <= height) {
-        const padX = 7;
-        const textWidth = this.estimateTextWidth(pin.label, 10);
+        const padX = 8;
+        const textWidth = this.estimateTextWidth(pin.label, 12);
         const boxWidth = textWidth + (padX * 2);
-        let boxX = 8;
-        let boxY = -11;
-        let textX = 8 + padX;
-        let textY = 4;
+        let boxX = 9;
+        let boxY = -12;
+        let textX = 9 + padX;
+        let textY = 4.5;
 
         if (pin.placement === 'top-left') {
-          boxX = -boxWidth - 8;
-          boxY = -20;
-          textX = -boxWidth - 8 + padX;
-          textY = -5;
-        } else if (pin.placement === 'bottom-left') {
-          boxX = -boxWidth - 8;
-          boxY = 6;
-          textX = -boxWidth - 8 + padX;
-          textY = 21;
-        } else if (pin.placement === 'top-right') {
-          boxX = 8;
+          boxX = -boxWidth - 9;
           boxY = -24;
-          textX = 8 + padX;
-          textY = -9;
+          textX = -boxWidth - 9 + padX;
+          textY = -7.5;
+        } else if (pin.placement === 'bottom-left') {
+          boxX = -boxWidth - 9;
+          boxY = 8;
+          textX = -boxWidth - 9 + padX;
+          textY = 24.5;
+        } else if (pin.placement === 'top-right') {
+          boxX = 9;
+          boxY = -28;
+          textX = 9 + padX;
+          textY = -11.5;
         } else if (pin.placement === 'bottom-right') {
-          boxX = 8;
-          boxY = 6;
-          textX = 8 + padX;
-          textY = 21;
+          boxX = 9;
+          boxY = 8;
+          textX = 9 + padX;
+          textY = 24.5;
         }
 
         const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
 
         pinsSvg += `
         <g transform="translate(${x}, ${y})">
-          <circle cx="0" cy="0" r="9" fill="${color}" fill-opacity="0.25" />
-          <circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="${color}" stroke-width="1" />
-          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
+          <circle cx="0" cy="0" r="10" fill="${color}" fill-opacity="0.25" />
+          <circle cx="0" cy="0" r="5.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${color}" stroke-width="1.2" />
+          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${pin.label}</text>
         </g>
         `;
       }
     }
+
+    const badgeText = subtitleBadge;
+    const badgeTextWidth = this.estimateTextWidth(badgeText, 11.5);
+    const badgeTotalWidth = badgeTextWidth + 32;
+    const badgeX = width - badgeTotalWidth - 20;
 
     return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -172,11 +179,19 @@ export class VideoCompilerService {
           <stop offset="35%" stop-color="#04060c" stop-opacity="0.94"/>
           <stop offset="100%" stop-color="#04060c" stop-opacity="0.98"/>
         </linearGradient>
+        <linearGradient id="thermalScaleGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#0f172a"/>
+          <stop offset="20%" stop-color="#38bdf8"/>
+          <stop offset="45%" stop-color="#22c55e"/>
+          <stop offset="68%" stop-color="#f59e0b"/>
+          <stop offset="85%" stop-color="#ef4444"/>
+          <stop offset="100%" stop-color="#ec4899"/>
+        </linearGradient>
       </defs>
 
       <!-- Header Top Bar -->
       <rect x="0" y="0" width="${width}" height="68" fill="url(#topBarGrad)"/>
-      <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
+      <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="20">${title}</text>
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
       <g transform="translate(${width - 180}, 18)">
@@ -194,14 +209,28 @@ export class VideoCompilerService {
       <!-- Plant Pin Markers -->
       ${pinsSvg}
 
+      <!-- Floating Thermal Scale Bar Overlay -->
+      <g transform="translate(20, ${height - 116})">
+        <rect x="0" y="0" width="220" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+        <rect x="10" y="19" width="200" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+        <text x="10" y="37" fill="#64748b" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+30°</text>
+        <text x="72" y="37" fill="#38bdf8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-20°</text>
+        <text x="135" y="37" fill="#f59e0b" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+        <text x="186" y="37" fill="#ec4899" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-80°C</text>
+      </g>
+
       <!-- Footer Bottom Bar -->
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
       <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${frame.dateEcuador}  ${frame.timeEcuador} ECT</text>
       
       <!-- Subtitle Pill Badge on Bottom Right -->
-      <rect x="${width - 165}" y="${height - 44}" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
-      <text x="${width - 92}" y="${height - 25}" text-anchor="middle" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${subtitleBadge}</text>
+      <g transform="translate(${badgeX}, ${height - 46})">
+        <rect x="0" y="0" width="${badgeTotalWidth}" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
+        <circle cx="12" cy="14" r="3.5" fill="#38bdf8" />
+        <text x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11.5">${badgeText}</text>
+      </g>
     </svg>
     `.trim();
   }

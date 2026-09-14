@@ -47,11 +47,19 @@
               <stop offset="35%" stop-color="#04060c" stop-opacity="0.94"/>
               <stop offset="100%" stop-color="#04060c" stop-opacity="0.98"/>
             </linearGradient>
+            <linearGradient id="thermalScaleGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#0f172a"/>
+              <stop offset="20%" stop-color="#38bdf8"/>
+              <stop offset="45%" stop-color="#22c55e"/>
+              <stop offset="68%" stop-color="#f59e0b"/>
+              <stop offset="85%" stop-color="#ef4444"/>
+              <stop offset="100%" stop-color="#ec4899"/>
+            </linearGradient>
           </defs>
 
           <!-- Top Header Bar -->
           <rect x="0" y="0" width="800" height="68" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ Satélite en Vivo • Nubes y Tormentas</text>
+          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="20">Vista Satelital En Vivo</text>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
           <g id="watermarkGroup" transform="translate(620, 18)">
@@ -71,10 +79,21 @@
 
           <!-- Dynamic Single Plant Pin Marker -->
           <g id="singlePinGroup" transform="translate(430, 436)" style="display: none;">
-            <circle cx="0" cy="0" r="9" fill="#ef4444" fill-opacity="0.25" />
-            <circle cx="0" cy="0" r="5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
-            <rect id="pinBox" x="8" y="-11" width="120" height="22" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#ef4444" stroke-width="1" />
-            <text id="pinLabel" x="15" y="4" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
+            <circle cx="0" cy="0" r="10" fill="#ef4444" fill-opacity="0.25" />
+            <circle cx="0" cy="0" r="5.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+            <rect id="pinBox" x="9" y="-12" width="130" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="#ef4444" stroke-width="1.2" />
+            <text id="pinLabel" x="17" y="4.5" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">Captación CCS</text>
+          </g>
+
+          <!-- Floating Thermal Scale Bar Overlay (GOES-16 Band 13 Clean Window IR) -->
+          <g id="thermalScaleGroup" transform="translate(20, 684)">
+            <rect x="0" y="0" width="220" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+            <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+            <rect x="10" y="19" width="200" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+            <text x="10" y="37" fill="#64748b" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+30°</text>
+            <text x="72" y="37" fill="#38bdf8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-20°</text>
+            <text x="135" y="37" fill="#f59e0b" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+            <text x="186" y="37" fill="#ec4899" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-80°C</text>
           </g>
 
           <!-- Bottom Footer Bar -->
@@ -83,8 +102,11 @@
           <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
           
           <!-- Subtitle Pill Badge on Bottom Right -->
-          <rect id="badgeRect" x="635" y="756" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
-          <text id="overlayBadge" x="708" y="775" text-anchor="middle" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">Satélite GOES-16</text>
+          <g id="badgeGroup" transform="translate(560, 754)">
+            <rect id="badgeRect" x="0" y="0" width="220" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
+            <circle id="badgeDot" cx="12" cy="14" r="3.5" fill="#38bdf8" />
+            <text id="overlayBadge" x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11.5">GOES-16 • Banda 13 IR (10.3 µm)</text>
+          </g>
         </svg>
       </div>
 
@@ -164,12 +186,12 @@
 
         <div class="form-group">
           <label class="form-label" for="customTitleInput">Título Superior</label>
-          <input type="text" id="customTitleInput" class="form-input" value="🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador">
+          <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital En Vivo">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="customBadgeInput">Badge de Subtítulo / Fuente</label>
-          <input type="text" id="customBadgeInput" class="form-input" value="INAMHI / NOAA">
+          <input type="text" id="customBadgeInput" class="form-input" value="GOES-16 • Banda 13 IR (10.3 µm)">
         </div>
 
         <div class="form-group">
@@ -291,43 +313,43 @@
       allHydroPins.forEach((pin) => {
         const { x, y } = projectGeoToPixel(pin.lat, pin.lon, bbox);
         if (x >= -10 && x <= 810 && y >= -10 && y <= 810) {
-          const padX = 7;
-          const textW = measureTextWidth(pin.label, 10, 'bold');
+          const padX = 8;
+          const textW = measureTextWidth(pin.label, 12, 'bold');
           const boxW = textW + (padX * 2);
-          let boxX = 8;
-          let boxY = -11;
-          let textX = 8 + padX;
-          let textY = 4;
+          let boxX = 9;
+          let boxY = -12;
+          let textX = 9 + padX;
+          let textY = 4.5;
 
           if (pin.placement === 'top-left') {
-            boxX = -boxW - 8;
-            boxY = -20;
-            textX = -boxW - 8 + padX;
-            textY = -5;
-          } else if (pin.placement === 'bottom-left') {
-            boxX = -boxW - 8;
-            boxY = 6;
-            textX = -boxW - 8 + padX;
-            textY = 21;
-          } else if (pin.placement === 'top-right') {
-            boxX = 8;
+            boxX = -boxW - 9;
             boxY = -24;
-            textX = 8 + padX;
-            textY = -9;
+            textX = -boxW - 9 + padX;
+            textY = -7.5;
+          } else if (pin.placement === 'bottom-left') {
+            boxX = -boxW - 9;
+            boxY = 8;
+            textX = -boxW - 9 + padX;
+            textY = 24.5;
+          } else if (pin.placement === 'top-right') {
+            boxX = 9;
+            boxY = -28;
+            textX = 9 + padX;
+            textY = -11.5;
           } else if (pin.placement === 'bottom-right') {
-            boxX = 8;
-            boxY = 6;
-            textX = 8 + padX;
-            textY = 21;
+            boxX = 9;
+            boxY = 8;
+            textX = 9 + padX;
+            textY = 24.5;
           }
 
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
           g.innerHTML = `
-            <circle cx="0" cy="0" r="9" fill="#38bdf8" fill-opacity="0.25" />
-            <circle cx="0" cy="0" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
-            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1" />
-            <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
+            <circle cx="0" cy="0" r="10" fill="#38bdf8" fill-opacity="0.25" />
+            <circle cx="0" cy="0" r="5.5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
+            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="#38bdf8" stroke-width="1.2" />
+            <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${pin.label}</text>
           `;
           allPinsLayer.appendChild(g);
         }
@@ -346,7 +368,26 @@
     // Full Overlay update (when changing basin, titles, or pins)
     function updateOverlay() {
       overlayTitle.textContent = customTitleInput.value;
-      overlayBadge.textContent = customBadgeInput.value;
+
+      // Dynamic Subtitle / Sensor Badge
+      const badgeText = customBadgeInput.value;
+      overlayBadge.textContent = badgeText;
+      const badgeTextW = measureTextWidth(badgeText, 11.5, 'bold');
+      const badgeTotalW = badgeTextW + 32;
+      const badgeX = 800 - badgeTotalW - 20;
+      const badgeGroup = document.getElementById('badgeGroup');
+      if (badgeGroup) {
+        badgeGroup.setAttribute('transform', `translate(${badgeX}, 754)`);
+        const badgeRect = document.getElementById('badgeRect');
+        if (badgeRect) badgeRect.setAttribute('width', badgeTotalW);
+      }
+
+      // Thermal Scale Bar visibility (GOES-16 IR)
+      const thermalScaleGroup = document.getElementById('thermalScaleGroup');
+      if (thermalScaleGroup) {
+        const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi';
+        thermalScaleGroup.style.display = isThermalLayer ? 'block' : 'none';
+      }
 
       updateTimestampDisplay();
 
@@ -358,8 +399,8 @@
           singlePinGroup.setAttribute('transform', `translate(${x}, ${y})`);
           const singleText = pinLabelInput.value || label;
           pinLabel.textContent = singleText;
-          const textW = measureTextWidth(singleText, 11, 'bold');
-          const boxW = textW + 16;
+          const textW = measureTextWidth(singleText, 12, 'bold');
+          const boxW = textW + 18;
           pinBox.setAttribute('width', boxW);
           singlePinGroup.style.display = 'block';
         } else {
@@ -576,8 +617,8 @@
         customTitleInput.value = isEcuador ? '🌦️ Pronóstico de Lluvias de Hoy' : `🌦️ ${basinName} • Pronóstico de Lluvias`;
         customBadgeInput.value = 'Pronóstico INAMHI';
       } else {
-        customTitleInput.value = isEcuador ? '🛰️ Satélite en Vivo • Nubes y Tormentas' : `⚡ ${basinName} • Monitoreo de Lluvias`;
-        customBadgeInput.value = isEcuador ? 'Satélite GOES-16' : (currentGeometry?.subtitle || 'Cuenca Alta');
+        customTitleInput.value = isEcuador ? 'Vista Satelital En Vivo' : `⚡ ${basinName} • Vista Satelital`;
+        customBadgeInput.value = isEcuador ? 'GOES-16 • Banda 13 IR (10.3 µm)' : (currentGeometry?.subtitle || 'GOES-16 • Banda 13 IR');
       }
 
       if (basinKey === 'ecuador' || basinKey === 'paute') {

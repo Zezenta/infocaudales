@@ -55,7 +55,7 @@ describe('VideoCompilerService', () => {
         height: 800
       });
 
-      expect(svg).toContain('🛰️ Satélite en Vivo • Nubes y Tormentas');
+      expect(svg).toContain('Vista Satelital En Vivo');
       expect(svg).toContain('2026-09-10  22:00 ECT');
       expect(svg).toContain('@Hidro_Info_Bot');
     });
