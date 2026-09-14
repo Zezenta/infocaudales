@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Infocaudales • Visualizador Satelital y Lluvias</title>
+  <title>Infocaudales • Monitoreo Satelital y Lluvias</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/rain-map.css">
   <style>
     /* Glowing pulse animation for map pins with correct SVG origin */
@@ -16,40 +17,23 @@
       transform-origin: center;
       animation: pin-pulse 2.2s ease-in-out infinite;
     }
-    .preload-bar-container {
-      width: 100%;
-      height: 4px;
-      background: #1e293b;
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .preload-bar-fill {
-      height: 100%;
-      background: #38bdf8;
-      width: 0%;
-      transition: width 0.2s ease-out;
-    }
   </style>
 </head>
 <body>
 
-  <!-- App Header -->
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-icon">🛰️</span>
-      <div>
-        <div class="brand-title">INFOCAUDALES • SATÉLITE & RADAR</div>
-        <div class="brand-subtitle">Visualizador & Editor de Animaciones Satelitales (GOES-16 IR)</div>
-      </div>
-    </div>
-    <nav class="header-links">
-      <a href="/" class="nav-link">📊 Tarjetas</a>
-      <a href="/daily" class="nav-link">📑 Reporte Diario</a>
-      <a href="/forecast" class="nav-link">🔮 Pronósticos</a>
-      <a href="/rain" class="nav-link active">🛰️ Satélite & Lluvia</a>
-    </nav>
-  </header>
+  <!-- Top Navigation Switcher -->
+  <nav class="nav-switcher">
+    <a href="/" class="nav-link">📊 Tarjetas de Telemetría</a>
+    <a href="/daily" class="nav-link">📑 Reporte Diario</a>
+    <a href="/forecast" class="nav-link">🔮 Pronósticos Hidrológicos</a>
+    <a href="/rain" class="nav-link active">🛰️ Satélite & Lluvia</a>
+  </nav>
+
+  <!-- Page Title & Header Badge -->
+  <div class="page-title-container">
+    <div class="page-badge">MONITOREO SATELITAL & RADAR</div>
+    <div class="page-heading">Animaciones Satelitales y Mapas de Lluvia</div>
+  </div>
 
   <!-- Main Workspace -->
   <main class="main-container">
