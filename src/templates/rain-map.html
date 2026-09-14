@@ -38,30 +38,34 @@
         <svg id="svgOverlay" class="overlay-layer" width="800" height="800" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#090d16" stop-opacity="0.95"/>
-              <stop offset="100%" stop-color="#090d16" stop-opacity="0.5"/>
+              <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
+              <stop offset="65%" stop-color="#04060c" stop-opacity="0.94"/>
+              <stop offset="100%" stop-color="#04060c" stop-opacity="0.0"/>
             </linearGradient>
             <linearGradient id="bottomBarGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#090d16" stop-opacity="0.5"/>
-              <stop offset="100%" stop-color="#090d16" stop-opacity="0.95"/>
+              <stop offset="0%" stop-color="#04060c" stop-opacity="0.0"/>
+              <stop offset="35%" stop-color="#04060c" stop-opacity="0.94"/>
+              <stop offset="100%" stop-color="#04060c" stop-opacity="0.98"/>
             </linearGradient>
           </defs>
 
           <!-- Top Header Bar -->
-          <rect x="0" y="0" width="800" height="60" fill="url(#topBarGrad)"/>
+          <rect x="0" y="0" width="800" height="68" fill="url(#topBarGrad)"/>
           <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ Satélite en Vivo • Nubes y Tormentas</text>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
-          <g id="watermarkGroup" transform="translate(620, 18)">
-            <!-- X Icon Box: 24x24, black bg, subtle border -->
-            <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1"/>
+          <g id="watermarkGroup" transform="translate(612, 16)">
+            <!-- Dark contrast backdrop pill -->
+            <rect x="-8" y="-4" width="180" height="32" rx="6" fill="#0b0f19" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+            <!-- X Icon Box: 24x24, solid black bg, subtle border -->
+            <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
             <g transform="translate(5, 5)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
             </g>
-            <!-- Handle Text -->
-            <text id="overlayWatermark" x="32" y="17" fill="#64748b" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
+            <!-- Handle Text in crisp high contrast Space Grotesk -->
+            <text id="overlayWatermark" x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
           </g>
 
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
@@ -272,6 +276,14 @@
       return { dateStr, timeStr, full: `${dateStr}  ${timeStr} ECT` };
     }
 
+    // Measure precise text width in Space Grotesk
+    function measureTextWidth(text, fontSize = 10, fontWeight = 'bold') {
+      const canvas = measureTextWidth.canvas || (measureTextWidth.canvas = document.createElement('canvas'));
+      const ctx = canvas.getContext('2d');
+      ctx.font = `${fontWeight} ${fontSize}px 'Space Grotesk', sans-serif`;
+      return Math.ceil(ctx.measureText(text).width);
+    }
+
     // Render All Hydroelectric Pins on Map
     function renderAllPins() {
       allPinsLayer.innerHTML = '';
@@ -281,31 +293,33 @@
       allHydroPins.forEach((pin) => {
         const { x, y } = projectGeoToPixel(pin.lat, pin.lon, bbox);
         if (x >= -10 && x <= 810 && y >= -10 && y <= 810) {
-          const textW = Math.max(65, pin.label.length * 7 + 14);
-          let boxX = 10;
+          const padX = 7;
+          const textW = measureTextWidth(pin.label, 10, 'bold');
+          const boxW = textW + (padX * 2);
+          let boxX = 8;
           let boxY = -11;
-          let textX = 16;
+          let textX = 8 + padX;
           let textY = 4;
 
           if (pin.placement === 'top-left') {
-            boxX = -textW - 8;
+            boxX = -boxW - 8;
             boxY = -20;
-            textX = -textW - 8 + 8;
+            textX = -boxW - 8 + padX;
             textY = -5;
           } else if (pin.placement === 'bottom-left') {
-            boxX = -textW - 8;
+            boxX = -boxW - 8;
             boxY = 6;
-            textX = -textW - 8 + 8;
+            textX = -boxW - 8 + padX;
             textY = 21;
           } else if (pin.placement === 'top-right') {
-            boxX = 10;
+            boxX = 8;
             boxY = -24;
-            textX = 16;
+            textX = 8 + padX;
             textY = -9;
           } else if (pin.placement === 'bottom-right') {
-            boxX = 10;
+            boxX = 8;
             boxY = 6;
-            textX = 16;
+            textX = 8 + padX;
             textY = 21;
           }
 
@@ -314,7 +328,7 @@
           g.innerHTML = `
             <circle cx="0" cy="0" r="9" fill="#38bdf8" fill-opacity="0.25" />
             <circle cx="0" cy="0" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
-            <rect x="${boxX}" y="${boxY}" width="${textW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1" />
+            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1" />
             <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
           `;
           allPinsLayer.appendChild(g);
@@ -344,9 +358,11 @@
         const { x, y } = projectGeoToPixel(lat, lon, currentGeometry.bbox);
         if (x >= 0 && x <= 800 && y >= 0 && y <= 800) {
           singlePinGroup.setAttribute('transform', `translate(${x}, ${y})`);
-          pinLabel.textContent = pinLabelInput.value || label;
-          const textW = Math.max(90, (pinLabel.textContent.length * 8) + 16);
-          pinBox.setAttribute('width', textW);
+          const singleText = pinLabelInput.value || label;
+          pinLabel.textContent = singleText;
+          const textW = measureTextWidth(singleText, 11, 'bold');
+          const boxW = textW + 16;
+          pinBox.setAttribute('width', boxW);
           singlePinGroup.style.display = 'block';
         } else {
           singlePinGroup.style.display = 'none';

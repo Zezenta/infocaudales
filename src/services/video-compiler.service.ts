@@ -69,6 +69,22 @@ export class VideoCompilerService {
   }
 
   /**
+   * Helper to estimate exact Space Grotesk text width in pixels.
+   */
+  public estimateTextWidth(text: string, fontSize: number = 10): number {
+    let width = 0;
+    for (const char of text) {
+      if ('WM@%#'.includes(char)) width += fontSize * 0.90;
+      else if ('ABCDEFGHNOPQRSTUVXYZ'.includes(char)) width += fontSize * 0.70;
+      else if ('mw'.includes(char)) width += fontSize * 0.76;
+      else if ('ijltfrI1 '.includes(char)) width += fontSize * 0.38;
+      else if ('0123456789'.includes(char)) width += fontSize * 0.60;
+      else width += fontSize * 0.56;
+    }
+    return Math.ceil(width);
+  }
+
+  /**
    * Generates a modern, clean SVG overlay with badges, plant pin, and timestamps.
    */
   public generateSvgOverlay(options: {
@@ -100,31 +116,33 @@ export class VideoCompilerService {
     for (const pin of pinsToRender) {
       const { x, y } = this.projectGeoToPixel(pin.lat, pin.lon, frame.bbox, width, height);
       if (x >= 0 && x <= width && y >= 0 && y <= height) {
-        const textWidth = Math.max(65, pin.label.length * 7 + 14);
-        let boxX = 10;
+        const padX = 7;
+        const textWidth = this.estimateTextWidth(pin.label, 10);
+        const boxWidth = textWidth + (padX * 2);
+        let boxX = 8;
         let boxY = -11;
-        let textX = 16;
+        let textX = 8 + padX;
         let textY = 4;
 
         if (pin.placement === 'top-left') {
-          boxX = -textWidth - 8;
+          boxX = -boxWidth - 8;
           boxY = -20;
-          textX = -textWidth - 8 + 8;
+          textX = -boxWidth - 8 + padX;
           textY = -5;
         } else if (pin.placement === 'bottom-left') {
-          boxX = -textWidth - 8;
+          boxX = -boxWidth - 8;
           boxY = 6;
-          textX = -textWidth - 8 + 8;
+          textX = -boxWidth - 8 + padX;
           textY = 21;
         } else if (pin.placement === 'top-right') {
-          boxX = 10;
+          boxX = 8;
           boxY = -24;
-          textX = 16;
+          textX = 8 + padX;
           textY = -9;
         } else if (pin.placement === 'bottom-right') {
-          boxX = 10;
+          boxX = 8;
           boxY = 6;
-          textX = 16;
+          textX = 8 + padX;
           textY = 21;
         }
 
@@ -133,7 +151,7 @@ export class VideoCompilerService {
         <g transform="translate(${x}, ${y})">
           <circle cx="0" cy="0" r="9" fill="${color}" fill-opacity="0.25" />
           <circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <rect x="${boxX}" y="${boxY}" width="${textWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="${color}" stroke-width="1" />
+          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="${color}" stroke-width="1" />
           <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
         </g>
         `;
@@ -144,30 +162,34 @@ export class VideoCompilerService {
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#090d16" stop-opacity="0.95"/>
-          <stop offset="100%" stop-color="#090d16" stop-opacity="0.5"/>
+          <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
+          <stop offset="65%" stop-color="#04060c" stop-opacity="0.94"/>
+          <stop offset="100%" stop-color="#04060c" stop-opacity="0.0"/>
         </linearGradient>
         <linearGradient id="bottomBarGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#090d16" stop-opacity="0.5"/>
-          <stop offset="100%" stop-color="#090d16" stop-opacity="0.95"/>
+          <stop offset="0%" stop-color="#04060c" stop-opacity="0.0"/>
+          <stop offset="35%" stop-color="#04060c" stop-opacity="0.94"/>
+          <stop offset="100%" stop-color="#04060c" stop-opacity="0.98"/>
         </linearGradient>
       </defs>
 
       <!-- Header Top Bar -->
-      <rect x="0" y="0" width="${width}" height="60" fill="url(#topBarGrad)"/>
+      <rect x="0" y="0" width="${width}" height="68" fill="url(#topBarGrad)"/>
       <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
-      <g transform="translate(${width - 180}, 18)">
-        <!-- X Icon Box: 24x24, black bg, subtle border -->
-        <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1"/>
+      <g transform="translate(${width - 188}, 16)">
+        <!-- Dark contrast backdrop card -->
+        <rect x="-8" y="-4" width="180" height="32" rx="6" fill="#0b0f19" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+        <!-- X Icon Box: 24x24, solid black bg, subtle border -->
+        <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
         <g transform="translate(5, 5)">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
           </svg>
         </g>
-        <!-- Handle Text -->
-        <text x="32" y="17" fill="#64748b" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
+        <!-- Handle Text in high contrast Space Grotesk -->
+        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
       </g>
 
       <!-- Plant Pin Markers -->
