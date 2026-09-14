@@ -155,10 +155,12 @@
         <div class="form-group">
           <label class="form-label" for="layerSelect">Capa Meteorológica / Satelital</label>
           <select id="layerSelect" class="form-select">
-            <option value="goes16_inamhi">🛰️ GOES-16 IR Limpio (Banda 13 - INAMHI/NOAA)</option>
-            <option value="nasa_gibs">🌍 NASA GIBS (GOES-East Banda 13)</option>
+            <option value="esri_satellite" selected>🛰️ Foto Satelital Óptica Real HD (ESRI World Imagery)</option>
+            <option value="blue_marble">🌍 NASA Blue Marble (Mosaico Satelital Óptico)</option>
+            <option value="goes16_inamhi">🌀 GOES-16 IR Infrarrojo Térmico (Banda 13 - Nubes/Tormentas)</option>
             <option value="persiann_24h">🌧️ PERSIANN-PDIR Precipitación Acumulada 24h</option>
             <option value="wrf_daily">🌦️ WRF Pronóstico Numérico de Lluvia</option>
+            <option value="nasa_gibs">🛰️ NASA GIBS GOES-East IR</option>
           </select>
         </div>
 
@@ -461,25 +463,54 @@
       }
     }
 
+    // Dynamic Title and Badge Configuration
+    function updateTitlesForSelection() {
+      const basinKey = basinSelect.value;
+      const layerKey = layerSelect.value;
+      const isEcuador = basinKey === 'ecuador';
+      const basinName = currentGeometry ? currentGeometry.name : 'Ecuador';
+
+      if (layerKey === 'esri_satellite') {
+        customTitleInput.value = isEcuador ? '🛰️ Imagen Satelital HD • Ecuador Continental' : `🛰️ ${basinName} • Foto Satelital HD`;
+        customBadgeInput.value = 'ESRI / ArcGIS';
+      } else if (layerKey === 'blue_marble') {
+        customTitleInput.value = isEcuador ? '🌍 NASA Blue Marble • Satélite Óptico' : `🌍 ${basinName} • Satélite Óptico`;
+        customBadgeInput.value = 'NASA EarthData';
+      } else if (layerKey === 'persiann_24h') {
+        customTitleInput.value = isEcuador ? '🌧️ PERSIANN-PDIR (24h) • Lluvia Acumulada' : `🌧️ ${basinName} • Lluvia 24h`;
+        customBadgeInput.value = 'UC Irvine / NOAA';
+      } else if (layerKey === 'wrf_daily') {
+        customTitleInput.value = isEcuador ? '🌦️ Pronóstico Numérico WRF • Precipitación Diaria' : `🌦️ ${basinName} • Pronóstico WRF`;
+        customBadgeInput.value = 'INAMHI WRF';
+      } else {
+        customTitleInput.value = isEcuador ? '🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador' : `⚡ ${basinName} • GOES-16 IR`;
+        customBadgeInput.value = isEcuador ? 'INAMHI / NOAA' : (currentGeometry?.subtitle || 'Cuenca Alta');
+      }
+
+      if (isEcuador) {
+        showSinglePinCheckbox.checked = false;
+        showAllPinsCheckbox.checked = true;
+      } else {
+        showSinglePinCheckbox.checked = Boolean(currentGeometry?.plantLocation);
+        showAllPinsCheckbox.checked = false;
+        if (currentGeometry?.plantLocation) {
+          pinLabelInput.value = currentGeometry.plantLocation.label;
+        }
+      }
+    }
+
     // Handlers
     function onBasinChange() {
       const key = basinSelect.value;
       currentGeometry = geometriesMap[key] || { key, name: key, bbox: [-81.5, -5.2, -75.0, 1.8] };
+      updateTitlesForSelection();
+      updateOverlay();
+      preloadSequence();
+      renderCurrentFrame();
+    }
 
-      if (key === 'ecuador') {
-        customTitleInput.value = '🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador';
-        customBadgeInput.value = 'INAMHI / NOAA';
-        showSinglePinCheckbox.checked = false;
-        showAllPinsCheckbox.checked = true;
-      } else {
-        customTitleInput.value = `⚡ ${currentGeometry.name} • GOES-16 IR`;
-        customBadgeInput.value = currentGeometry.subtitle || 'Cuenca Alta';
-        showSinglePinCheckbox.checked = Boolean(currentGeometry.plantLocation);
-        showAllPinsCheckbox.checked = false;
-        if (currentGeometry.plantLocation) {
-          pinLabelInput.value = currentGeometry.plantLocation.label;
-        }
-      }
+    function onLayerChange() {
+      updateTitlesForSelection();
       updateOverlay();
       preloadSequence();
       renderCurrentFrame();
@@ -540,10 +571,7 @@
     });
 
     basinSelect.addEventListener('change', onBasinChange);
-    layerSelect.addEventListener('change', () => {
-      preloadSequence();
-      renderCurrentFrame();
-    });
+    layerSelect.addEventListener('change', onLayerChange);
 
     customTitleInput.addEventListener('input', updateOverlay);
     customBadgeInput.addEventListener('input', updateOverlay);

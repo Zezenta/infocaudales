@@ -214,10 +214,15 @@ const server = http.createServer((req, res) => {
     const width = parseInt(urlObj.searchParams.get('width') || '800', 10);
     const height = parseInt(urlObj.searchParams.get('height') || '800', 10);
 
-    let source: 'geoserver' | 'nasa_gibs' = 'geoserver';
+    let source: 'geoserver' | 'nasa_gibs' | 'esri_satellite' = 'geoserver';
     let layers: string | undefined = undefined;
 
-    if (layer === 'nasa_gibs') {
+    if (layer === 'esri_satellite') {
+      source = 'esri_satellite';
+    } else if (layer === 'blue_marble') {
+      source = 'nasa_gibs';
+      layers = 'BlueMarble_NextGeneration';
+    } else if (layer === 'nasa_gibs') {
       source = 'nasa_gibs';
       layers = 'GOES-East_ABI_Band13_Clean_Infrared';
     } else if (layer === 'persiann_24h') {

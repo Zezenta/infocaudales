@@ -2,7 +2,7 @@ import axios from 'axios';
 import { BASIN_GEOMETRIES, BasinGeometry } from '../data/basin-geometries.js';
 import { systemLogger } from '../utils/logger.js';
 
-export type SatelliteSource = 'geoserver' | 'nasa_gibs';
+export type SatelliteSource = 'geoserver' | 'nasa_gibs' | 'esri_satellite';
 
 export interface FetchMapTileOptions {
   source?: SatelliteSource;
@@ -44,6 +44,7 @@ export class SatelliteMapService {
   private readonly geoserverGlobalUrl = 'https://services.geoglows.org/geoserver/wms';
   private readonly geoserverGoesUrl = 'https://services.geoglows.org/geoserver/goes/wms';
   private readonly nasaGibsUrl = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
+  private readonly esriSatelliteUrl = 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export';
   private readonly tileCache = new Map<string, Buffer>();
 
   /**
@@ -125,6 +126,18 @@ export class SatelliteMapService {
     const format = options.format ?? 'image/png';
     const srs = options.srs ?? 'EPSG:4326';
     const bboxStr = `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`;
+
+    if (source === 'esri_satellite') {
+      const params: Record<string, string> = {
+        bbox: `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`,
+        bboxSR: '4326',
+        imageSR: '4326',
+        size: `${width},${height}`,
+        format: 'png',
+        f: 'image'
+      };
+      return { url: this.esriSatelliteUrl, params };
+    }
 
     if (source === 'nasa_gibs') {
       const layers = Array.isArray(options.layers)
