@@ -157,15 +157,17 @@ export class VideoCompilerService {
       <rect x="0" y="0" width="${width}" height="60" fill="url(#topBarGrad)"/>
       <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
       
-      <!-- Top Right Watermark with X Icon -->
-      <g transform="translate(${width - 165}, 16)">
-        <rect x="0" y="0" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
-        <g transform="translate(10, 6)">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="#f8fafc">
+      <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
+      <g transform="translate(${width - 180}, 18)">
+        <!-- X Icon Box: 24x24, black bg, subtle border -->
+        <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1"/>
+        <g transform="translate(5, 5)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
           </svg>
         </g>
-        <text x="32" y="19" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="13">@Hidro_Info_Bot</text>
+        <!-- Handle Text -->
+        <text x="32" y="17" fill="#64748b" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
       </g>
 
       <!-- Plant Pin Markers -->
