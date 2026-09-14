@@ -6,18 +6,6 @@
   <title>Infocaudales • Monitoreo Satelital y Lluvias</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/rain-map.css">
-  <style>
-    /* Glowing pulse animation for map pins with correct SVG origin */
-    @keyframes pin-pulse {
-      0%, 100% { opacity: 0.3; transform: scale(0.9); }
-      50% { opacity: 0.8; transform: scale(1.3); }
-    }
-    .pulsing-circle {
-      transform-box: fill-box;
-      transform-origin: center;
-      animation: pin-pulse 2.2s ease-in-out infinite;
-    }
-  </style>
 </head>
 <body>
 
@@ -61,34 +49,38 @@
 
           <!-- Top Header Bar -->
           <rect x="0" y="0" width="800" height="60" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ Foto Satelital • Ecuador</text>
+          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ Foto Satelital • Ecuador</text>
           
-          <rect id="badgeRect" x="650" y="16" width="130" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-          <text id="overlayBadge" x="715" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">ESRI / ArcGIS</text>
+          <!-- Top Right Watermark with X Icon -->
+          <g id="watermarkGroup" transform="translate(635, 16)">
+            <rect x="0" y="0" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
+            <g transform="translate(10, 6)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#f8fafc">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </g>
+            <text id="overlayWatermark" x="32" y="19" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="13">@Hidro_Info_Bot</text>
+          </g>
 
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
           <g id="allPinsLayer"></g>
 
           <!-- Dynamic Single Plant Pin Marker -->
           <g id="singlePinGroup" transform="translate(430, 436)" style="display: none;">
-            <circle cx="0" cy="0" r="16" fill="#ef4444" fill-opacity="0.35" class="pulsing-circle" />
-            <circle cx="0" cy="0" r="6" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+            <circle cx="0" cy="0" r="9" fill="#ef4444" fill-opacity="0.25" />
+            <circle cx="0" cy="0" r="5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
             <rect id="pinBox" x="12" y="-13" width="120" height="26" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#ef4444" stroke-width="1" />
-            <text id="pinLabel" x="20" y="4" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
+            <text id="pinLabel" x="20" y="4" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
           </g>
 
           <!-- Bottom Footer Bar -->
           <rect x="0" y="740" width="800" height="60" fill="url(#bottomBarGrad)"/>
           <circle cx="30" cy="770" r="7" fill="#22c55e" />
-          <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
+          <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
           
-          <!-- Watermark with X Icon -->
-          <g id="watermarkGroup" transform="translate(635, 762)">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="#94a3b8">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-            <text id="overlayWatermark" x="22" y="14" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
-          </g>
+          <!-- Subtitle Pill Badge on Bottom Right -->
+          <rect id="badgeRect" x="635" y="756" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
+          <text id="overlayBadge" x="708" y="775" text-anchor="middle" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">ESRI / ArcGIS</text>
         </svg>
       </div>
 
@@ -284,17 +276,44 @@
       if (!showAllPinsCheckbox.checked || !currentGeometry) return;
 
       const bbox = currentGeometry.bbox;
-      allHydroPins.forEach((pin, i) => {
+      allHydroPins.forEach((pin) => {
         const { x, y } = projectGeoToPixel(pin.lat, pin.lon, bbox);
         if (x >= -10 && x <= 810 && y >= -10 && y <= 810) {
-          const textW = Math.max(70, pin.label.length * 7 + 14);
+          const textW = Math.max(65, pin.label.length * 7 + 14);
+          let boxX = 10;
+          let boxY = -11;
+          let textX = 16;
+          let textY = 4;
+
+          if (pin.placement === 'top-left') {
+            boxX = -textW - 8;
+            boxY = -20;
+            textX = -textW - 8 + 8;
+            textY = -5;
+          } else if (pin.placement === 'bottom-left') {
+            boxX = -textW - 8;
+            boxY = 6;
+            textX = -textW - 8 + 8;
+            textY = 21;
+          } else if (pin.placement === 'top-right') {
+            boxX = 10;
+            boxY = -24;
+            textX = 16;
+            textY = -9;
+          } else if (pin.placement === 'bottom-right') {
+            boxX = 10;
+            boxY = 6;
+            textX = 16;
+            textY = 21;
+          }
+
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
           g.innerHTML = `
-            <circle cx="0" cy="0" r="14" fill="#38bdf8" fill-opacity="0.3" class="pulsing-circle" />
+            <circle cx="0" cy="0" r="9" fill="#38bdf8" fill-opacity="0.25" />
             <circle cx="0" cy="0" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
-            <rect x="10" y="-11" width="${textW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1" />
-            <text x="16" y="4" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
+            <rect x="${boxX}" y="${boxY}" width="${textW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1" />
+            <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
           `;
           allPinsLayer.appendChild(g);
         }

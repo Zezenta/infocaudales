@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { BASIN_GEOMETRIES, BasinGeometry } from '../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin } from '../data/basin-geometries.js';
 import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
 import { systemLogger } from '../utils/logger.js';
 
@@ -84,20 +84,57 @@ export class VideoCompilerService {
 
     const subtitleBadge = geometry.subtitle || 'Satélite GOES-16';
 
-    let pinSvg = '';
-    if (geometry.plantLocation) {
-      const { lat, lon, label } = geometry.plantLocation;
-      const { x, y } = this.projectGeoToPixel(lat, lon, frame.bbox, width, height);
+    // Collect all relevant pins for this view
+    const pinsToRender: PlantPin[] = [];
+    if (geometry.key === 'ecuador' || geometry.key === 'paute') {
+      for (const p of ALL_HYDRO_PLANTS_PINS) {
+        if (p.lon >= frame.bbox[0] && p.lat >= frame.bbox[1] && p.lon <= frame.bbox[2] && p.lat <= frame.bbox[3]) {
+          pinsToRender.push(p);
+        }
+      }
+    } else if (geometry.plantLocation) {
+      pinsToRender.push(geometry.plantLocation);
+    }
 
-      // Only draw pin if it falls inside visible image area
+    let pinsSvg = '';
+    for (const pin of pinsToRender) {
+      const { x, y } = this.projectGeoToPixel(pin.lat, pin.lon, frame.bbox, width, height);
       if (x >= 0 && x <= width && y >= 0 && y <= height) {
-        const textWidth = Math.max(90, label.length * 8 + 16);
-        pinSvg = `
+        const textWidth = Math.max(65, pin.label.length * 7 + 14);
+        let boxX = 10;
+        let boxY = -11;
+        let textX = 16;
+        let textY = 4;
+
+        if (pin.placement === 'top-left') {
+          boxX = -textWidth - 8;
+          boxY = -20;
+          textX = -textWidth - 8 + 8;
+          textY = -5;
+        } else if (pin.placement === 'bottom-left') {
+          boxX = -textWidth - 8;
+          boxY = 6;
+          textX = -textWidth - 8 + 8;
+          textY = 21;
+        } else if (pin.placement === 'top-right') {
+          boxX = 10;
+          boxY = -24;
+          textX = 16;
+          textY = -9;
+        } else if (pin.placement === 'bottom-right') {
+          boxX = 10;
+          boxY = 6;
+          textX = 16;
+          textY = 21;
+        }
+
+        const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+        pinsSvg += `
         <g transform="translate(${x}, ${y})">
-          <circle cx="0" cy="0" r="16" fill="#ef4444" fill-opacity="0.35" />
-          <circle cx="0" cy="0" r="6" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
-          <rect x="12" y="-13" width="${textWidth}" height="26" rx="5" fill="#0f172a" fill-opacity="0.9" stroke="#ef4444" stroke-width="1" />
-          <text x="20" y="4" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">${label}</text>
+          <circle cx="0" cy="0" r="9" fill="${color}" fill-opacity="0.25" />
+          <circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+          <rect x="${boxX}" y="${boxY}" width="${textWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="${color}" stroke-width="1" />
+          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
         </g>
         `;
       }
@@ -118,27 +155,30 @@ export class VideoCompilerService {
 
       <!-- Header Top Bar -->
       <rect x="0" y="0" width="${width}" height="60" fill="url(#topBarGrad)"/>
-      <text x="20" y="38" fill="#ffffff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
+      <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
       
-      <!-- Subtitle Pill Badge -->
-      <rect x="${width - 165}" y="16" width="145" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="${width - 92}" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${subtitleBadge}</text>
+      <!-- Top Right Watermark with X Icon -->
+      <g transform="translate(${width - 165}, 16)">
+        <rect x="0" y="0" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
+        <g transform="translate(10, 6)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="#f8fafc">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </g>
+        <text x="32" y="19" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="13">@Hidro_Info_Bot</text>
+      </g>
 
-      <!-- Plant Pin Marker -->
-      ${pinSvg}
+      <!-- Plant Pin Markers -->
+      ${pinsSvg}
 
       <!-- Footer Bottom Bar -->
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
-      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${frame.dateEcuador}  ${frame.timeEcuador} ECT</text>
+      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${frame.dateEcuador}  ${frame.timeEcuador} ECT</text>
       
-      <!-- Watermark with X Icon -->
-      <g transform="translate(${width - 165}, ${height - 38})">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="#94a3b8">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-        </svg>
-        <text x="22" y="14" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
-      </g>
+      <!-- Subtitle Pill Badge on Bottom Right -->
+      <rect x="${width - 165}" y="${height - 44}" width="145" height="28" rx="6" fill="#1e293b" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
+      <text x="${width - 92}" y="${height - 25}" text-anchor="middle" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${subtitleBadge}</text>
     </svg>
     `.trim();
   }
