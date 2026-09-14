@@ -30,6 +30,17 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
       label: 'Captación CCS'
     }
   },
+  paute: {
+    key: 'paute',
+    name: 'Complejo Hidroeléctrico Paute',
+    subtitle: 'Mazar • Molino • Sopladora',
+    bbox: [-79.15, -3.15, -78.05, -2.05],
+    plantLocation: {
+      lat: -2.58,
+      lon: -78.58,
+      label: 'Complejo Paute'
+    }
+  },
   mazar: {
     key: 'mazar',
     name: 'Complejo Paute / Mazar',

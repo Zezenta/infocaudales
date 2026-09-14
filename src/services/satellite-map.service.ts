@@ -229,7 +229,7 @@ export class SatelliteMapService {
    */
   public preloadAllOptionsBackground(options: { limit?: number; plantKeys?: string[] } = {}): void {
     const limit = options.limit || 18;
-    const plantKeys = options.plantKeys || ['ecuador', 'cocaCodoSinclair', 'mazar', 'agoyan', 'minasSanFrancisco'];
+    const plantKeys = options.plantKeys || ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
     const layerConfigs: Array<{ source: SatelliteSource; layers: string }> = [
       { source: 'geoserver', layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias' },
       { source: 'nasa_gibs', layers: 'GOES-East_ABI_Band13_Clean_Infrared' },

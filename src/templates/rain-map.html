@@ -144,9 +144,7 @@
           <select id="basinSelect" class="form-select">
             <option value="ecuador">🇪🇨 Ecuador Continental (Nacional)</option>
             <option value="cocaCodoSinclair">⚡ Coca Codo Sinclair (Quijos/Salado)</option>
-            <option value="mazar">🏔️ Complejo Paute / Mazar</option>
-            <option value="molino">🌊 Complejo Paute / Molino</option>
-            <option value="sopladora">⚡ Complejo Paute / Sopladora</option>
+            <option value="paute">🏔️ Complejo Paute (Mazar / Molino / Sopladora)</option>
             <option value="agoyan">💧 Cuenca Pastaza / Agoyán</option>
             <option value="minasSanFrancisco">🏞️ Cuenca Jubones / Minas San Francisco</option>
           </select>
@@ -492,7 +490,7 @@
         customBadgeInput.value = isEcuador ? 'INAMHI / NOAA' : (currentGeometry?.subtitle || 'Cuenca Alta');
       }
 
-      if (isEcuador) {
+      if (basinKey === 'ecuador' || basinKey === 'paute') {
         showSinglePinCheckbox.checked = false;
         showAllPinsCheckbox.checked = true;
       } else {
