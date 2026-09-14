@@ -85,20 +85,6 @@ export class VideoCompilerService {
   }
 
   /**
-   * Helper to load base64 data URI for plant drawings.
-   */
-  private getDrawingBase64(imageName?: string): string | null {
-    if (!imageName) return null;
-    try {
-      const imgPath = path.join(process.cwd(), 'src', 'hydroelectric-drawings', imageName);
-      if (fs.existsSync(imgPath)) {
-        return `data:image/png;base64,${fs.readFileSync(imgPath).toString('base64')}`;
-      }
-    } catch (err) {}
-    return null;
-  }
-
-  /**
    * Generates a modern, clean SVG overlay with badges, plant pin, and timestamps.
    */
   public generateSvgOverlay(options: {
@@ -133,44 +119,40 @@ export class VideoCompilerService {
         const padX = 7;
         const textWidth = this.estimateTextWidth(pin.label, 10);
         const boxWidth = textWidth + (padX * 2);
-        let boxX = 14;
+        let boxX = 8;
         let boxY = -11;
-        let textX = 14 + padX;
+        let textX = 8 + padX;
         let textY = 4;
 
         if (pin.placement === 'top-left') {
-          boxX = -boxWidth - 14;
+          boxX = -boxWidth - 8;
           boxY = -20;
-          textX = -boxWidth - 14 + padX;
+          textX = -boxWidth - 8 + padX;
           textY = -5;
         } else if (pin.placement === 'bottom-left') {
-          boxX = -boxWidth - 14;
-          boxY = 8;
-          textX = -boxWidth - 14 + padX;
-          textY = 23;
+          boxX = -boxWidth - 8;
+          boxY = 6;
+          textX = -boxWidth - 8 + padX;
+          textY = 21;
         } else if (pin.placement === 'top-right') {
-          boxX = 14;
+          boxX = 8;
           boxY = -24;
-          textX = 14 + padX;
+          textX = 8 + padX;
           textY = -9;
         } else if (pin.placement === 'bottom-right') {
-          boxX = 14;
-          boxY = 8;
-          textX = 14 + padX;
-          textY = 23;
+          boxX = 8;
+          boxY = 6;
+          textX = 8 + padX;
+          textY = 21;
         }
 
         const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
-        const base64Uri = this.getDrawingBase64(pin.imageName);
-        const imgMarkup = base64Uri
-          ? `<image href="${base64Uri}" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`
-          : `<circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />`;
 
         pinsSvg += `
         <g transform="translate(${x}, ${y})">
-          <circle cx="0" cy="0" r="15" fill="#0f172a" fill-opacity="0.92" stroke="${color}" stroke-width="1.5" />
-          ${imgMarkup}
-          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.92" stroke="${color}" stroke-width="1" />
+          <circle cx="0" cy="0" r="9" fill="${color}" fill-opacity="0.25" />
+          <circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="${color}" stroke-width="1" />
           <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
         </g>
         `;

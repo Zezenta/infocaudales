@@ -69,13 +69,12 @@
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
           <g id="allPinsLayer"></g>
 
-          <!-- Dynamic Single Plant Pin Marker with Drawing Card -->
+          <!-- Dynamic Single Plant Pin Marker -->
           <g id="singlePinGroup" transform="translate(430, 436)" style="display: none;">
-            <circle cx="0" cy="0" r="4" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
-            <rect x="-24" y="-34" width="48" height="28" rx="6" fill="#0f172a" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.5" />
-            <image id="singlePinImg" href="/hydroelectric-drawings/Coca_Codo_Sinclair.png" xlink:href="/hydroelectric-drawings/Coca_Codo_Sinclair.png" x="-22" y="-32" width="44" height="24" preserveAspectRatio="xMidYMid meet"/>
-            <rect id="pinBox" x="28" y="-12" width="120" height="24" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#ef4444" stroke-width="1" />
-            <text id="pinLabel" x="35" y="4" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
+            <circle cx="0" cy="0" r="9" fill="#ef4444" fill-opacity="0.25" />
+            <circle cx="0" cy="0" r="5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+            <rect id="pinBox" x="8" y="-11" width="120" height="22" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#ef4444" stroke-width="1" />
+            <text id="pinLabel" x="15" y="4" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
           </g>
 
           <!-- Bottom Footer Bar -->
@@ -295,47 +294,39 @@
           const padX = 7;
           const textW = measureTextWidth(pin.label, 10, 'bold');
           const boxW = textW + (padX * 2);
-          let boxX = 14;
+          let boxX = 8;
           let boxY = -11;
-          let textX = 14 + padX;
+          let textX = 8 + padX;
           let textY = 4;
 
           if (pin.placement === 'top-left') {
-            boxX = -boxW - 14;
+            boxX = -boxW - 8;
             boxY = -20;
-            textX = -boxW - 14 + padX;
+            textX = -boxW - 8 + padX;
             textY = -5;
           } else if (pin.placement === 'bottom-left') {
-            boxX = -boxW - 14;
-            boxY = 8;
-            textX = -boxW - 14 + padX;
-            textY = 23;
+            boxX = -boxW - 8;
+            boxY = 6;
+            textX = -boxW - 8 + padX;
+            textY = 21;
           } else if (pin.placement === 'top-right') {
-            boxX = 14;
+            boxX = 8;
             boxY = -24;
-            textX = 14 + padX;
+            textX = 8 + padX;
             textY = -9;
           } else if (pin.placement === 'bottom-right') {
-            boxX = 14;
-            boxY = 8;
-            textX = 14 + padX;
-            textY = 23;
+            boxX = 8;
+            boxY = 6;
+            textX = 8 + padX;
+            textY = 21;
           }
-
-          const imgSrc = pin.imageName ? `/hydroelectric-drawings/${pin.imageName}` : '';
-          const imgMarkup = imgSrc
-            ? `
-              <rect x="-20" y="-30" width="40" height="24" rx="5" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1.5" />
-              <image href="${imgSrc}" xlink:href="${imgSrc}" x="-18" y="-28" width="36" height="20" preserveAspectRatio="xMidYMid meet"/>
-            `
-            : `<circle cx="0" cy="0" r="14" fill="#0f172a" fill-opacity="0.92" stroke="#38bdf8" stroke-width="1.5" />`;
 
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
           g.innerHTML = `
-            <circle cx="0" cy="0" r="4" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
-            ${imgMarkup}
-            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="20" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1" />
+            <circle cx="0" cy="0" r="9" fill="#38bdf8" fill-opacity="0.25" />
+            <circle cx="0" cy="0" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
+            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1" />
             <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
           `;
           allPinsLayer.appendChild(g);
@@ -361,14 +352,10 @@
 
       // Single Focused Pin
       if (currentGeometry && currentGeometry.plantLocation && showSinglePinCheckbox.checked) {
-        const { lat, lon, label, imageName } = currentGeometry.plantLocation;
+        const { lat, lon, label } = currentGeometry.plantLocation;
         const { x, y } = projectGeoToPixel(lat, lon, currentGeometry.bbox);
         if (x >= 0 && x <= 800 && y >= 0 && y <= 800) {
           singlePinGroup.setAttribute('transform', `translate(${x}, ${y})`);
-          const singlePinImg = document.getElementById('singlePinImg');
-          if (singlePinImg && imageName) {
-            singlePinImg.setAttribute('href', `/hydroelectric-drawings/${imageName}`);
-          }
           const singleText = pinLabelInput.value || label;
           pinLabel.textContent = singleText;
           const textW = measureTextWidth(singleText, 11, 'bold');
