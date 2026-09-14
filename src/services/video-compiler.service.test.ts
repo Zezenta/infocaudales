@@ -79,7 +79,7 @@ describe('VideoCompilerService', () => {
         height: 800
       });
 
-      expect(svg).toContain('Cuenca Coca Codo Sinclair');
+      expect(svg).toContain('Vista Satelital En Vivo');
       expect(svg).toContain('Captación CCS');
       expect(svg).toContain('2026-09-10  22:00 ECT');
     });

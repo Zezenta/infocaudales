@@ -722,14 +722,23 @@
     // Compilation Action
     async function triggerCompile(format = 'mp4') {
       exportStatus.className = 'status-box active loading';
-      exportStatus.innerHTML = `⏳ Compilando animación en formato <strong>${format.toUpperCase()}</strong>...`;
+      exportStatus.innerHTML = `⏳ Compilando animación en formato <strong>${format.toUpperCase()}</strong> con los estilos visuales activos...`;
 
       try {
+        const speedVal = parseInt(speedSelect.value, 10) || 250;
+        const fps = Math.round(1000 / speedVal) || 4;
+
         const payload = {
           plantKey: basinSelect.value,
+          layer: layerSelect.value,
+          customTitle: customTitleInput.value,
+          customBadge: customBadgeInput.value,
+          pinLabel: pinLabelInput.value,
+          showSinglePin: showSinglePinCheckbox.checked,
+          showAllPins: showAllPinsCheckbox.checked,
           createMp4: format === 'mp4',
           createGif: format === 'gif',
-          framerate: 4
+          framerate: fps
         };
 
         const res = await fetch('/api/compile-rain-video', {

@@ -9,7 +9,18 @@ import { systemLogger } from '../utils/logger.js';
 
 const execAsync = promisify(exec);
 
-export interface CompileOptions {
+export interface OverlayCustomizationOptions {
+  customTitle?: string;
+  customBadge?: string;
+  showAllPins?: boolean;
+  showSinglePin?: boolean;
+  singlePinLabel?: string;
+  showThermalScale?: boolean;
+  layer?: string;
+  layers?: string | string[];
+}
+
+export interface CompileOptions extends OverlayCustomizationOptions {
   outputDir?: string;
   outputName?: string;
   framerate?: number;
@@ -41,7 +52,7 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
   bbox?: [number, number, number, number];
   hoursBack?: number;
   frameCount?: number;
-  source?: 'geoserver' | 'nasa_gibs';
+  source?: 'geoserver' | 'nasa_gibs' | 'esri_satellite';
 }
 
 export class VideoCompilerService {
@@ -92,32 +103,43 @@ export class VideoCompilerService {
     geometry: BasinGeometry;
     width: number;
     height: number;
+    customTitle?: string;
+    customBadge?: string;
+    showAllPins?: boolean;
+    showSinglePin?: boolean;
+    singlePinLabel?: string;
+    showThermalScale?: boolean;
   }): string {
     const { frame, geometry, width, height } = options;
-    const title = geometry.key === 'ecuador'
-      ? 'Vista Satelital En Vivo'
-      : `⚡ ${geometry.name} • Vista Satelital`;
+    const title = options.customTitle || 'Vista Satelital En Vivo';
 
-    const subtitleBadge = geometry.key === 'ecuador'
+    const subtitleBadge = options.customBadge || (geometry.key === 'ecuador'
       ? 'GOES-16 • Banda 13 IR (10.3 µm)'
-      : (geometry.subtitle || 'GOES-16 • Banda 13 IR');
+      : (geometry.subtitle || 'GOES-16 • Banda 13 IR'));
 
-    // Collect all relevant pins for this view
+    // Determine pins to render according to browser toggle state
     const pinsToRender: PlantPin[] = [];
-    if (geometry.key === 'ecuador' || geometry.key === 'paute') {
+    const showAllPins = options.showAllPins !== undefined ? options.showAllPins : (geometry.key === 'ecuador' || geometry.key === 'paute');
+    const showSinglePin = options.showSinglePin !== undefined ? options.showSinglePin : (geometry.key !== 'ecuador' && geometry.key !== 'paute');
+
+    if (showAllPins) {
       for (const p of ALL_HYDRO_PLANTS_PINS) {
         if (p.lon >= frame.bbox[0] && p.lat >= frame.bbox[1] && p.lon <= frame.bbox[2] && p.lat <= frame.bbox[3]) {
           pinsToRender.push(p);
         }
       }
-    } else if (geometry.plantLocation) {
-      pinsToRender.push(geometry.plantLocation);
+    } else if (showSinglePin && geometry.plantLocation) {
+      const singlePin = { ...geometry.plantLocation };
+      if (options.singlePinLabel) {
+        singlePin.label = options.singlePinLabel;
+      }
+      pinsToRender.push(singlePin);
     }
 
     let pinsSvg = '';
     for (const pin of pinsToRender) {
       const { x, y } = this.projectGeoToPixel(pin.lat, pin.lon, frame.bbox, width, height);
-      if (x >= 0 && x <= width && y >= 0 && y <= height) {
+      if (x >= -10 && x <= width + 10 && y >= -10 && y <= height + 10) {
         const padX = 8;
         const textWidth = this.estimateTextWidth(pin.label, 12);
         const boxWidth = textWidth + (padX * 2);
@@ -166,6 +188,23 @@ export class VideoCompilerService {
     const badgeTotalWidth = badgeTextWidth + 32;
     const badgeX = width - badgeTotalWidth - 20;
 
+    const showThermalScale = options.showThermalScale !== false;
+    const thermalScaleSvg = showThermalScale
+      ? `
+      <!-- Floating Thermal Scale Bar Overlay -->
+      <g transform="translate(20, ${height - 116})">
+        <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+        <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+        <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
+        <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
+        <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+        <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
+        <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
+      </g>
+      `
+      : '';
+
     return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -213,17 +252,7 @@ export class VideoCompilerService {
       <!-- Plant Pin Markers -->
       ${pinsSvg}
 
-      <!-- Floating Thermal Scale Bar Overlay -->
-      <g transform="translate(20, ${height - 116})">
-        <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
-        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
-        <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
-        <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
-        <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
-        <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
-        <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
-        <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
-      </g>
+      ${thermalScaleSvg}
 
       <!-- Footer Bottom Bar -->
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
@@ -294,7 +323,13 @@ export class VideoCompilerService {
           frame,
           geometry,
           width,
-          height
+          height,
+          customTitle: options.customTitle,
+          customBadge: options.customBadge,
+          showAllPins: options.showAllPins,
+          showSinglePin: options.showSinglePin,
+          singlePinLabel: options.singlePinLabel,
+          showThermalScale: options.showThermalScale
         });
         fs.writeFileSync(svgPath, svgContent);
 
@@ -365,13 +400,38 @@ export class VideoCompilerService {
     const hoursBack = options.hoursBack || 3;
     const frameCount = options.frameCount || Math.round(hoursBack * 6); // 6 frames per hour (10-min cadence)
 
+    // Resolve source & layers from layer parameter if provided
+    let source = options.source;
+    let layers = options.layers;
+    if (options.layer) {
+      if (options.layer === 'esri_satellite') {
+        source = 'esri_satellite';
+      } else if (options.layer === 'blue_marble') {
+        source = 'nasa_gibs';
+        layers = 'BlueMarble_NextGeneration';
+      } else if (options.layer === 'nasa_gibs') {
+        source = 'nasa_gibs';
+        layers = 'GOES-East_ABI_Band13_Clean_Infrared';
+      } else if (options.layer === 'persiann_24h') {
+        source = 'geoserver';
+        layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+      } else if (options.layer === 'wrf_daily') {
+        source = 'geoserver';
+        layers = 'wrf:wrf_precipitation_daily,ecuador:provincias';
+      } else {
+        source = 'geoserver';
+        layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+      }
+    }
+
     systemLogger.info(`[VideoCompilerService] Starting basin animation generation for ${plantKey} (${hoursBack}h back, ${frameCount} frames)...`);
 
     const frames = await this.satelliteMapService.fetchBasinRecentFrames({
       plantKey,
       bbox: options.bbox,
       frameCount,
-      source: options.source,
+      source,
+      layers,
       width: options.width,
       height: options.height
     });

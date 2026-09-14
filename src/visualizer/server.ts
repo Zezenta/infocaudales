@@ -275,13 +275,27 @@ const server = http.createServer((req, res) => {
         const createMp4 = payload.createMp4 !== false;
         const createGif = payload.createGif !== false;
         const framerate = payload.framerate || 4;
+        const customTitle = payload.customTitle || 'Vista Satelital En Vivo';
+        const customBadge = payload.customBadge;
+        const pinLabel = payload.pinLabel;
+        const showSinglePin = payload.showSinglePin;
+        const showAllPins = payload.showAllPins;
+        const layer = payload.layer || 'goes16_inamhi';
+        const showThermalScale = layer === 'goes16_inamhi';
 
-        console.log(`[Visualizer] Compiling rain video for ${plantKey}...`);
+        console.log(`[Visualizer] Compiling rain animation for ${plantKey} (layer: ${layer}, title: "${customTitle}")...`);
         const result = await videoCompilerService.generateBasinAnimation({
           plantKey,
           createMp4,
           createGif,
-          framerate
+          framerate,
+          customTitle,
+          customBadge,
+          singlePinLabel: pinLabel,
+          showSinglePin,
+          showAllPins,
+          showThermalScale,
+          layer
         });
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
