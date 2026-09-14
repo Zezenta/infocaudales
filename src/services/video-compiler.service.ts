@@ -131,7 +131,14 @@ export class VideoCompilerService {
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
       <text x="46" y="${height - 24}" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${frame.dateEcuador}  ${frame.timeEcuador} ECT</text>
-      <text x="${width - 24}" y="${height - 24}" text-anchor="end" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
+      
+      <!-- Watermark with X Icon -->
+      <g transform="translate(${width - 165}, ${height - 38})">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="#94a3b8">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        <text x="22" y="14" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
+      </g>
     </svg>
     `.trim();
   }
