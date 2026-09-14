@@ -59,6 +59,13 @@ function generatePlantsConfigScript() {
 }
 
 const server = http.createServer((req, res) => {
+  // Ignore favicon requests
+  if (req.url === '/favicon.ico') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   // Serve dynamic plants configuration script
   if (req.url === '/api/plants-config.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript' });
