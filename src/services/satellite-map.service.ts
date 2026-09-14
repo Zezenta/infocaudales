@@ -230,11 +230,12 @@ export class SatelliteMapService {
   public preloadAllOptionsBackground(options: { limit?: number; plantKeys?: string[] } = {}): void {
     const limit = options.limit || 18;
     const plantKeys = options.plantKeys || ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
-    const layerConfigs: Array<{ source: SatelliteSource; layers: string }> = [
+    const layerConfigs: Array<{ source: SatelliteSource; layers?: string }> = [
+      { source: 'esri_satellite' },
       { source: 'geoserver', layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias' },
-      { source: 'nasa_gibs', layers: 'GOES-East_ABI_Band13_Clean_Infrared' },
       { source: 'geoserver', layers: 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias' },
-      { source: 'geoserver', layers: 'wrf:wrf_precipitation_daily,ecuador:provincias' }
+      { source: 'geoserver', layers: 'wrf:wrf_precipitation_daily,ecuador:provincias' },
+      { source: 'nasa_gibs', layers: 'BlueMarble_NextGeneration' }
     ];
 
     setTimeout(async () => {

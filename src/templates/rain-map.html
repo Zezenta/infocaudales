@@ -347,6 +347,69 @@
       renderAllPins();
     }
 
+    const ALL_BASIN_KEYS = ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
+    const ALL_LAYER_KEYS = ['esri_satellite', 'goes16_inamhi', 'persiann_24h', 'wrf_daily', 'blue_marble'];
+    let isBackgroundPreloadRunning = false;
+
+    // Background Progressive Preloader for all basins and layers (Zero Buffering on Switch)
+    async function preloadAllViewsInBackground() {
+      if (isBackgroundPreloadRunning || !timestamps.length) return;
+      isBackgroundPreloadRunning = true;
+
+      const currentBasin = basinSelect.value;
+      const currentLayer = layerSelect.value;
+      const tasks = [];
+
+      // Priority 1: Other basins with current layer
+      for (const b of ALL_BASIN_KEYS) {
+        if (b !== currentBasin) {
+          for (const t of timestamps) {
+            tasks.push({ plantKey: b, layer: currentLayer, time: t });
+          }
+        }
+      }
+
+      // Priority 2: Other layers across all basins
+      for (const l of ALL_LAYER_KEYS) {
+        if (l !== currentLayer) {
+          for (const b of ALL_BASIN_KEYS) {
+            for (const t of timestamps) {
+              tasks.push({ plantKey: b, layer: l, time: t });
+            }
+          }
+        }
+      }
+
+      // Run 4 parallel background workers
+      const CONCURRENCY = 4;
+      let taskIdx = 0;
+
+      async function worker() {
+        while (taskIdx < tasks.length) {
+          const task = tasks[taskIdx++];
+          const cacheKey = `${task.plantKey}_${task.layer}_${task.time}`;
+
+          if (!frameImageCache.has(cacheKey)) {
+            await new Promise((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                frameImageCache.set(cacheKey, img);
+                resolve();
+              };
+              img.onerror = () => {
+                resolve();
+              };
+              img.src = `/api/satellite-frame?time=${encodeURIComponent(task.time)}&plantKey=${encodeURIComponent(task.plantKey)}&layer=${encodeURIComponent(task.layer)}&width=800&height=800`;
+            });
+          }
+        }
+      }
+
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+      preloadStatusText.textContent = `⚡ Todo en RAM (${frameImageCache.size} frames)`;
+      console.log(`[Preloader] Background preloading complete: ${frameImageCache.size} frames cached in browser RAM.`);
+    }
+
     // Preload Sequence for Current View
     async function preloadSequence() {
       if (!timestamps.length) return;
@@ -461,6 +524,7 @@
         currentFrameIdx = maxIdx;
 
         onBasinChange();
+        setTimeout(preloadAllViewsInBackground, 600);
       } catch (err) {
         console.error('Error loading initial data:', err);
       }
