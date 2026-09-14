@@ -122,8 +122,8 @@ describe('SatelliteMapService', () => {
       `;
       mockedAxios.get.mockResolvedValueOnce({ status: 200, data: mockXml });
 
-      // Mock image buffer responses
-      const fakeImageBuf = Buffer.from('fake-png-data');
+      // Mock valid image buffer response (PNG header)
+      const fakeImageBuf = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D]);
       mockedAxios.get.mockResolvedValue({ status: 200, data: fakeImageBuf });
 
       const frames = await service.fetchBasinRecentFrames({

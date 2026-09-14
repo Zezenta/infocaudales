@@ -55,9 +55,9 @@ describe('VideoCompilerService', () => {
         height: 800
       });
 
-      expect(svg).toContain('GOES-16 IR (Banda 13) • Satélite Ecuador');
+      expect(svg).toContain('🛰️ Satélite en Vivo • Nubes y Tormentas');
       expect(svg).toContain('2026-09-10  22:00 ECT');
-      expect(svg).toContain('@infocaudales');
+      expect(svg).toContain('@Hidro_Info_Bot');
     });
 
     it('generates SVG overlay with plant pin for specific hydro basin', () => {

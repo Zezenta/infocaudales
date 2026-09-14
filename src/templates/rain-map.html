@@ -61,10 +61,10 @@
 
           <!-- Top Header Bar -->
           <rect x="0" y="0" width="800" height="60" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador</text>
+          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">🛰️ Foto Satelital • Ecuador</text>
           
           <rect id="badgeRect" x="650" y="16" width="130" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-          <text id="overlayBadge" x="715" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">INAMHI / NOAA</text>
+          <text id="overlayBadge" x="715" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">ESRI / ArcGIS</text>
 
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
           <g id="allPinsLayer"></g>
@@ -81,7 +81,7 @@
           <rect x="0" y="740" width="800" height="60" fill="url(#bottomBarGrad)"/>
           <circle cx="30" cy="770" r="7" fill="#22c55e" />
           <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
-          <text x="776" y="776" text-anchor="end" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@infocaudales</text>
+          <text id="overlayWatermark" x="776" y="776" text-anchor="end" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
         </svg>
       </div>
 
@@ -522,20 +522,20 @@
       const basinName = currentGeometry ? currentGeometry.name : 'Ecuador';
 
       if (layerKey === 'esri_satellite') {
-        customTitleInput.value = isEcuador ? '🛰️ Imagen Satelital HD • Ecuador Continental' : `🛰️ ${basinName} • Foto Satelital HD`;
+        customTitleInput.value = isEcuador ? '🛰️ Foto Satelital • Ecuador' : `🛰️ ${basinName} • Foto Satelital`;
         customBadgeInput.value = 'ESRI / ArcGIS';
       } else if (layerKey === 'blue_marble') {
-        customTitleInput.value = isEcuador ? '🌍 NASA Blue Marble • Satélite Óptico' : `🌍 ${basinName} • Satélite Óptico`;
+        customTitleInput.value = isEcuador ? '🌍 Vista Satelital • Ecuador' : `🌍 ${basinName} • Vista Satelital`;
         customBadgeInput.value = 'NASA EarthData';
       } else if (layerKey === 'persiann_24h') {
-        customTitleInput.value = isEcuador ? '🌧️ PERSIANN-PDIR (24h) • Lluvia Acumulada' : `🌧️ ${basinName} • Lluvia 24h`;
-        customBadgeInput.value = 'UC Irvine / NOAA';
+        customTitleInput.value = isEcuador ? '🌧️ Lluvia de las Últimas 24 Horas' : `🌧️ ${basinName} • Lluvia 24h`;
+        customBadgeInput.value = 'Lluvia 24h';
       } else if (layerKey === 'wrf_daily') {
-        customTitleInput.value = isEcuador ? '🌦️ Pronóstico Numérico WRF • Precipitación Diaria' : `🌦️ ${basinName} • Pronóstico WRF`;
-        customBadgeInput.value = 'INAMHI WRF';
+        customTitleInput.value = isEcuador ? '🌦️ Pronóstico de Lluvias de Hoy' : `🌦️ ${basinName} • Pronóstico de Lluvias`;
+        customBadgeInput.value = 'Pronóstico INAMHI';
       } else {
-        customTitleInput.value = isEcuador ? '🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador' : `⚡ ${basinName} • GOES-16 IR`;
-        customBadgeInput.value = isEcuador ? 'INAMHI / NOAA' : (currentGeometry?.subtitle || 'Cuenca Alta');
+        customTitleInput.value = isEcuador ? '🛰️ Satélite en Vivo • Nubes y Tormentas' : `⚡ ${basinName} • Monitoreo de Lluvias`;
+        customBadgeInput.value = isEcuador ? 'Satélite GOES-16' : (currentGeometry?.subtitle || 'Cuenca Alta');
       }
 
       if (basinKey === 'ecuador' || basinKey === 'paute') {

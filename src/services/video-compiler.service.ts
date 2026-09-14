@@ -79,10 +79,10 @@ export class VideoCompilerService {
   }): string {
     const { frame, geometry, width, height } = options;
     const title = geometry.key === 'ecuador'
-      ? '🛰️ GOES-16 IR (Banda 13) • Satélite Ecuador'
-      : `⚡ ${geometry.name} • GOES-16 IR`;
+      ? '🛰️ Satélite en Vivo • Nubes y Tormentas'
+      : `⚡ ${geometry.name} • Monitoreo de Lluvias`;
 
-    const subtitleBadge = geometry.subtitle || 'INAMHI / NOAA';
+    const subtitleBadge = geometry.subtitle || 'Satélite GOES-16';
 
     let pinSvg = '';
     if (geometry.plantLocation) {
@@ -121,8 +121,8 @@ export class VideoCompilerService {
       <text x="20" y="38" fill="#ffffff" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
       
       <!-- Subtitle Pill Badge -->
-      <rect x="${width - 150}" y="16" width="130" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="${width - 85}" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${subtitleBadge}</text>
+      <rect x="${width - 165}" y="16" width="145" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="${width - 92}" y="35" text-anchor="middle" fill="#38bdf8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${subtitleBadge}</text>
 
       <!-- Plant Pin Marker -->
       ${pinSvg}
@@ -131,7 +131,7 @@ export class VideoCompilerService {
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
       <text x="46" y="${height - 24}" fill="#f8fafc" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${frame.dateEcuador}  ${frame.timeEcuador} ECT</text>
-      <text x="${width - 24}" y="${height - 24}" text-anchor="end" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@infocaudales</text>
+      <text x="${width - 24}" y="${height - 24}" text-anchor="end" fill="#94a3b8" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
     </svg>
     `.trim();
   }

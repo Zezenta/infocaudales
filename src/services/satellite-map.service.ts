@@ -214,6 +214,16 @@ export class SatelliteMapService {
 
       if (response.status === 200 && response.data) {
         const buf = Buffer.from(response.data);
+        if (buf.length < 8) {
+          throw new Error(`Invalid map tile buffer length: ${buf.length}`);
+        }
+        // Check for PNG signature (0x89 0x50 0x4E 0x47) or JPEG (0xFF 0xD8)
+        const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+        const isJpg = buf[0] === 0xff && buf[1] === 0xd8;
+        if (!isPng && !isJpg) {
+          const sample = buf.toString('utf8', 0, Math.min(buf.length, 250));
+          throw new Error(`WMS returned non-image payload: ${sample}`);
+        }
         this.tileCache.set(cacheKey, buf);
         return buf;
       }
