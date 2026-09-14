@@ -17,16 +17,16 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'ecuador',
     name: 'Ecuador Continental',
     subtitle: 'Nacional',
-    bbox: [-81.5, -5.2, -75.0, 1.8],
+    bbox: [-81.65, -5.10, -74.85, 1.70],
   },
   cocaCodoSinclair: {
     key: 'cocaCodoSinclair',
     name: 'Cuenca Coca Codo Sinclair',
     subtitle: 'Ríos Quijos / Salado / Coca',
-    bbox: [-78.4, -0.8, -77.1, 0.5],
+    bbox: [-78.40, -0.80, -77.10, 0.50],
     plantLocation: {
       lat: -0.21,
-      lon: -77.7,
+      lon: -77.70,
       label: 'Captación CCS'
     }
   },
@@ -34,7 +34,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'mazar',
     name: 'Complejo Paute / Mazar',
     subtitle: 'Cuenca Río Paute',
-    bbox: [-79.3, -3.1, -78.2, -2.1],
+    bbox: [-79.15, -3.15, -78.05, -2.05],
     plantLocation: {
       lat: -2.54,
       lon: -78.63,
@@ -45,7 +45,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'molino',
     name: 'Complejo Paute / Molino',
     subtitle: 'Cuenca Río Paute',
-    bbox: [-79.3, -3.1, -78.2, -2.1],
+    bbox: [-79.15, -3.15, -78.05, -2.05],
     plantLocation: {
       lat: -2.58,
       lon: -78.58,
@@ -56,7 +56,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'sopladora',
     name: 'Complejo Paute / Sopladora',
     subtitle: 'Cuenca Río Paute',
-    bbox: [-79.3, -3.1, -78.2, -2.1],
+    bbox: [-79.15, -3.15, -78.05, -2.05],
     plantLocation: {
       lat: -2.61,
       lon: -78.54,
@@ -67,7 +67,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'agoyan',
     name: 'Cuenca Pastaza / Agoyán',
     subtitle: 'Río Pastaza',
-    bbox: [-78.7, -1.6, -77.9, -1.2],
+    bbox: [-78.80, -1.85, -77.90, -0.95],
     plantLocation: {
       lat: -1.40,
       lon: -78.36,
@@ -78,7 +78,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'minasSanFrancisco',
     name: 'Cuenca Jubones / MSF',
     subtitle: 'Río Jubones',
-    bbox: [-79.8, -3.6, -79.2, -3.1],
+    bbox: [-79.88, -3.74, -79.08, -2.94],
     plantLocation: {
       lat: -3.34,
       lon: -79.48,
