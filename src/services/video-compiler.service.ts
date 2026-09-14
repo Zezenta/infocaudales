@@ -180,12 +180,16 @@ export class VideoCompilerService {
           <stop offset="100%" stop-color="#04060c" stop-opacity="0.98"/>
         </linearGradient>
         <linearGradient id="thermalScaleGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#0f172a"/>
-          <stop offset="20%" stop-color="#38bdf8"/>
-          <stop offset="45%" stop-color="#22c55e"/>
-          <stop offset="68%" stop-color="#f59e0b"/>
-          <stop offset="85%" stop-color="#ef4444"/>
-          <stop offset="100%" stop-color="#ec4899"/>
+          <stop offset="0%" stop-color="#262626"/>
+          <stop offset="10%" stop-color="#404040"/>
+          <stop offset="35%" stop-color="#808080"/>
+          <stop offset="40%" stop-color="#00FFFF"/>
+          <stop offset="50%" stop-color="#000073"/>
+          <stop offset="60%" stop-color="#2EFF00"/>
+          <stop offset="70%" stop-color="#FFFF00"/>
+          <stop offset="80%" stop-color="#FF0000"/>
+          <stop offset="85%" stop-color="#921313"/>
+          <stop offset="100%" stop-color="#FFFFFF"/>
         </linearGradient>
       </defs>
 
@@ -211,13 +215,14 @@ export class VideoCompilerService {
 
       <!-- Floating Thermal Scale Bar Overlay -->
       <g transform="translate(20, ${height - 116})">
-        <rect x="0" y="0" width="220" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+        <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
         <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
-        <rect x="10" y="19" width="200" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
-        <text x="10" y="37" fill="#64748b" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+30°</text>
-        <text x="72" y="37" fill="#38bdf8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-20°</text>
-        <text x="135" y="37" fill="#f59e0b" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
-        <text x="186" y="37" fill="#ec4899" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-80°C</text>
+        <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+        <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
+        <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
+        <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+        <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
+        <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
       </g>
 
       <!-- Footer Bottom Bar -->
