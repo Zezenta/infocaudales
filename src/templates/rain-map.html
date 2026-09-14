@@ -35,7 +35,7 @@
         <canvas id="satelliteCanvas" width="800" height="800" class="satellite-image-layer"></canvas>
         
         <!-- Live SVG Overlay (Matches Exact Video Format) -->
-        <svg id="svgOverlay" class="overlay-layer" width="800" height="800" xmlns="http://www.w3.org/2000/svg">
+        <svg id="svgOverlay" class="overlay-layer" width="800" height="800" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
           <defs>
             <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
@@ -69,12 +69,13 @@
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
           <g id="allPinsLayer"></g>
 
-          <!-- Dynamic Single Plant Pin Marker with Drawing -->
+          <!-- Dynamic Single Plant Pin Marker with Drawing Card -->
           <g id="singlePinGroup" transform="translate(430, 436)" style="display: none;">
-            <circle cx="0" cy="0" r="16" fill="#0f172a" fill-opacity="0.92" stroke="#ef4444" stroke-width="1.5" />
-            <image id="singlePinImg" href="/hydroelectric-drawings/Coca_Codo_Sinclair.png" x="-13" y="-13" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>
-            <rect id="pinBox" x="16" y="-12" width="120" height="24" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="#ef4444" stroke-width="1" />
-            <text id="pinLabel" x="23" y="4" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
+            <circle cx="0" cy="0" r="4" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
+            <rect x="-24" y="-34" width="48" height="28" rx="6" fill="#0f172a" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.5" />
+            <image id="singlePinImg" href="/hydroelectric-drawings/Coca_Codo_Sinclair.png" xlink:href="/hydroelectric-drawings/Coca_Codo_Sinclair.png" x="-22" y="-32" width="44" height="24" preserveAspectRatio="xMidYMid meet"/>
+            <rect id="pinBox" x="28" y="-12" width="120" height="24" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#ef4444" stroke-width="1" />
+            <text id="pinLabel" x="35" y="4" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11">Captación CCS</text>
           </g>
 
           <!-- Bottom Footer Bar -->
@@ -323,15 +324,18 @@
 
           const imgSrc = pin.imageName ? `/hydroelectric-drawings/${pin.imageName}` : '';
           const imgMarkup = imgSrc
-            ? `<image href="${imgSrc}" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`
-            : `<circle cx="0" cy="0" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />`;
+            ? `
+              <rect x="-20" y="-30" width="40" height="24" rx="5" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1.5" />
+              <image href="${imgSrc}" xlink:href="${imgSrc}" x="-18" y="-28" width="36" height="20" preserveAspectRatio="xMidYMid meet"/>
+            `
+            : `<circle cx="0" cy="0" r="14" fill="#0f172a" fill-opacity="0.92" stroke="#38bdf8" stroke-width="1.5" />`;
 
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
           g.innerHTML = `
-            <circle cx="0" cy="0" r="15" fill="#0f172a" fill-opacity="0.92" stroke="#38bdf8" stroke-width="1.5" />
+            <circle cx="0" cy="0" r="4" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
             ${imgMarkup}
-            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="22" rx="4" fill="#0f172a" fill-opacity="0.92" stroke="#38bdf8" stroke-width="1" />
+            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="20" rx="4" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1" />
             <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
           `;
           allPinsLayer.appendChild(g);
