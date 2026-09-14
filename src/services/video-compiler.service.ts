@@ -85,6 +85,20 @@ export class VideoCompilerService {
   }
 
   /**
+   * Helper to load base64 data URI for plant drawings.
+   */
+  private getDrawingBase64(imageName?: string): string | null {
+    if (!imageName) return null;
+    try {
+      const imgPath = path.join(process.cwd(), 'src', 'hydroelectric-drawings', imageName);
+      if (fs.existsSync(imgPath)) {
+        return `data:image/png;base64,${fs.readFileSync(imgPath).toString('base64')}`;
+      }
+    } catch (err) {}
+    return null;
+  }
+
+  /**
    * Generates a modern, clean SVG overlay with badges, plant pin, and timestamps.
    */
   public generateSvgOverlay(options: {
@@ -119,39 +133,44 @@ export class VideoCompilerService {
         const padX = 7;
         const textWidth = this.estimateTextWidth(pin.label, 10);
         const boxWidth = textWidth + (padX * 2);
-        let boxX = 8;
+        let boxX = 14;
         let boxY = -11;
-        let textX = 8 + padX;
+        let textX = 14 + padX;
         let textY = 4;
 
         if (pin.placement === 'top-left') {
-          boxX = -boxWidth - 8;
+          boxX = -boxWidth - 14;
           boxY = -20;
-          textX = -boxWidth - 8 + padX;
+          textX = -boxWidth - 14 + padX;
           textY = -5;
         } else if (pin.placement === 'bottom-left') {
-          boxX = -boxWidth - 8;
-          boxY = 6;
-          textX = -boxWidth - 8 + padX;
-          textY = 21;
+          boxX = -boxWidth - 14;
+          boxY = 8;
+          textX = -boxWidth - 14 + padX;
+          textY = 23;
         } else if (pin.placement === 'top-right') {
-          boxX = 8;
+          boxX = 14;
           boxY = -24;
-          textX = 8 + padX;
+          textX = 14 + padX;
           textY = -9;
         } else if (pin.placement === 'bottom-right') {
-          boxX = 8;
-          boxY = 6;
-          textX = 8 + padX;
-          textY = 21;
+          boxX = 14;
+          boxY = 8;
+          textX = 14 + padX;
+          textY = 23;
         }
 
         const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+        const base64Uri = this.getDrawingBase64(pin.imageName);
+        const imgMarkup = base64Uri
+          ? `<image href="${base64Uri}" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`
+          : `<circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />`;
+
         pinsSvg += `
         <g transform="translate(${x}, ${y})">
-          <circle cx="0" cy="0" r="9" fill="${color}" fill-opacity="0.25" />
-          <circle cx="0" cy="0" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.9" stroke="${color}" stroke-width="1" />
+          <circle cx="0" cy="0" r="15" fill="#0f172a" fill-opacity="0.92" stroke="${color}" stroke-width="1.5" />
+          ${imgMarkup}
+          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="22" rx="4" fill="#0f172a" fill-opacity="0.92" stroke="${color}" stroke-width="1" />
           <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="10">${pin.label}</text>
         </g>
         `;
@@ -178,9 +197,7 @@ export class VideoCompilerService {
       <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="19">${title}</text>
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
-      <g transform="translate(${width - 188}, 16)">
-        <!-- Dark contrast backdrop card -->
-        <rect x="-8" y="-4" width="180" height="32" rx="6" fill="#0b0f19" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+      <g transform="translate(${width - 180}, 18)">
         <!-- X Icon Box: 24x24, solid black bg, subtle border -->
         <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
         <g transform="translate(5, 5)">
@@ -189,7 +206,7 @@ export class VideoCompilerService {
           </svg>
         </g>
         <!-- Handle Text in high contrast Space Grotesk -->
-        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="15">@Hidro_Info_Bot</text>
+        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
       </g>
 
       <!-- Plant Pin Markers -->

@@ -3,6 +3,7 @@ export interface PlantPin {
   lon: number;
   label: string;
   placement?: 'top-left' | 'bottom-left' | 'top-right' | 'bottom-right' | 'right' | 'left';
+  imageName?: string;
 }
 
 export interface BasinGeometry {
@@ -28,7 +29,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -0.21,
       lon: -77.70,
-      label: 'Captación CCS'
+      label: 'Captación CCS',
+      imageName: 'Coca_Codo_Sinclair.png'
     }
   },
   paute: {
@@ -39,7 +41,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -2.58,
       lon: -78.58,
-      label: 'Complejo Paute'
+      label: 'Complejo Paute',
+      imageName: 'Molino.png'
     }
   },
   mazar: {
@@ -50,7 +53,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -2.54,
       lon: -78.63,
-      label: 'Embalse Mazar'
+      label: 'Embalse Mazar',
+      imageName: 'Mazar.png'
     }
   },
   molino: {
@@ -61,7 +65,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -2.58,
       lon: -78.58,
-      label: 'Presa Amaluza'
+      label: 'Presa Amaluza',
+      imageName: 'Molino.png'
     }
   },
   sopladora: {
@@ -72,7 +77,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -2.61,
       lon: -78.54,
-      label: 'Central Sopladora'
+      label: 'Central Sopladora',
+      imageName: 'Sopladora.png'
     }
   },
   agoyan: {
@@ -83,7 +89,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -1.40,
       lon: -78.36,
-      label: 'Presa Agoyán'
+      label: 'Presa Agoyán',
+      imageName: 'Agoyan.png'
     }
   },
   minasSanFrancisco: {
@@ -94,16 +101,17 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     plantLocation: {
       lat: -3.34,
       lon: -79.48,
-      label: 'Central Minas San Francisco'
+      label: 'Central Minas San Francisco',
+      imageName: 'Minas_San_Francisco.png'
     }
   }
 };
 
 export const ALL_HYDRO_PLANTS_PINS: PlantPin[] = [
-  { lat: -0.21, lon: -77.70, label: 'Coca Codo Sinclair', placement: 'right' },
-  { lat: -2.54, lon: -78.63, label: 'Mazar', placement: 'top-left' },
-  { lat: -2.58, lon: -78.58, label: 'Molino', placement: 'bottom-left' },
-  { lat: -2.61, lon: -78.54, label: 'Sopladora', placement: 'right' },
-  { lat: -1.40, lon: -78.36, label: 'Agoyán', placement: 'right' },
-  { lat: -3.34, lon: -79.48, label: 'Minas San Francisco', placement: 'right' }
+  { lat: -0.21, lon: -77.70, label: 'Coca Codo Sinclair', placement: 'right', imageName: 'Coca_Codo_Sinclair.png' },
+  { lat: -2.54, lon: -78.63, label: 'Mazar', placement: 'top-left', imageName: 'Mazar.png' },
+  { lat: -2.58, lon: -78.58, label: 'Molino', placement: 'bottom-left', imageName: 'Molino.png' },
+  { lat: -2.61, lon: -78.54, label: 'Sopladora', placement: 'right', imageName: 'Sopladora.png' },
+  { lat: -1.40, lon: -78.36, label: 'Agoyán', placement: 'right', imageName: 'Agoyan.png' },
+  { lat: -3.34, lon: -79.48, label: 'Minas San Francisco', placement: 'right', imageName: 'Minas_San_Francisco.png' }
 ];
