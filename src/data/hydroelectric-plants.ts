@@ -10,6 +10,7 @@ export const hydroelectricPlants: Record<string, HydroelectricPlant> = {
       maxTurbines: 2,
       maxFlowM3s: 150,
       minLevelMasl: 2098,
+      criticalLevelMasl: 2115,
       maxLevelMasl: 2153,
       turbineType: 'Francis',
       flowThresholds: {
