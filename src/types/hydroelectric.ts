@@ -10,6 +10,7 @@ export interface HydroelectricPlant {
     maxTurbines?: number;       // Maximum active turbines
     maxFlowM3s?: number;        // Design flow rate in m³/s
     minLevelMasl?: number;      // Minimum operational level (meters above sea level)
+    criticalLevelMasl?: number; // Critical operational level threshold (e.g. 2115 for Mazar)
     maxLevelMasl?: number;      // Maximum operational level (meters above sea level)
     turbineType?: 'Pelton' | 'Francis' | 'Kaplan'; // Type of turbine used
     flowThresholds?: {

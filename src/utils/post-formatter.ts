@@ -67,8 +67,24 @@ export function buildMessageText(
 
   let cotaStr = '';
   if (telemetry.cota !== undefined && minLevelMasl !== undefined) {
-    const distMin = formatVal(telemetry.cota - minLevelMasl);
-    cotaStr = `💧Cota: ${formatVal(telemetry.cota)} msnm\nA ${distMin} m de la cota mínima\n\n`;
+    if (plant.physicalData?.criticalLevelMasl !== undefined) {
+      const critLevel = plant.physicalData.criticalLevelMasl;
+      const distCrit = telemetry.cota - critLevel;
+      const distMin = telemetry.cota - minLevelMasl;
+
+      let critLine = '';
+      if (distCrit >= 0) {
+        critLine = `• A ${formatVal(distCrit)} m del nivel crítico (${critLevel} msnm)`;
+      } else {
+        critLine = `⚠️ Bajo cota crítica (-${formatVal(Math.abs(distCrit))} m de ${critLevel} msnm)`;
+      }
+      const minLine = `• A ${formatVal(distMin)} m del apagado total (${minLevelMasl} msnm)`;
+
+      cotaStr = `💧Cota: ${formatVal(telemetry.cota)} msnm\n${critLine}\n${minLine}\n\n`;
+    } else {
+      const distMin = formatVal(telemetry.cota - minLevelMasl);
+      cotaStr = `💧Cota: ${formatVal(telemetry.cota)} msnm\nA ${distMin} m de la cota mínima\n\n`;
+    }
   }
 
   return `${header}\n\n${cotaStr}${caudalStr}\n\n${genStr}`;
