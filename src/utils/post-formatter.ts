@@ -36,7 +36,7 @@ export function buildMessageText(
   const caudalStr = `🌊Caudal: ${formatVal(telemetry.flow)} m³/s\n${signoCaudal}${formatVal(Math.abs(deltaCaudal))}% desde hace 3h`;
 
   const trabajoEnergia = (telemetry.gen / maxEnergyMW) * 100;
-  let genStr = `🔋Generación: ${formatVal(telemetry.gen)} MWh\nAl ${formatVal(trabajoEnergia)}% de capacidad máxima`;
+  let genStr = `🔋Generación: ${formatVal(telemetry.gen)} MWh\nAl ${formatVal(trabajoEnergia)}% de capacidad`;
   if (telemetry.turbines !== undefined && maxTurbines > 0) {
     genStr += `\nTurbinas Activas: ${telemetry.turbines}/${maxTurbines}`;
   }
@@ -67,6 +67,19 @@ export function buildMessageText(
 
   let cotaStr = '';
   if (telemetry.cota !== undefined && minLevelMasl !== undefined) {
+    let diff24hLine = '';
+    if (telemetry.cota24hAgo !== undefined) {
+      const diff = telemetry.cota - telemetry.cota24hAgo;
+      const ayerVal = formatVal(telemetry.cota24hAgo);
+      if (Math.abs(diff) < 0.005) {
+        diff24hLine = `\n= Sin variación en 24h (ayer: ${ayerVal})`;
+      } else if (diff < 0) {
+        diff24hLine = `\n📉 Bajó ${formatVal(Math.abs(diff))} m en 24h (ayer: ${ayerVal})`;
+      } else {
+        diff24hLine = `\n📈 Subió ${formatVal(diff)} m en 24h (ayer: ${ayerVal})`;
+      }
+    }
+
     if (plant.physicalData?.criticalLevelMasl !== undefined) {
       const critLevel = plant.physicalData.criticalLevelMasl;
       const distCrit = telemetry.cota - critLevel;
@@ -74,16 +87,16 @@ export function buildMessageText(
 
       let critLine = '';
       if (distCrit >= 0) {
-        critLine = `• A ${formatVal(distCrit)} m del nivel crítico (${critLevel} msnm)`;
+        critLine = `• A ${formatVal(distCrit)} m de nivel crítico (${critLevel})`;
       } else {
-        critLine = `⚠️ Bajo cota crítica (-${formatVal(Math.abs(distCrit))} m de ${critLevel} msnm)`;
+        critLine = `⚠️ Bajo cota crítica (-${formatVal(Math.abs(distCrit))} m de ${critLevel})`;
       }
-      const minLine = `• A ${formatVal(distMin)} m del apagado total (${minLevelMasl} msnm)`;
+      const minLine = `• A ${formatVal(distMin)} m de apagado total (${minLevelMasl})`;
 
-      cotaStr = `💧Cota: ${formatVal(telemetry.cota)} msnm\n${critLine}\n${minLine}\n\n`;
+      cotaStr = `💧Cota actual: ${formatVal(telemetry.cota)} msnm${diff24hLine}\n${critLine}\n${minLine}\n\n`;
     } else {
       const distMin = formatVal(telemetry.cota - minLevelMasl);
-      cotaStr = `💧Cota: ${formatVal(telemetry.cota)} msnm\nA ${distMin} m de la cota mínima\n\n`;
+      cotaStr = `💧Cota actual: ${formatVal(telemetry.cota)} msnm${diff24hLine}\nA ${distMin} m de la cota mínima\n\n`;
     }
   }
 
