@@ -126,6 +126,7 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
   let flow: number | null = null;
   let flow3hAgo: number | null = null;
   let cota: number | undefined = undefined;
+  let cota24hAgo: number | undefined = undefined;
   let turbines: number | undefined = undefined;
   let gen: number | null = null;
   let telemetryTimestamp: Date = now;
@@ -186,8 +187,19 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
       if (err instanceof DataPendingError) throw err;
       console.warn(`[Index] Failed to fetch level for ${plant.name}:`, err);
     }
+
+    try {
+      const levelPointsYesterday = await celecService.fetchLevel(plant, yesterday);
+      const level24hResult = extractCelecPoint(levelPointsYesterday, targetIdx, false);
+      if (level24hResult.value !== null) {
+        cota24hAgo = level24hResult.value;
+      }
+    } catch (err) {
+      console.warn(`[Index] Failed to fetch 24h ago level for ${plant.name}:`, err);
+    }
   } else {
     cota = undefined;
+    cota24hAgo = undefined;
   }
 
   // 3. Fetch Active Turbines from CELEC (ignored for CCS)
@@ -285,6 +297,7 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
     flow,
     flow3hAgo: flow3hAgo ?? flow,
     cota,
+    cota24hAgo,
     turbines,
     timestamp: telemetryTimestamp
   };

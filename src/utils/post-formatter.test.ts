@@ -20,9 +20,9 @@ describe('post-formatter', () => {
     });
 
     expect(text).toContain('Hidroeléctrica #Mazar #Paute');
-    expect(text).toContain('💧Cota: 2132.5 msnm');
-    expect(text).toContain('• A 17.5 m del nivel crítico (2115 msnm)');
-    expect(text).toContain('• A 34.5 m del apagado total (2098 msnm)');
+    expect(text).toContain('💧Cota actual: 2132.5 msnm');
+    expect(text).toContain('• A 17.5 m de nivel crítico (2115)');
+    expect(text).toContain('• A 34.5 m de apagado total (2098)');
     expect(text).toContain('🌊Caudal: 85 m³/s');
     expect(text).toContain('+6.25% desde hace 3h');
     expect(text).toContain('🔋Generación: 136 MWh');
@@ -39,9 +39,9 @@ describe('post-formatter', () => {
       cota: 2112.4,
     });
 
-    expect(text).toContain('💧Cota: 2112.4 msnm');
-    expect(text).toContain('⚠️ Bajo cota crítica (-2.6 m de 2115 msnm)');
-    expect(text).toContain('• A 14.4 m del apagado total (2098 msnm)');
+    expect(text).toContain('💧Cota actual: 2112.4 msnm');
+    expect(text).toContain('⚠️ Bajo cota crítica (-2.6 m de 2115)');
+    expect(text).toContain('• A 14.4 m de apagado total (2098)');
   });
 
   it('formats other plants (e.g. Molino) with single standard cota line', () => {
@@ -55,9 +55,57 @@ describe('post-formatter', () => {
     });
 
     expect(text).toContain('Hidroeléctrica #Molino #Paute');
-    expect(text).toContain('💧Cota: 1987.5 msnm\nA 12.5 m de la cota mínima');
+    expect(text).toContain('💧Cota actual: 1987.5 msnm\nA 12.5 m de la cota mínima');
     expect(text).not.toContain('nivel crítico');
     expect(text).not.toContain('apagado total');
+  });
+
+  it('formats 24h cota decrease correctly for Mazar and other plants', () => {
+    const mazarPlant = hydroelectricPlants.mazar;
+    const text = buildMessageText(mazarPlant, 'mazar', {
+      gen: 136,
+      flow: 85,
+      flow3hAgo: 80,
+      turbines: 2,
+      cota: 2132.5,
+      cota24hAgo: 2132.9,
+    });
+
+    expect(text).toContain('💧Cota actual: 2132.5 msnm\n📉 Bajó 0.4 m en 24h (ayer: 2132.9)');
+    expect(text).toContain('• A 17.5 m de nivel crítico (2115)');
+    expect(text).toContain('• A 34.5 m de apagado total (2098)');
+
+    const molinoPlant = hydroelectricPlants.molino;
+    const molinoText = buildMessageText(molinoPlant, 'molino', {
+      gen: 913,
+      flow: 154,
+      turbines: 8,
+      cota: 1987.5,
+      cota24hAgo: 1988.0,
+    });
+
+    expect(molinoText).toContain('💧Cota actual: 1987.5 msnm\n📉 Bajó 0.5 m en 24h (ayer: 1988)\nA 12.5 m de la cota mínima');
+  });
+
+  it('formats 24h cota increase and no change correctly', () => {
+    const mazarPlant = hydroelectricPlants.mazar;
+    const textUp = buildMessageText(mazarPlant, 'mazar', {
+      gen: 136,
+      flow: 85,
+      turbines: 2,
+      cota: 2132.5,
+      cota24hAgo: 2132.2,
+    });
+    expect(textUp).toContain('💧Cota actual: 2132.5 msnm\n📈 Subió 0.3 m en 24h (ayer: 2132.2)');
+
+    const textSame = buildMessageText(mazarPlant, 'mazar', {
+      gen: 136,
+      flow: 85,
+      turbines: 2,
+      cota: 2132.5,
+      cota24hAgo: 2132.5,
+    });
+    expect(textSame).toContain('💧Cota actual: 2132.5 msnm\n= Sin variación en 24h (ayer: 2132.5)');
   });
 
   it('formats CCS without cota line', () => {

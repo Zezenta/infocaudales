@@ -9,6 +9,7 @@ export interface TelemetryData {
   flow: number;
   flow3hAgo?: number;
   cota?: number;
+  cota24hAgo?: number;
   timestamp?: Date;
 }
 
