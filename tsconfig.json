@@ -11,6 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["src/**/*", "infocaudalesbot.js"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/x.service.test.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/x.service.test.ts", "vitest.config.ts"]
 }
