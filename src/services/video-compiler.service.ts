@@ -1,13 +1,25 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin } from '../data/basin-geometries.js';
 import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
 import { systemLogger } from '../utils/logger.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+/**
+ * Escapes characters with special meaning in XML/SVG to prevent parse failures or injection.
+ */
+export function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
 export interface OverlayCustomizationOptions {
   customTitle?: string;
@@ -111,11 +123,11 @@ export class VideoCompilerService {
     showThermalScale?: boolean;
   }): string {
     const { frame, geometry, width, height } = options;
-    const title = options.customTitle || 'Vista Satelital En Vivo';
+    const title = escapeXml(options.customTitle || 'Vista Satelital En Vivo');
 
-    const subtitleBadge = options.customBadge || (geometry.key === 'ecuador'
+    const subtitleBadge = escapeXml(options.customBadge || (geometry.key === 'ecuador'
       ? 'GOES-16 • Banda 13 IR (10.3 µm)'
-      : (geometry.subtitle || 'GOES-16 • Banda 13 IR'));
+      : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
 
     // Determine pins to render according to browser toggle state
     const pinsToRender: PlantPin[] = [];
@@ -171,13 +183,14 @@ export class VideoCompilerService {
         }
 
         const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+        const safePinLabel = escapeXml(pin.label);
 
         pinsSvg += `
         <g transform="translate(${x}, ${y})">
           <circle cx="0" cy="0" r="10" fill="${color}" fill-opacity="0.25" />
           <circle cx="0" cy="0" r="5.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
           <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${color}" stroke-width="1.2" />
-          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${pin.label}</text>
+          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${safePinLabel}</text>
         </g>
         `;
       }
@@ -204,6 +217,8 @@ export class VideoCompilerService {
       </g>
       `
       : '';
+
+    const safeTimestamp = escapeXml(`${frame.dateEcuador}  ${frame.timeEcuador} ECT`);
 
     return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -257,7 +272,7 @@ export class VideoCompilerService {
       <!-- Footer Bottom Bar -->
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
-      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${frame.dateEcuador}  ${frame.timeEcuador} ECT</text>
+      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${safeTimestamp}</text>
       
       <!-- Subtitle Pill Badge on Bottom Right -->
       <g transform="translate(${badgeX}, ${height - 46})">
@@ -288,12 +303,15 @@ export class VideoCompilerService {
       bbox: frames[0].bbox
     };
 
-    const framerate = options.framerate || 4;
-    const width = options.width || 800;
-    const height = options.height || 800;
+    const framerate = Math.max(1, Math.min(30, options.framerate || 4));
+    let width = Math.max(128, Math.min(2048, options.width || 800));
+    let height = Math.max(128, Math.min(2048, options.height || 800));
+    // Ensure even dimensions for libx264 compatibility
+    width = Math.floor(width / 2) * 2;
+    height = Math.floor(height / 2) * 2;
     const createMp4 = options.createMp4 !== false;
     const createGif = options.createGif !== false;
-    const gifScale = options.gifScale || 600;
+    const gifScale = Math.max(64, Math.min(1920, options.gifScale || 600));
 
     const runId = crypto.randomBytes(6).toString('hex');
     const workDir = path.join(process.cwd(), 'temp', `render_${runId}`);
@@ -302,40 +320,53 @@ export class VideoCompilerService {
     const targetOutputDir = options.outputDir || path.join(process.cwd(), 'generated');
     fs.mkdirSync(targetOutputDir, { recursive: true });
 
-    const baseName = options.outputName || `goes16_${plantKey}_${Date.now()}`;
+    const sanitizedOutputName = options.outputName ? options.outputName.replace(/[^a-zA-Z0-9_-]/g, '_') : undefined;
+    const baseName = sanitizedOutputName || `goes16_${plantKey.replace(/[^a-zA-Z0-9_-]/g, '_')}_${Date.now()}`;
     const mp4Path = path.join(targetOutputDir, `${baseName}.mp4`);
     const gifPath = path.join(targetOutputDir, `${baseName}.gif`);
 
     systemLogger.info(`[VideoCompilerService] Rendering ${frames.length} frames in ${workDir}...`);
 
     try {
-      // 1. Write raw and labeled images
-      for (let i = 0; i < frames.length; i++) {
-        const frame = frames[i];
-        const pad = String(i).padStart(3, '0');
-        const rawPath = path.join(workDir, `raw_${pad}.png`);
-        const svgPath = path.join(workDir, `overlay_${pad}.svg`);
-        const outPath = path.join(workDir, `frame_${pad}.png`);
+      // 1. Write raw images, overlays, and stamp via ffmpeg in parallel chunks
+      const concurrency = 4;
+      for (let i = 0; i < frames.length; i += concurrency) {
+        const chunk = frames.slice(i, i + concurrency);
+        await Promise.all(
+          chunk.map(async (frame, chunkIdx) => {
+            const idx = i + chunkIdx;
+            const pad = String(idx).padStart(3, '0');
+            const rawPath = path.join(workDir, `raw_${pad}.png`);
+            const svgPath = path.join(workDir, `overlay_${pad}.svg`);
+            const outPath = path.join(workDir, `frame_${pad}.png`);
 
-        fs.writeFileSync(rawPath, frame.buffer);
+            fs.writeFileSync(rawPath, frame.buffer);
 
-        const svgContent = this.generateSvgOverlay({
-          frame,
-          geometry,
-          width,
-          height,
-          customTitle: options.customTitle,
-          customBadge: options.customBadge,
-          showAllPins: options.showAllPins,
-          showSinglePin: options.showSinglePin,
-          singlePinLabel: options.singlePinLabel,
-          showThermalScale: options.showThermalScale
-        });
-        fs.writeFileSync(svgPath, svgContent);
+            const svgContent = this.generateSvgOverlay({
+              frame,
+              geometry,
+              width,
+              height,
+              customTitle: options.customTitle,
+              customBadge: options.customBadge,
+              showAllPins: options.showAllPins,
+              showSinglePin: options.showSinglePin,
+              singlePinLabel: options.singlePinLabel,
+              showThermalScale: options.showThermalScale
+            });
+            fs.writeFileSync(svgPath, svgContent);
 
-        // Apply SVG overlay via ffmpeg
-        const overlayCmd = `ffmpeg -y -i "${rawPath}" -i "${svgPath}" -filter_complex "[0:v][1:v]overlay=0:0" -frames:v 1 -update 1 "${outPath}"`;
-        await execAsync(overlayCmd);
+            await execFileAsync('ffmpeg', [
+              '-y',
+              '-i', rawPath,
+              '-i', svgPath,
+              '-filter_complex', '[0:v][1:v]overlay=0:0',
+              '-frames:v', '1',
+              '-update', '1',
+              outPath
+            ]);
+          })
+        );
       }
 
       const inputPattern = path.join(workDir, 'frame_%03d.png');
@@ -345,17 +376,28 @@ export class VideoCompilerService {
       // 2. Compile MP4 Video
       if (createMp4) {
         systemLogger.info(`[VideoCompilerService] Encoding MP4 video to ${mp4Path}...`);
-        // Ensure dimensions are even (required by libx264 with yuv420p)
-        const mp4Cmd = `ffmpeg -y -framerate ${framerate} -i "${inputPattern}" -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -c:v libx264 -pix_fmt yuv420p "${mp4Path}"`;
-        await execAsync(mp4Cmd);
+        await execFileAsync('ffmpeg', [
+          '-y',
+          '-framerate', framerate.toString(),
+          '-i', inputPattern,
+          '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+          '-c:v', 'libx264',
+          '-pix_fmt', 'yuv420p',
+          mp4Path
+        ]);
         sizeBytesMp4 = fs.statSync(mp4Path).size;
       }
 
       // 3. Compile GIF Animation
       if (createGif) {
         systemLogger.info(`[VideoCompilerService] Encoding GIF animation to ${gifPath}...`);
-        const gifCmd = `ffmpeg -y -framerate ${framerate} -i "${inputPattern}" -filter_complex "[0:v] scale=${gifScale}:${gifScale},split [a][b];[a] palettegen [p];[b][p] paletteuse" "${gifPath}"`;
-        await execAsync(gifCmd);
+        await execFileAsync('ffmpeg', [
+          '-y',
+          '-framerate', framerate.toString(),
+          '-i', inputPattern,
+          '-filter_complex', `[0:v] scale=${gifScale}:${gifScale},split [a][b];[a] palettegen [p];[b][p] paletteuse`,
+          gifPath
+        ]);
         sizeBytesGif = fs.statSync(gifPath).size;
       }
 

@@ -83,6 +83,34 @@ describe('VideoCompilerService', () => {
       expect(svg).toContain('Captación CCS');
       expect(svg).toContain('2026-09-10  22:00 ECT');
     });
+
+    it('safely escapes special XML characters (&, <, >, ", \') in titles and labels', () => {
+      const fakeFrame: SatelliteFrame = {
+        index: 0,
+        timestampIso: '2026-09-11T03:00:00.000Z',
+        dateEcuador: '2026-09-10',
+        timeEcuador: '22:00',
+        buffer: Buffer.from(''),
+        bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox,
+        plantKey: 'cocaCodoSinclair',
+        source: 'geoserver'
+      };
+
+      const svg = compiler.generateSvgOverlay({
+        frame: fakeFrame,
+        geometry: BASIN_GEOMETRIES.cocaCodoSinclair,
+        width: 800,
+        height: 800,
+        customTitle: 'Cuencas & Ríos <Ecuador>',
+        customBadge: 'Banda 13 "IR" & Vapor',
+        singlePinLabel: 'Presa & Vertedero'
+      });
+
+      expect(svg).toContain('Cuencas &amp; Ríos &lt;Ecuador&gt;');
+      expect(svg).toContain('Banda 13 &quot;IR&quot; &amp; Vapor');
+      expect(svg).toContain('Presa &amp; Vertedero');
+      expect(svg).not.toContain('<Ecuador>');
+    });
   });
 
   describe('compileFramesToVideo', () => {

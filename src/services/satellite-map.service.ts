@@ -45,7 +45,22 @@ export class SatelliteMapService {
   private readonly geoserverGoesUrl = 'https://services.geoglows.org/geoserver/goes/wms';
   private readonly nasaGibsUrl = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
   private readonly esriSatelliteUrl = 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export';
+  public readonly maxCacheEntries: number = 400;
   private readonly tileCache = new Map<string, Buffer>();
+
+  /**
+   * Returns current count of cached map tiles in memory.
+   */
+  public getCacheSize(): number {
+    return this.tileCache.size;
+  }
+
+  /**
+   * Clears the in-memory tile cache.
+   */
+  public clearCache(): void {
+    this.tileCache.clear();
+  }
 
   /**
    * Fetches available GOES-16 satellite timestamps from GEOGLOWS GeoServer GetCapabilities.
@@ -224,6 +239,12 @@ export class SatelliteMapService {
           const sample = buf.toString('utf8', 0, Math.min(buf.length, 250));
           throw new Error(`WMS returned non-image payload: ${sample}`);
         }
+        if (this.tileCache.size >= this.maxCacheEntries) {
+          const oldestKey = this.tileCache.keys().next().value;
+          if (oldestKey) {
+            this.tileCache.delete(oldestKey);
+          }
+        }
         this.tileCache.set(cacheKey, buf);
         return buf;
       }
@@ -280,6 +301,9 @@ export class SatelliteMapService {
    */
   public formatEcuadorTimestamp(isoString: string): { dateEcuador: string; timeEcuador: string } {
     const dt = new Date(isoString);
+    if (isNaN(dt.getTime())) {
+      return { dateEcuador: 'N/A', timeEcuador: 'N/A' };
+    }
     const ecDt = new Date(dt.getTime() - 5 * 3600 * 1000);
     const dateEcuador = ecDt.toISOString().slice(0, 10);
     const timeEcuador = ecDt.toISOString().slice(11, 16);

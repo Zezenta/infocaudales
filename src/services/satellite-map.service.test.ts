@@ -85,6 +85,38 @@ describe('SatelliteMapService', () => {
       expect(dateEcuador).toBe('2026-09-10');
       expect(timeEcuador).toBe('22:30');
     });
+
+    it('gracefully handles invalid date string without throwing or returning NaN', () => {
+      const { dateEcuador, timeEcuador } = service.formatEcuadorTimestamp('invalid-date-string');
+      expect(dateEcuador).toBe('N/A');
+      expect(timeEcuador).toBe('N/A');
+    });
+  });
+
+  describe('tileCache bounding and eviction', () => {
+    it('caps cache size and evicts oldest items when max limit is reached', async () => {
+      service.clearCache();
+      expect(service.getCacheSize()).toBe(0);
+
+      // Override maxCacheEntries to 2 for testing
+      (service as any).maxCacheEntries = 2;
+
+      const fakeImageBuf = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      mockedAxios.get.mockResolvedValue({ status: 200, data: fakeImageBuf });
+
+      await service.fetchMapTile({ plantKey: 'cocaCodoSinclair', time: '2026-09-10T10:00:00Z' });
+      expect(service.getCacheSize()).toBe(1);
+
+      await service.fetchMapTile({ plantKey: 'cocaCodoSinclair', time: '2026-09-10T11:00:00Z' });
+      expect(service.getCacheSize()).toBe(2);
+
+      // Third fetch should evict the oldest tile
+      await service.fetchMapTile({ plantKey: 'cocaCodoSinclair', time: '2026-09-10T12:00:00Z' });
+      expect(service.getCacheSize()).toBe(2);
+
+      service.clearCache();
+      expect(service.getCacheSize()).toBe(0);
+    });
   });
 
   describe('fetchGoesTimestamps', () => {
