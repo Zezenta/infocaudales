@@ -173,7 +173,8 @@ export class SatelliteMapService {
         HEIGHT: height.toString()
       };
 
-      if (options.time) {
+      // NASA GIBS only accepts time parameter for temporal products (e.g., GOES-East)
+      if (options.time && layers.includes('GOES')) {
         params.TIME = options.time;
       }
 
@@ -199,7 +200,10 @@ export class SatelliteMapService {
       TRANSPARENT: options.transparent !== false ? 'TRUE' : 'FALSE'
     };
 
-    if (options.time) {
+    // Only real-time GOES-16 raster layers have sub-hourly 10-minute timestamps.
+    // Static and daily layers (PERSIANN 24h, WRF daily) throw ServiceException if sent a 10-min timestamp.
+    const isTemporalLayer = layers.includes('goes:goes_abi_l2_cmipf_13');
+    if (options.time && isTemporalLayer) {
       params.TIME = options.time;
     }
     if (options.dimInitd) {
@@ -274,14 +278,27 @@ export class SatelliteMapService {
       try {
         const timestamps = await this.fetchGoesTimestamps({ limit });
         for (const config of layerConfigs) {
+          const isTemporal = config.source === 'geoserver' && config.layers?.includes('goes:goes_abi_l2_cmipf_13');
           for (const plantKey of plantKeys) {
-            for (const t of timestamps) {
+            if (isTemporal) {
+              for (const t of timestamps) {
+                try {
+                  await this.fetchMapTile({
+                    source: config.source,
+                    layers: config.layers,
+                    plantKey,
+                    time: t,
+                    width: 800,
+                    height: 800
+                  });
+                } catch (err) {}
+              }
+            } else {
               try {
                 await this.fetchMapTile({
                   source: config.source,
                   layers: config.layers,
                   plantKey,
-                  time: t,
                   width: 800,
                   height: 800
                 });

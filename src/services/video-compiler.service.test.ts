@@ -160,13 +160,25 @@ describe('VideoCompilerService', () => {
 
       expect(result.plantKey).toBe('cocaCodoSinclair');
       expect(result.frameCount).toBe(2);
-      expect(result.durationSeconds).toBe(1);
+      // Default minDurationSeconds is 10, so 2 frames at 2fps (1s) repeats 10 times to reach 10s
+      expect(result.durationSeconds).toBe(10);
       expect(result.mp4Path).toBeDefined();
       expect(result.gifPath).toBeDefined();
       expect(fs.existsSync(result.mp4Path!)).toBe(true);
       expect(fs.existsSync(result.gifPath!)).toBe(true);
       expect(result.sizeBytesMp4).toBeGreaterThan(0);
       expect(result.sizeBytesGif).toBeGreaterThan(0);
+
+      // Verify custom minDurationSeconds = 1 works without extra repetition
+      const resultNoRepeat = await compiler.compileFramesToVideo(frames, {
+        outputDir: outDir,
+        outputName: 'test_anim_no_repeat',
+        framerate: 2,
+        createMp4: true,
+        createGif: false,
+        minDurationSeconds: 1
+      });
+      expect(resultNoRepeat.durationSeconds).toBe(1);
 
       // Clean up test output
       fs.rmSync(outDir, { recursive: true, force: true });

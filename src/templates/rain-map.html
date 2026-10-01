@@ -129,12 +129,21 @@
 
         <div class="playback-buttons">
           <div class="btn-group">
-            <button id="prevBtn" class="btn">⏮ Anterior</button>
-            <button id="nextBtn" class="btn">Siguiente ⏭</button>
+            <button id="firstBtn" class="btn" title="Primer fotograma (Inicio)">⏮⏮</button>
+            <button id="prevBtn" class="btn" title="Fotograma anterior (Flecha Izquierda)">⏮ Anterior</button>
+            <button id="nextBtn" class="btn" title="Siguiente fotograma (Flecha Derecha)">Siguiente ⏭</button>
+            <button id="lastBtn" class="btn" title="Último fotograma (Fin)">⏭⏭</button>
             <select id="speedSelect" class="form-select" style="width: auto; padding: 6px 10px;">
-              <option value="250">Velocidad: 4 fps (1x)</option>
-              <option value="125">Velocidad: 8 fps (2x)</option>
-              <option value="500">Velocidad: 2 fps (0.5x)</option>
+              <option value="1000">Velocidad: 0.25x (1 fps)</option>
+              <option value="500">Velocidad: 0.5x (2 fps)</option>
+              <option value="333">Velocidad: 0.75x (3 fps)</option>
+              <option value="250">Velocidad: 1x (4 fps)</option>
+              <option value="167">Velocidad: 1.5x (6 fps)</option>
+              <option value="125" selected>Velocidad: 2x (8 fps) • Predeterminada</option>
+              <option value="83">Velocidad: 3x (12 fps)</option>
+              <option value="62">Velocidad: 4x (16 fps)</option>
+              <option value="50">Velocidad: 5x (20 fps)</option>
+              <option value="42">Velocidad: 6x (24 fps)</option>
             </select>
           </div>
           <div class="btn-group">
@@ -248,7 +257,7 @@
     let currentFrameIdx = 0;
     let isPlaying = false;
     let playInterval = null;
-    let playSpeedMs = 250;
+    let playSpeedMs = 125;
     let currentGeometry = null;
     let geometriesMap = {};
     let allHydroPins = [];
@@ -261,8 +270,10 @@
     const ctx = canvas.getContext('2d');
     const scrubSlider = document.getElementById('scrubSlider');
     const playBtn = document.getElementById('playBtn');
+    const firstBtn = document.getElementById('firstBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const lastBtn = document.getElementById('lastBtn');
     const frameCounter = document.getElementById('frameCounter');
     const currentTimeDisplay = document.getElementById('currentTimeDisplay');
     const preloadBar = document.getElementById('preloadBar');
@@ -684,6 +695,12 @@
       else startPlayback();
     });
 
+    firstBtn.addEventListener('click', () => {
+      stopPlayback();
+      currentFrameIdx = 0;
+      renderCurrentFrame();
+    });
+
     prevBtn.addEventListener('click', () => {
       stopPlayback();
       currentFrameIdx = (currentFrameIdx - 1 + timestamps.length) % timestamps.length;
@@ -694,6 +711,44 @@
       stopPlayback();
       currentFrameIdx = (currentFrameIdx + 1) % timestamps.length;
       renderCurrentFrame();
+    });
+
+    lastBtn.addEventListener('click', () => {
+      stopPlayback();
+      currentFrameIdx = Math.max(0, timestamps.length - 1);
+      renderCurrentFrame();
+    });
+
+    // Keyboard shortcuts for fluid frame inspection
+    window.addEventListener('keydown', (e) => {
+      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (isPlaying) stopPlayback();
+        else startPlayback();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        stopPlayback();
+        currentFrameIdx = (currentFrameIdx - 1 + timestamps.length) % timestamps.length;
+        renderCurrentFrame();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        stopPlayback();
+        currentFrameIdx = (currentFrameIdx + 1) % timestamps.length;
+        renderCurrentFrame();
+      } else if (e.code === 'Home') {
+        e.preventDefault();
+        stopPlayback();
+        currentFrameIdx = 0;
+        renderCurrentFrame();
+      } else if (e.code === 'End') {
+        e.preventDefault();
+        stopPlayback();
+        currentFrameIdx = Math.max(0, timestamps.length - 1);
+        renderCurrentFrame();
+      }
     });
 
     scrubSlider.addEventListener('input', (e) => {
@@ -725,8 +780,8 @@
       exportStatus.innerHTML = `⏳ Compilando animación en formato <strong>${format.toUpperCase()}</strong> con los estilos visuales activos...`;
 
       try {
-        const speedVal = parseInt(speedSelect.value, 10) || 250;
-        const fps = Math.round(1000 / speedVal) || 4;
+        const speedVal = parseInt(speedSelect.value, 10) || 125;
+        const fps = Math.round(1000 / speedVal) || 8;
 
         const payload = {
           plantKey: basinSelect.value,

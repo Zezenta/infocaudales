@@ -64,6 +64,22 @@ describe('SatelliteMapService', () => {
       expect(params.LAYERS).toBe('GOES-East_ABI_Band13_Clean_Infrared');
       expect(params.TIME).toBe('2026-09-10T20:00:00Z');
     });
+
+    it('omits TIME parameter for non-temporal raster layers like PERSIANN, WRF daily, or Blue Marble', () => {
+      const persiann = service.buildWmsUrl({
+        source: 'geoserver',
+        layers: 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias',
+        time: '2026-09-10T20:00:00Z'
+      });
+      expect(persiann.params.TIME).toBeUndefined();
+
+      const blueMarble = service.buildWmsUrl({
+        source: 'nasa_gibs',
+        layers: 'BlueMarble_NextGeneration',
+        time: '2026-09-10T20:00:00Z'
+      });
+      expect(blueMarble.params.TIME).toBeUndefined();
+    });
   });
 
   describe('generateFallbackTimestamps', () => {

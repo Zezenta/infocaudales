@@ -41,6 +41,7 @@ export interface CompileOptions extends OverlayCustomizationOptions {
   createMp4?: boolean;
   createGif?: boolean;
   gifScale?: number;
+  minDurationSeconds?: number;
 }
 
 export interface CompiledAnimationResult {
@@ -303,7 +304,7 @@ export class VideoCompilerService {
       bbox: frames[0].bbox
     };
 
-    const framerate = Math.max(1, Math.min(30, options.framerate || 4));
+    const framerate = Math.max(1, Math.min(30, options.framerate || 8));
     let width = Math.max(128, Math.min(2048, options.width || 800));
     let height = Math.max(128, Math.min(2048, options.height || 800));
     // Ensure even dimensions for libx264 compatibility
@@ -373,18 +374,35 @@ export class VideoCompilerService {
       let sizeBytesMp4: number | undefined;
       let sizeBytesGif: number | undefined;
 
+      // Calculate repetition for video to reach at least minDurationSeconds (default: 10s)
+      const minDurationSeconds = options.minDurationSeconds !== undefined ? options.minDurationSeconds : 10;
+      const baseDuration = frames.length / framerate;
+      const loopCount = (minDurationSeconds > 0 && baseDuration < minDurationSeconds)
+        ? Math.ceil(minDurationSeconds / baseDuration) - 1
+        : 0;
+      const totalPlays = loopCount + 1;
+      const durationSeconds = parseFloat((baseDuration * totalPlays).toFixed(2));
+
       // 2. Compile MP4 Video
       if (createMp4) {
-        systemLogger.info(`[VideoCompilerService] Encoding MP4 video to ${mp4Path}...`);
-        await execFileAsync('ffmpeg', [
+        systemLogger.info(
+          `[VideoCompilerService] Encoding MP4 video to ${mp4Path} (${totalPlays} cycles, target duration: ${durationSeconds}s)...`
+        );
+        const mp4Args = [
           '-y',
           '-framerate', framerate.toString(),
+        ];
+        if (loopCount > 0) {
+          mp4Args.push('-stream_loop', loopCount.toString());
+        }
+        mp4Args.push(
           '-i', inputPattern,
           '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
           mp4Path
-        ]);
+        );
+        await execFileAsync('ffmpeg', mp4Args);
         sizeBytesMp4 = fs.statSync(mp4Path).size;
       }
 
@@ -401,12 +419,11 @@ export class VideoCompilerService {
         sizeBytesGif = fs.statSync(gifPath).size;
       }
 
-      const durationSeconds = parseFloat((frames.length / framerate).toFixed(2));
       const firstFrame = frames[0];
       const lastFrame = frames[frames.length - 1];
 
       systemLogger.info(
-        `[VideoCompilerService] Successfully compiled animation for ${plantKey} (${frames.length} frames, duration: ${durationSeconds}s)`
+        `[VideoCompilerService] Successfully compiled animation for ${plantKey} (${frames.length} frames, ${totalPlays} cycles, duration: ${durationSeconds}s)`
       );
 
       return {

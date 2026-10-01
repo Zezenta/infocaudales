@@ -274,7 +274,7 @@ const server = http.createServer((req, res) => {
         const plantKey = payload.plantKey || 'ecuador';
         const createMp4 = payload.createMp4 !== false;
         const createGif = payload.createGif !== false;
-        const framerate = payload.framerate || 4;
+        const framerate = payload.framerate || 8;
         const customTitle = payload.customTitle || 'Vista Satelital En Vivo';
         const customBadge = payload.customBadge;
         const pinLabel = payload.pinLabel;
@@ -295,7 +295,8 @@ const server = http.createServer((req, res) => {
           showSinglePin,
           showAllPins,
           showThermalScale,
-          layer
+          layer,
+          minDurationSeconds: payload.minDurationSeconds !== undefined ? payload.minDurationSeconds : 10
         });
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
