@@ -12,5 +12,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*", "infocaudalesbot.js"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/x.service.test.ts"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/x.service.test.ts", "src/scripts/rnd/**"]
 }

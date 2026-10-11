@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin } from '../data/basin-geometries.js';
 import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
 import { systemLogger } from '../utils/logger.js';
+import { db } from '../utils/db.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -21,6 +22,13 @@ export function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
+export interface MonitoredBasinBox {
+  key: string;
+  label: string;
+  bbox: [number, number, number, number];
+  defaultColor?: string;
+}
+
 export interface OverlayCustomizationOptions {
   customTitle?: string;
   customBadge?: string;
@@ -28,11 +36,17 @@ export interface OverlayCustomizationOptions {
   showSinglePin?: boolean;
   singlePinLabel?: string;
   showThermalScale?: boolean;
+  showDetectionBoxes?: boolean;
+  highlightBasinKey?: string;
+  activeBasinKeys?: string[] | Set<string>;
+  customMonitoredBasins?: MonitoredBasinBox[];
+  showPublicationStatusBadge?: boolean;
   layer?: string;
   layers?: string | string[];
 }
 
 export interface CompileOptions extends OverlayCustomizationOptions {
+  plantKey?: string;
   outputDir?: string;
   outputName?: string;
   framerate?: number;
@@ -122,6 +136,11 @@ export class VideoCompilerService {
     showSinglePin?: boolean;
     singlePinLabel?: string;
     showThermalScale?: boolean;
+    showDetectionBoxes?: boolean;
+    highlightBasinKey?: string;
+    activeBasinKeys?: string[] | Set<string>;
+    customMonitoredBasins?: MonitoredBasinBox[];
+    showPublicationStatusBadge?: boolean;
   }): string {
     const { frame, geometry, width, height } = options;
     const title = escapeXml(options.customTitle || 'Vista Satelital En Vivo');
@@ -129,6 +148,76 @@ export class VideoCompilerService {
     const subtitleBadge = escapeXml(options.customBadge || (geometry.key === 'ecuador'
       ? 'GOES-16 • Banda 13 IR (10.3 µm)'
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
+
+    // Render Basin Storm Detection Boundary Boxes when displaying Ecuador Continental
+    let detectionBoxesSvg = '';
+    const showDetectionBoxes = options.showDetectionBoxes !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    if (showDetectionBoxes) {
+      const monitoredBasins = options.customMonitoredBasins || [
+        { key: 'cocaCodoSinclair', label: 'Cuenca Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#38bdf8' },
+        { key: 'paute', label: 'Complejo Hidroeléctrico Paute', bbox: BASIN_GEOMETRIES.paute.bbox, defaultColor: '#a855f7' }
+      ];
+
+      for (const b of monitoredBasins) {
+        const isHighlighted = options.highlightBasinKey === b.key;
+        const isActiveStorm = (options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.has(b.key) : options.activeBasinKeys.includes(b.key))) || isHighlighted;
+
+        const color = isActiveStorm ? '#ef4444' : (b.key === 'cocaCodoSinclair' ? '#38bdf8' : '#a855f7');
+        // When storm is active, significantly thicken the borders!
+        const strokeWidth = isActiveStorm ? 5.2 : 2.0;
+        const strokeDash = isActiveStorm ? '12,4' : '7,4';
+        const shadowStrokeWidth = isActiveStorm ? 9.5 : 4.5;
+        const fillOpacity = isActiveStorm ? 0.22 : 0.08;
+        const cornerLen = isActiveStorm ? 22 : 12;
+        const cornerStroke = isActiveStorm ? 6.5 : 3.0;
+
+        const tl = this.projectGeoToPixel(b.bbox[3], b.bbox[0], frame.bbox, width, height);
+        const br = this.projectGeoToPixel(b.bbox[1], b.bbox[2], frame.bbox, width, height);
+        const boxX = Math.min(tl.x, br.x);
+        const boxY = Math.min(tl.y, br.y);
+        const boxW = Math.abs(br.x - tl.x);
+        const boxH = Math.abs(br.y - tl.y);
+
+        const tagText = isActiveStorm ? `🚨 TORMENTA ACTIVA • ${b.label}` : b.label;
+        const tagW = this.estimateTextWidth(tagText, 11) + (isActiveStorm ? 48 : 28);
+        const tagH = 22;
+        const tagY = (boxY - tagH - 4 < 70) ? boxY + 6 : boxY - tagH - 4;
+        const textY = tagY + 15;
+        const tagBg = isActiveStorm ? '#7f1d1d' : '#0b1120';
+        const tagBorder = isActiveStorm ? '#ef4444' : color;
+        const tagBorderWidth = isActiveStorm ? 2.0 : 1.5;
+
+        detectionBoxesSvg += `
+        <g id="detection-box-${b.key}">
+          <!-- Semi-transparent colored basin area fill -->
+          <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
+                fill="${color}" fill-opacity="${fillOpacity}" />
+
+          <!-- Dark shadow underlay for maximum contrast against clouds -->
+          <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
+                fill="none" stroke="#000000" stroke-width="${shadowStrokeWidth}" stroke-opacity="0.90" />
+
+          <!-- High-visibility dashed boundary (substantially thickened during storm) -->
+          <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
+                fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" />
+
+          <!-- Corner reinforcement brackets -->
+          <path d="M ${boxX} ${boxY + cornerLen} L ${boxX} ${boxY} L ${boxX + cornerLen} ${boxY}
+                   M ${boxX + boxW - cornerLen} ${boxY} L ${boxX + boxW} ${boxY} L ${boxX + boxW} ${boxY + cornerLen}
+                   M ${boxX} ${boxY + boxH - cornerLen} L ${boxX} ${boxY + boxH} L ${boxX + cornerLen} ${boxY + boxH}
+                   M ${boxX + boxW - cornerLen} ${boxY + boxH} L ${boxX + boxW} ${boxY + boxH} L ${boxX + boxW} ${boxY + boxH - cornerLen}"
+                fill="none" stroke="${color}" stroke-width="${cornerStroke}" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Tag Badge -->
+          <rect x="${boxX}" y="${tagY}" width="${tagW}" height="${tagH}" rx="5"
+                fill="${tagBg}" fill-opacity="0.96" stroke="${tagBorder}" stroke-width="${tagBorderWidth}" />
+          ${isActiveStorm ? `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="6.5" fill="#ef4444" fill-opacity="0.4" />` : ''}
+          <circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.5" fill="${color}" />
+          <text x="${boxX + 20}" y="${textY}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">${escapeXml(tagText)}</text>
+        </g>
+        `;
+      }
+    }
 
     // Determine pins to render according to browser toggle state
     const pinsToRender: PlantPin[] = [];
@@ -191,7 +280,7 @@ export class VideoCompilerService {
           <circle cx="0" cy="0" r="10" fill="${color}" fill-opacity="0.25" />
           <circle cx="0" cy="0" r="5.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
           <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${color}" stroke-width="1.2" />
-          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${safePinLabel}</text>
+          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12">${safePinLabel}</text>
         </g>
         `;
       }
@@ -208,7 +297,7 @@ export class VideoCompilerService {
       <!-- Floating Thermal Scale Bar Overlay -->
       <g transform="translate(20, ${height - 116})">
         <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
-        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
         <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
         <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
         <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
@@ -221,9 +310,40 @@ export class VideoCompilerService {
 
     const safeTimestamp = escapeXml(`${frame.dateEcuador}  ${frame.timeEcuador} ECT`);
 
+    const showPublicationBadge = options.showPublicationStatusBadge === true;
+    let pubStatusSvg = '';
+    if (showPublicationBadge) {
+      const isAnyActive = options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.size > 0 : options.activeBasinKeys.length > 0);
+      if (isAnyActive) {
+        pubStatusSvg = `
+        <g transform="translate(20, 44)">
+          <rect x="0" y="0" width="315" height="24" rx="5" fill="#7f1d1d" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.2" />
+          <circle cx="12" cy="12" r="5" fill="#ef4444" />
+          <circle cx="12" cy="12" r="2.5" fill="#ffffff" />
+          <text x="24" y="16.5" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">🚨 ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN</text>
+        </g>
+        `;
+      } else {
+        pubStatusSvg = `
+        <g transform="translate(20, 44)">
+          <rect x="0" y="0" width="220" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
+          <circle cx="12" cy="12" r="4.5" fill="#10b981" />
+          <text x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">🟢 CONDICIÓN NORMAL • SIN ALERTA</text>
+        </g>
+        `;
+      }
+    }
+
     return `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
+        <style>
+          @font-face {
+            font-family: 'Space Grotesk';
+            src: url('/fonts/SpaceGrotesk-Variable.ttf') format('truetype');
+            font-weight: 100 900;
+          }
+        </style>
         <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
           <stop offset="65%" stop-color="#04060c" stop-opacity="0.94"/>
@@ -249,8 +369,9 @@ export class VideoCompilerService {
       </defs>
 
       <!-- Header Top Bar -->
-      <rect x="0" y="0" width="${width}" height="68" fill="url(#topBarGrad)"/>
-      <text x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="20">${title}</text>
+      <rect x="0" y="0" width="${width}" height="${showPublicationBadge ? 92 : 68}" fill="url(#topBarGrad)"/>
+      <text x="20" y="${showPublicationBadge ? 34 : 38}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="20">${title}</text>
+      ${pubStatusSvg}
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
       <g transform="translate(${width - 180}, 18)">
@@ -262,8 +383,11 @@ export class VideoCompilerService {
           </svg>
         </g>
         <!-- Handle Text in high contrast Space Grotesk -->
-        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
+        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
       </g>
+
+      <!-- Basin Storm Detection Boundary Boxes -->
+      ${detectionBoxesSvg}
 
       <!-- Plant Pin Markers -->
       ${pinsSvg}
@@ -273,13 +397,13 @@ export class VideoCompilerService {
       <!-- Footer Bottom Bar -->
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
-      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">${safeTimestamp}</text>
+      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="17">${safeTimestamp}</text>
       
       <!-- Subtitle Pill Badge on Bottom Right -->
       <g transform="translate(${badgeX}, ${height - 46})">
         <rect x="0" y="0" width="${badgeTotalWidth}" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
         <circle cx="12" cy="14" r="3.5" fill="#38bdf8" />
-        <text x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11.5">${badgeText}</text>
+        <text x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">${badgeText}</text>
       </g>
     </svg>
     `.trim();
@@ -329,6 +453,12 @@ export class VideoCompilerService {
     systemLogger.info(`[VideoCompilerService] Rendering ${frames.length} frames in ${workDir}...`);
 
     try {
+      // 0. Pre-query SQLite rain_events to dynamically identify basins with active storms during each frame
+      let dbRainEvents: Array<{ plant_key: string; detected_at: number; last_checked_at: number }> = [];
+      try {
+        dbRainEvents = db.prepare('SELECT plant_key, detected_at, last_checked_at FROM rain_events').all() as any;
+      } catch (err) {}
+
       // 1. Write raw images, overlays, and stamp via ffmpeg in parallel chunks
       const concurrency = 4;
       for (let i = 0; i < frames.length; i += concurrency) {
@@ -343,6 +473,28 @@ export class VideoCompilerService {
 
             fs.writeFileSync(rawPath, frame.buffer);
 
+            // Determine which basins are actively in a storm during this specific frame
+            const ts = frame.timestampIso || (frame as any).timestamp;
+            const frameTime = ts ? new Date(ts).getTime() : 0;
+            const activeBasinKeys = new Set<string>();
+            if (options.highlightBasinKey) {
+              activeBasinKeys.add(options.highlightBasinKey);
+            }
+            if (options.activeBasinKeys) {
+              if (options.activeBasinKeys instanceof Set) {
+                options.activeBasinKeys.forEach(k => activeBasinKeys.add(k));
+              } else if (Array.isArray(options.activeBasinKeys)) {
+                options.activeBasinKeys.forEach(k => activeBasinKeys.add(k));
+              }
+            }
+            if (frameTime > 0 && dbRainEvents.length > 0) {
+              for (const ev of dbRainEvents) {
+                if (frameTime >= ev.detected_at && frameTime <= ev.last_checked_at) {
+                  activeBasinKeys.add(ev.plant_key);
+                }
+              }
+            }
+
             const svgContent = this.generateSvgOverlay({
               frame,
               geometry,
@@ -353,7 +505,12 @@ export class VideoCompilerService {
               showAllPins: options.showAllPins,
               showSinglePin: options.showSinglePin,
               singlePinLabel: options.singlePinLabel,
-              showThermalScale: options.showThermalScale
+              showThermalScale: options.showThermalScale,
+              showDetectionBoxes: options.showDetectionBoxes,
+              highlightBasinKey: options.highlightBasinKey,
+              activeBasinKeys,
+              customMonitoredBasins: options.customMonitoredBasins,
+              showPublicationStatusBadge: options.showPublicationStatusBadge
             });
             fs.writeFileSync(svgPath, svgContent);
 

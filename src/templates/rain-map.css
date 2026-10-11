@@ -18,6 +18,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('/fonts/SpaceGrotesk-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 :root {
@@ -56,11 +63,11 @@ body {
   color: var(--text-primary);
   font-family: var(--font-body);
   margin: 0;
-  padding: 30px 20px 50px;
+  padding: 16px 20px 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
@@ -75,7 +82,7 @@ body {
   padding: 6px;
   border-radius: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   z-index: 1000;
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -110,8 +117,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 2px;
 }
 
 .page-badge {
@@ -129,7 +136,7 @@ body {
 
 .page-heading {
   font-family: var(--font-heading);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.02em;
@@ -143,7 +150,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 32px;
+  gap: 28px;
   max-width: 1440px;
   width: 100%;
 }
@@ -153,7 +160,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   flex-shrink: 0;
 }
 
@@ -162,11 +169,22 @@ body {
   position: relative;
   width: 800px;
   height: 800px;
+  max-width: 100%;
   background: #020617;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
   user-select: none;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+.video-card-wrapper.fit-screen {
+  width: min(800px, 60vh);
+  height: min(800px, 60vh);
+}
+
+.player-controls.fit-screen {
+  width: min(800px, 60vh);
 }
 
 .satellite-image-layer {
@@ -194,6 +212,7 @@ body {
    ========================================================================== */
 .player-controls {
   width: 800px;
+  max-width: 100%;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   backdrop-filter: blur(16px);
@@ -203,6 +222,7 @@ body {
   flex-direction: column;
   gap: 14px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  transition: width 0.2s ease;
 }
 
 .timeline-row {
@@ -244,12 +264,15 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .btn-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .time-badge {

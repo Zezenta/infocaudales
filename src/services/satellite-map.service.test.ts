@@ -45,7 +45,7 @@ describe('SatelliteMapService', () => {
       expect(params.SERVICE).toBe('WMS');
       expect(params.VERSION).toBe('1.1.1');
       expect(params.LAYERS).toBe('goes:goes_abi_l2_cmipf_13,ecuador:provincias');
-      expect(params.BBOX).toBe('-78.4,-0.8,-77.1,0.5');
+      expect(params.BBOX).toBe(BASIN_GEOMETRIES.cocaCodoSinclair.bbox.join(','));
       expect(params.TIME).toBe('2026-09-10T20:00:00.000Z');
       expect(params.WIDTH).toBe('600');
       expect(params.HEIGHT).toBe('600');

@@ -1,0 +1,557 @@
+import fs from 'fs';
+import path from 'path';
+import zlib from 'zlib';
+import { db } from '../utils/db.js';
+import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
+import { SatelliteMapService, SatelliteFrame } from './satellite-map.service.js';
+import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
+import { systemLogger } from '../utils/logger.js';
+
+export interface RainEventRecord {
+  id: number;
+  plant_key: string;
+  status: 'ACTIVE' | 'COMPILING' | 'COOLDOWN' | 'CLOSED';
+  detected_at: number;
+  last_checked_at: number;
+  peak_coverage_pct: number;
+  last_coverage_pct: number;
+  video_compiled_at?: number;
+  video_path?: string;
+  video_duration_seconds?: number;
+  cooldown_until: number;
+}
+
+export interface RainCheckOptions {
+  stormThresholdPct?: number;      // Coverage % to declare a rain storm started (default: 18%)
+  dissipationRatio?: number;       // Ratio of peak coverage to declare rain is passing (default: 0.50)
+  minRainDurationMinutes?: number; // Minimum elapsed minutes before compiling on dissipation (default: 60 min)
+  maxRainDurationMinutes?: number; // Maximum elapsed minutes before forced compile timeout (default: 150 min / 2.5h)
+  cooldownHours?: number;          // Hours to wait before allowing another event for this basin (default: 6h)
+  autoCompileVideo?: boolean;      // Whether to compile MP4 video automatically when triggered (default: true)
+  tileResolution?: number;         // Tile width & height in pixels for analysis (default: 80)
+}
+
+export interface RainCheckResult {
+  plantKey: string;
+  action: 'NO_STORM' | 'STORM_STARTED' | 'STORM_MONITORING' | 'TRIGGER_COMPILATION' | 'VIDEO_COMPILED' | 'IN_COOLDOWN';
+  coveragePct: number;
+  peakCoveragePct?: number;
+  elapsedMinutes?: number;
+  event?: RainEventRecord;
+  compilationResult?: CompiledAnimationResult;
+  message: string;
+}
+
+/**
+ * Unfilters standard PNG scanlines according to PNG specification (RFC 2083).
+ */
+export function unfilterPngScanlines(raw: Buffer, width: number, height: number, bytesPerPixel: number): Buffer {
+  const stride = width * bytesPerPixel;
+  const out = Buffer.alloc(width * height * bytesPerPixel);
+  let rawOffset = 0;
+  let outOffset = 0;
+
+  for (let y = 0; y < height; y++) {
+    const filterType = raw[rawOffset++];
+    for (let x = 0; x < stride; x++) {
+      const byte = raw[rawOffset++];
+      const a = x >= bytesPerPixel ? out[outOffset - bytesPerPixel + (x % bytesPerPixel)] : 0;
+      const b = y > 0 ? out[(y - 1) * stride + x] : 0;
+      const c = (x >= bytesPerPixel && y > 0) ? out[(y - 1) * stride + x - bytesPerPixel] : 0;
+
+      let val = byte;
+      if (filterType === 1) {
+        val = (byte + a) & 0xff;
+      } else if (filterType === 2) {
+        val = (byte + b) & 0xff;
+      } else if (filterType === 3) {
+        val = (byte + Math.floor((a + b) / 2)) & 0xff;
+      } else if (filterType === 4) {
+        const p = a + b - c;
+        const pa = Math.abs(p - a);
+        const pb = Math.abs(p - b);
+        const pc = Math.abs(p - c);
+        const pr = (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c);
+        val = (byte + pr) & 0xff;
+      }
+      out[outOffset++] = val;
+    }
+  }
+  return out;
+}
+
+/**
+ * Analyzes a PNG buffer of a GOES-16 IR Band 13 tile and computes the percentage
+ * of pixels belonging to deep convective cold cloud tops (rain-producing clouds).
+ * Accurately filters out high-altitude non-raining cirrus clouds (cyan/blue) and isolates
+ * true convective precipitation cores (green, yellow, red, overshooting white).
+ */
+export function analyzeStormCloudCoverage(pngBuf: Buffer): number {
+  if (!pngBuf || pngBuf.length < 24) return 0;
+
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  let plte: Buffer | null = null;
+  const idatChunks: Buffer[] = [];
+
+  while (offset < pngBuf.length) {
+    const len = pngBuf.readUInt32BE(offset);
+    const type = pngBuf.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IHDR') {
+      width = pngBuf.readUInt32BE(offset + 8);
+      height = pngBuf.readUInt32BE(offset + 12);
+      colorType = pngBuf.readUInt8(offset + 17);
+    } else if (type === 'PLTE') {
+      plte = pngBuf.subarray(offset + 8, offset + 8 + len);
+    } else if (type === 'IDAT') {
+      idatChunks.push(pngBuf.subarray(offset + 8, offset + 8 + len));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset += 12 + len;
+  }
+
+  if (width === 0 || height === 0 || idatChunks.length === 0) {
+    return 0;
+  }
+
+  const inflated = zlib.inflateSync(Buffer.concat(idatChunks));
+  const bpp = colorType === 6 ? 4 : (colorType === 3 ? 1 : 3);
+  const pixels = unfilterPngScanlines(inflated, width, height, bpp);
+
+  let convectiveCount = 0;
+  let severeCount = 0;
+  const total = width * height;
+
+  for (let i = 0; i < pixels.length; i += bpp) {
+    let r = 0, g = 0, b = 0;
+    if (colorType === 3 && plte) {
+      const idx = pixels[i];
+      const pOff = idx * 3;
+      if (pOff + 2 < plte.length) {
+        r = plte[pOff];
+        g = plte[pOff + 1];
+        b = plte[pOff + 2];
+      }
+    } else {
+      r = pixels[i];
+      g = pixels[i + 1];
+      b = pixels[i + 2];
+    }
+
+    // Severe Convective Cores: Yellow (-60°C), Red (-70°C to -85°C), White Core (-90°C)
+    const isYellow = (r > 160 && g > 160 && b < 120);
+    const isRed = (r > 130 && g < 100 && b < 100);
+    const isWhite = (r > 210 && g > 210 && b > 210);
+    const isSevere = isYellow || isRed || isWhite;
+
+    // Active Convective Rain: Green (-48°C to -58°C)
+    const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
+
+    if (isSevere) {
+      severeCount++;
+      convectiveCount++;
+    } else if (isGreen) {
+      convectiveCount++;
+    }
+  }
+
+  const convPct = (convectiveCount / total) * 100;
+  const sevPct = (severeCount / total) * 100;
+  // Weighted convective precipitation score (severe cores carry extra weight)
+  const effectiveCoverage = convPct + (sevPct * 1.5);
+  return parseFloat(effectiveCoverage.toFixed(1));
+}
+
+export class RainMonitorService {
+  constructor(
+    private readonly satelliteService: SatelliteMapService = new SatelliteMapService(),
+    private readonly videoCompilerService: VideoCompilerService = new VideoCompilerService()
+  ) {}
+
+  /**
+   * Retrieves active or cooldown rain event record from SQLite for a given basin.
+   */
+  public getActiveOrCooldownEvent(plantKey: string): RainEventRecord | null {
+    const row = db.prepare(`
+      SELECT * FROM rain_events
+      WHERE plant_key = ? AND status IN ('ACTIVE', 'COMPILING', 'COOLDOWN')
+      ORDER BY id DESC LIMIT 1
+    `).get(plantKey) as RainEventRecord | undefined;
+
+    return row || null;
+  }
+
+  /**
+   * Retrieves recent rain event records from SQLite.
+   */
+  public getRecentEvents(limit: number = 20): RainEventRecord[] {
+    return db.prepare(`
+      SELECT * FROM rain_events
+      ORDER BY id DESC LIMIT ?
+    `).all(limit) as RainEventRecord[];
+  }
+
+  /**
+   * Measures current storm cloud coverage percentage from GOES-16 satellite for a basin.
+   */
+  public async getBasinCurrentStormCoverage(
+    plantKey: string = 'cocaCodoSinclair',
+    tileResolution: number = 80
+  ): Promise<{ coveragePct: number; timestampIso: string }> {
+    const basin = BASIN_GEOMETRIES[plantKey];
+    if (!basin) {
+      throw new Error(`[RainMonitor] Basin geometry not found for "${plantKey}"`);
+    }
+
+    const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 4 });
+    let tileBuffer: Buffer | null = null;
+    let selectedTimestamp = timestamps[0] || new Date().toISOString();
+
+    for (const ts of timestamps) {
+      try {
+        tileBuffer = await this.satelliteService.fetchMapTile({
+          layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
+          bbox: basin.bbox,
+          time: ts,
+          width: tileResolution,
+          height: tileResolution,
+          format: 'image/png'
+        });
+        selectedTimestamp = ts;
+        break;
+      } catch (err: any) {
+        // If newest timestamp is still being ingested or fails on GeoServer, fallback to previous available
+        continue;
+      }
+    }
+
+    if (!tileBuffer) {
+      throw new Error(`[RainMonitor] Unable to fetch valid satellite tile for basin "${plantKey}"`);
+    }
+
+    const coveragePct = analyzeStormCloudCoverage(tileBuffer);
+    return { coveragePct, timestampIso: selectedTimestamp };
+  }
+
+  /**
+   * Evaluates the rain state machine for a basin:
+   * - Detects new storm onset.
+   * - Tracks ongoing event and records peak coverage.
+   * - Waits until the storm begins passing or optimal duration (2-3h) is reached.
+   * - Compiles animation video when ready and enters cooldown period.
+   */
+  public async checkBasin(
+    plantKey: string = 'cocaCodoSinclair',
+    options: RainCheckOptions = {}
+  ): Promise<RainCheckResult> {
+    const stormThreshold = options.stormThresholdPct ?? 6.0;
+    const dissipationRatio = options.dissipationRatio ?? 0.50;
+    const minRainDurationMinutes = options.minRainDurationMinutes ?? 60;
+    const maxRainDurationMinutes = options.maxRainDurationMinutes ?? 150;
+    const cooldownHours = options.cooldownHours ?? 6;
+    const autoCompileVideo = options.autoCompileVideo ?? true;
+    const tileResolution = options.tileResolution ?? 80;
+
+    const now = Date.now();
+    const existingEvent = this.getActiveOrCooldownEvent(plantKey);
+
+    // 1. Check Cooldown
+    if (existingEvent && existingEvent.status === 'COOLDOWN') {
+      if (now < existingEvent.cooldown_until) {
+        const remainingMinutes = Math.round((existingEvent.cooldown_until - now) / 60000);
+        return {
+          plantKey,
+          action: 'IN_COOLDOWN',
+          coveragePct: existingEvent.last_coverage_pct,
+          peakCoveragePct: existingEvent.peak_coverage_pct,
+          event: existingEvent,
+          message: `Cuenca en período de enfriamiento. Próxima evaluación en ${remainingMinutes} min.`
+        };
+      } else {
+        // Cooldown has expired, close the event
+        db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+        existingEvent.status = 'CLOSED';
+      }
+    }
+
+    // 2. Fetch Live Satellite Cloud Coverage
+    const { coveragePct, timestampIso } = await this.getBasinCurrentStormCoverage(plantKey, tileResolution);
+
+    // 3. No active event currently running
+    if (!existingEvent || existingEvent.status === 'CLOSED') {
+      if (coveragePct >= stormThreshold) {
+        // Start new rain storm tracking event
+        const insertStmt = db.prepare(`
+          INSERT INTO rain_events (
+            plant_key, status, detected_at, last_checked_at,
+            peak_coverage_pct, last_coverage_pct, cooldown_until
+          ) VALUES (?, 'ACTIVE', ?, ?, ?, ?, 0)
+        `);
+        const result = insertStmt.run(plantKey, now, now, coveragePct, coveragePct);
+        const eventId = Number(result.lastInsertRowid);
+
+        const newEvent: RainEventRecord = {
+          id: eventId,
+          plant_key: plantKey,
+          status: 'ACTIVE',
+          detected_at: now,
+          last_checked_at: now,
+          peak_coverage_pct: coveragePct,
+          last_coverage_pct: coveragePct,
+          cooldown_until: 0
+        };
+
+        // Pre-seed storm frame cache with recent Ecuador frames
+        await this.initStormFrameCache(eventId, timestampIso);
+
+        systemLogger.info(
+          `[RainMonitor] 🌧️ Rain event started for ${plantKey} (Coverage: ${coveragePct}%, timestamp: ${timestampIso})`
+        );
+
+        return {
+          plantKey,
+          action: 'STORM_STARTED',
+          coveragePct,
+          peakCoveragePct: coveragePct,
+          elapsedMinutes: 0,
+          event: newEvent,
+          message: `Lluvia detectada en la cuenca (${coveragePct}% cobertura nubosa fría). Monitoreo iniciado.`
+        };
+      }
+
+      return {
+        plantKey,
+        action: 'NO_STORM',
+        coveragePct,
+        message: `Sin lluvias significativas (${coveragePct}% cobertura, umbral: ${stormThreshold}%).`
+      };
+    }
+
+    // 4. An ACTIVE storm event is in progress
+    const elapsedMinutes = Math.round((now - existingEvent.detected_at) / 60000);
+    const newPeak = Math.max(existingEvent.peak_coverage_pct, coveragePct);
+
+    db.prepare(`
+      UPDATE rain_events
+      SET peak_coverage_pct = ?, last_coverage_pct = ?, last_checked_at = ?
+      WHERE id = ?
+    `).run(newPeak, coveragePct, now, existingEvent.id);
+
+    existingEvent.peak_coverage_pct = newPeak;
+    existingEvent.last_coverage_pct = coveragePct;
+    existingEvent.last_checked_at = now;
+
+    // Cache current Ecuador frame for progressive video compilation
+    await this.cacheEcuadorFrame(existingEvent.id, timestampIso);
+
+    // Check Trigger Conditions:
+    // A) Dissipation / Cloud passed: coverage dropped to dissipationRatio of peak after at least minRainDurationMinutes
+    const isPassing = elapsedMinutes >= minRainDurationMinutes && coveragePct <= newPeak * dissipationRatio;
+    // B) Timeout: storm has been ongoing for maxRainDurationMinutes (2.5h)
+    const isMaxDurationReached = elapsedMinutes >= maxRainDurationMinutes;
+
+    if (!isPassing && !isMaxDurationReached) {
+      systemLogger.info(
+        `[RainMonitor] Storm ongoing in ${plantKey} (${elapsedMinutes} min elapsed, peak: ${newPeak}%, current: ${coveragePct}%)`
+      );
+      return {
+        plantKey,
+        action: 'STORM_MONITORING',
+        coveragePct,
+        peakCoveragePct: newPeak,
+        elapsedMinutes,
+        event: existingEvent,
+        message: `Tormenta activa (${elapsedMinutes} min acumulados). Pico: ${newPeak}%, Actual: ${coveragePct}%. Esperando maduración/descenso.`
+      };
+    }
+
+    // Trigger condition reached! Prepare for video compilation
+    const reason = isPassing ? 'disipación/salida de la nube' : 'ventana temporal máxima alcanzada (2.5h)';
+    systemLogger.info(
+      `[RainMonitor] 🎬 Triggering video compilation for ${plantKey} due to: ${reason} (Elapsed: ${elapsedMinutes} min)`
+    );
+
+    db.prepare(`UPDATE rain_events SET status = 'COMPILING' WHERE id = ?`).run(existingEvent.id);
+    existingEvent.status = 'COMPILING';
+
+    if (!autoCompileVideo) {
+      return {
+        plantKey,
+        action: 'TRIGGER_COMPILATION',
+        coveragePct,
+        peakCoveragePct: newPeak,
+        elapsedMinutes,
+        event: existingEvent,
+        message: `Lluvia completó su ciclo (${reason}). Listo para compilar video.`
+      };
+    }
+
+    // Compile MP4 video using VideoCompilerService (Ecuador Continental view)
+    const basin = BASIN_GEOMETRIES[plantKey];
+    const basinName = basin?.name || plantKey;
+
+    const framesDir = path.join(process.cwd(), 'temp', 'storm_frames', `event_${existingEvent.id}`);
+    const cachedFrames = this.loadCachedStormFrames(framesDir);
+
+    let compilationResult: CompiledAnimationResult;
+    if (cachedFrames.length >= 4) {
+      compilationResult = await this.videoCompilerService.compileFramesToVideo(cachedFrames, {
+        plantKey: 'ecuador',
+        customTitle: `Tormenta en ${basinName}`,
+        minDurationSeconds: 10,
+        createMp4: true,
+        createGif: false,
+        showAllPins: true,
+        showDetectionBoxes: true,
+        highlightBasinKey: plantKey
+      });
+      try {
+        fs.rmSync(framesDir, { recursive: true, force: true });
+      } catch (err) {}
+    } else {
+      const hoursBack = Math.min(4, Math.max(2, Math.round(elapsedMinutes / 60) + 1));
+      compilationResult = await this.videoCompilerService.generateBasinAnimation({
+        plantKey: 'ecuador',
+        hoursBack,
+        customTitle: `Tormenta en ${basinName}`,
+        minDurationSeconds: 10,
+        createMp4: true,
+        createGif: false,
+        showAllPins: true,
+        showDetectionBoxes: true,
+        highlightBasinKey: plantKey
+      });
+    }
+
+    const cooldownUntil = now + cooldownHours * 3600 * 1000;
+
+    db.prepare(`
+      UPDATE rain_events
+      SET status = 'COOLDOWN',
+          video_compiled_at = ?,
+          video_path = ?,
+          video_duration_seconds = ?,
+          cooldown_until = ?
+      WHERE id = ?
+    `).run(
+      now,
+      compilationResult.mp4Path,
+      compilationResult.durationSeconds,
+      cooldownUntil,
+      existingEvent.id
+    );
+
+    existingEvent.status = 'COOLDOWN';
+    existingEvent.video_compiled_at = now;
+    existingEvent.video_path = compilationResult.mp4Path;
+    existingEvent.video_duration_seconds = compilationResult.durationSeconds;
+    existingEvent.cooldown_until = cooldownUntil;
+
+    return {
+      plantKey,
+      action: 'VIDEO_COMPILED',
+      coveragePct,
+      peakCoveragePct: newPeak,
+      elapsedMinutes,
+      event: existingEvent,
+      compilationResult,
+      message: `Video satelital compilado exitosamente (${compilationResult.durationSeconds}s, ${compilationResult.frameCount} frames). Cuenca en cooldown de ${cooldownHours}h.`
+    };
+  }
+
+  /**
+   * Caches an Ecuador Continental frame on disk for an active storm event.
+   */
+  public async cacheEcuadorFrame(eventId: number, timestampIso: string): Promise<void> {
+    const framesDir = path.join(process.cwd(), 'temp', 'storm_frames', `event_${eventId}`);
+    if (!fs.existsSync(framesDir)) {
+      fs.mkdirSync(framesDir, { recursive: true });
+    }
+
+    const safeTs = timestampIso.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(framesDir, `frame_${safeTs}.png`);
+    const metaPath = path.join(framesDir, `frame_${safeTs}.json`);
+
+    if (fs.existsSync(filePath) && fs.existsSync(metaPath)) {
+      return;
+    }
+
+    try {
+      const buffer = await this.satelliteService.fetchMapTile({
+        layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
+        bbox: BASIN_GEOMETRIES.ecuador.bbox,
+        time: timestampIso,
+        width: 800,
+        height: 800,
+        format: 'image/png'
+      });
+
+      fs.writeFileSync(filePath, buffer);
+      const { dateEcuador, timeEcuador } = this.satelliteService.formatEcuadorTimestamp(timestampIso);
+      fs.writeFileSync(
+        metaPath,
+        JSON.stringify({
+          timestampIso,
+          dateEcuador,
+          timeEcuador
+        })
+      );
+    } catch (err: any) {
+      systemLogger.warn(`[RainMonitor] Failed to cache frame for ${timestampIso}: ${err?.message || err}`);
+    }
+  }
+
+  /**
+   * Initializes cache for a new storm event by saving pre-storm frames and the current frame.
+   */
+  public async initStormFrameCache(eventId: number, currentTimestamp: string): Promise<void> {
+    try {
+      const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 4 });
+      const chrono = [...timestamps].reverse();
+      for (const ts of chrono) {
+        await this.cacheEcuadorFrame(eventId, ts);
+      }
+    } catch (err: any) {
+      systemLogger.warn(`[RainMonitor] Failed to pre-seed storm frame cache: ${err?.message || err}`);
+    }
+  }
+
+  /**
+   * Loads cached storm frames from disk in chronological order.
+   */
+  public loadCachedStormFrames(framesDir: string): SatelliteFrame[] {
+    if (!fs.existsSync(framesDir)) return [];
+    const files = fs.readdirSync(framesDir).filter(f => f.endsWith('.json')).sort();
+    const frames: SatelliteFrame[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const metaFile = files[i];
+      const base = metaFile.replace('.json', '');
+      const pngFile = `${base}.png`;
+      const fullMetaPath = path.join(framesDir, metaFile);
+      const fullPngPath = path.join(framesDir, pngFile);
+
+      if (fs.existsSync(fullPngPath)) {
+        try {
+          const meta = JSON.parse(fs.readFileSync(fullMetaPath, 'utf8'));
+          const buffer = fs.readFileSync(fullPngPath);
+          frames.push({
+            index: i,
+            timestampIso: meta.timestampIso,
+            dateEcuador: meta.dateEcuador,
+            timeEcuador: meta.timeEcuador,
+            buffer,
+            bbox: BASIN_GEOMETRIES.ecuador.bbox,
+            plantKey: 'ecuador',
+            source: 'geoserver'
+          });
+        } catch (err) {}
+      }
+    }
+
+    return frames;
+  }
+}

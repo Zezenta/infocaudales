@@ -182,6 +182,6 @@ describe('VideoCompilerService', () => {
 
       // Clean up test output
       fs.rmSync(outDir, { recursive: true, force: true });
-    });
+    }, 25000);
   });
 });

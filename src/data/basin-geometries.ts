@@ -23,8 +23,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   cocaCodoSinclair: {
     key: 'cocaCodoSinclair',
     name: 'Cuenca Coca Codo Sinclair',
-    subtitle: 'Ríos Quijos / Salado / Coca',
-    bbox: [-78.40, -0.80, -77.10, 0.50],
+    subtitle: 'Ríos Quijos • Salado • Cosanga (Aguas arriba)',
+    bbox: [-78.30, -0.75, -77.60, 0.20],
     plantLocation: {
       lat: -0.21,
       lon: -77.70,
@@ -34,8 +34,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   paute: {
     key: 'paute',
     name: 'Complejo Hidroeléctrico Paute',
-    subtitle: 'Mazar • Molino • Sopladora',
-    bbox: [-79.15, -3.15, -78.05, -2.05],
+    subtitle: 'Cajas • Cuenca • Mazar • Amaluza • Sopladora',
+    bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.58,
       lon: -78.58,
@@ -45,8 +45,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   mazar: {
     key: 'mazar',
     name: 'Complejo Paute / Mazar',
-    subtitle: 'Cuenca Río Paute',
-    bbox: [-79.15, -3.15, -78.05, -2.05],
+    subtitle: 'Cuenca Río Paute y Mazar',
+    bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.54,
       lon: -78.63,
@@ -57,7 +57,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'molino',
     name: 'Complejo Paute / Molino',
     subtitle: 'Cuenca Río Paute',
-    bbox: [-79.15, -3.15, -78.05, -2.05],
+    bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.58,
       lon: -78.58,
@@ -68,7 +68,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
     key: 'sopladora',
     name: 'Complejo Paute / Sopladora',
     subtitle: 'Cuenca Río Paute',
-    bbox: [-79.15, -3.15, -78.05, -2.05],
+    bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.61,
       lon: -78.54,
@@ -78,8 +78,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   agoyan: {
     key: 'agoyan',
     name: 'Cuenca Pastaza / Agoyán',
-    subtitle: 'Río Pastaza',
-    bbox: [-78.80, -1.85, -77.90, -0.95],
+    subtitle: 'Ríos Chambo y Patate (Aguas arriba)',
+    bbox: [-78.98, -2.35, -78.30, -0.58],
     plantLocation: {
       lat: -1.40,
       lon: -78.36,
@@ -89,8 +89,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   minasSanFrancisco: {
     key: 'minasSanFrancisco',
     name: 'Cuenca Jubones / MSF',
-    subtitle: 'Río Jubones',
-    bbox: [-79.88, -3.74, -79.08, -2.94],
+    subtitle: 'Cuenca Alta Río Jubones',
+    bbox: [-79.60, -3.75, -78.90, -3.00],
     plantLocation: {
       lat: -3.34,
       lon: -79.48,

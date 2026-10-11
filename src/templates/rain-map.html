@@ -35,7 +35,7 @@
         <canvas id="satelliteCanvas" width="800" height="800" class="satellite-image-layer"></canvas>
         
         <!-- Live SVG Overlay (Matches Exact Video Format) -->
-        <svg id="svgOverlay" class="overlay-layer" width="800" height="800" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <svg id="svgOverlay" class="overlay-layer" viewBox="0 0 800 800" width="800" height="800" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
           <defs>
             <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
@@ -62,8 +62,16 @@
           </defs>
 
           <!-- Top Header Bar -->
-          <rect x="0" y="0" width="800" height="68" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="20">Vista Satelital En Vivo</text>
+          <rect id="topHeaderRect" x="0" y="0" width="800" height="68" fill="url(#topBarGrad)"/>
+          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="20">Vista Satelital En Vivo</text>
+
+          <!-- Top-Left Publication Alert Badge (matches VideoCompilerService) -->
+          <g id="pubStatusBadgeGroup" transform="translate(20, 48)" style="display: none;">
+            <rect id="pubBadgeRect" x="0" y="0" width="220" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
+            <circle id="pubBadgeDotOuter" cx="12" cy="12" r="4.5" fill="#10b981" />
+            <circle id="pubBadgeDotInner" cx="12" cy="12" r="2.5" fill="#ffffff" style="display: none;" />
+            <text id="pubBadgeText" x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">🟢 CONDICIÓN NORMAL • SIN ALERTA</text>
+          </g>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
           <g id="watermarkGroup" transform="translate(620, 18)">
@@ -75,8 +83,11 @@
               </svg>
             </g>
             <!-- Handle Text -->
-            <text id="overlayWatermark" x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
+            <text id="overlayWatermark" x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
           </g>
+
+          <!-- Layer for Basin Storm Detection Boundary Boxes -->
+          <g id="detectionBoxesLayer"></g>
 
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
           <g id="allPinsLayer"></g>
@@ -86,13 +97,13 @@
             <circle cx="0" cy="0" r="10" fill="#ef4444" fill-opacity="0.25" />
             <circle cx="0" cy="0" r="5.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" />
             <rect id="pinBox" x="9" y="-12" width="130" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="#ef4444" stroke-width="1.2" />
-            <text id="pinLabel" x="17" y="4.5" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">Captación CCS</text>
+            <text id="pinLabel" x="17" y="4.5" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12">Captación CCS</text>
           </g>
 
           <!-- Floating Thermal Scale Bar Overlay (GOES-16 Band 13 Clean Window IR) -->
           <g id="thermalScaleGroup" transform="translate(20, 684)">
             <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
-            <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+            <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
             <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
             <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
             <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
@@ -104,13 +115,13 @@
           <!-- Bottom Footer Bar -->
           <rect x="0" y="740" width="800" height="60" fill="url(#bottomBarGrad)"/>
           <circle cx="30" cy="770" r="7" fill="#22c55e" />
-          <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
+          <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
           
           <!-- Subtitle Pill Badge on Bottom Right -->
           <g id="badgeGroup" transform="translate(560, 754)">
             <rect id="badgeRect" x="0" y="0" width="220" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
             <circle id="badgeDot" cx="12" cy="14" r="3.5" fill="#38bdf8" />
-            <text id="overlayBadge" x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="11.5">GOES-16 • Banda 13 IR (10.3 µm)</text>
+            <text id="overlayBadge" x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">GOES-16 • Banda 13 IR (10.3 µm)</text>
           </g>
         </svg>
       </div>
@@ -185,11 +196,27 @@
           </select>
         </div>
 
-        <!-- Pins Toggle -->
+        <!-- Timeline Preset Selector -->
         <div class="form-group" style="margin-top: 10px;">
+          <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
+          <select id="presetSelect" class="form-select">
+            <option value="live">📡 En Vivo: Últimas 3 horas (INAMHI GeoServer)</option>
+            <option value="storm_paute_oct7">⚡ Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
+            <option value="storm_ccs_oct7">🌧️ Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
+            <option value="recent_50">📁 Últimos 50 fotogramas archivados</option>
+            <option value="all_966">📁 Archivo Histórico Completo (966 fotogramas)</option>
+          </select>
+        </div>
+
+        <!-- Pins Toggle & Screen Fit -->
+        <div class="form-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
             <input type="checkbox" id="showAllPinsCheckbox" checked>
             📍 Mostrar Pines de Todas las Centrales
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+            <input type="checkbox" id="fitScreenCheckbox" checked>
+            📱 Ajustar video a pantalla (visibilidad sin scroll)
           </label>
         </div>
       </div>
@@ -198,7 +225,33 @@
       <div class="control-panel">
         <h3 class="panel-title">🎨 Personalización de Overlays</h3>
 
-        <div class="form-group">
+        <!-- Storm Detection Boxes & Alert Badges Controls -->
+        <div class="form-group" style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">📦 Cuadros de Detección & Alerta</div>
+          
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+            <input type="checkbox" id="showDetectionBoxesCheckbox" checked>
+            Mostrar Cuadros de Cuencas (CCS & Paute)
+          </label>
+
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+            <input type="checkbox" id="showPubBadgeCheckbox" checked>
+            Mostrar Ticker de Publicación (🚨 / 🟢)
+          </label>
+
+          <div style="display: flex; gap: 12px; margin-top: 2px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #f87171; cursor: pointer;">
+              <input type="checkbox" id="simCcsStormCheckbox">
+              ⚡ Forzar Tormenta CCS
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #f87171; cursor: pointer;">
+              <input type="checkbox" id="simPauteStormCheckbox">
+              🏔️ Forzar Tormenta Paute
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="customTitleInput">Título Superior</label>
           <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital En Vivo">
         </div>
@@ -295,6 +348,22 @@
     const overlayTime = document.getElementById('overlayTime');
     const exportStatus = document.getElementById('exportStatus');
 
+    // New Detection & Preset DOM Elements
+    const showDetectionBoxesCheckbox = document.getElementById('showDetectionBoxesCheckbox');
+    const showPubBadgeCheckbox = document.getElementById('showPubBadgeCheckbox');
+    const simCcsStormCheckbox = document.getElementById('simCcsStormCheckbox');
+    const simPauteStormCheckbox = document.getElementById('simPauteStormCheckbox');
+    const fitScreenCheckbox = document.getElementById('fitScreenCheckbox');
+    const presetSelect = document.getElementById('presetSelect');
+    const videoCardWrapper = document.getElementById('videoCard');
+    const playerControls = document.querySelector('.player-controls');
+
+    // Calibrated Monitored Basins matching BASIN_GEOMETRIES & VideoCompilerService
+    const MONITORED_BASINS = [
+      { key: 'cocaCodoSinclair', label: 'Cuenca Coca Codo Sinclair', bbox: [-78.30, -0.75, -77.60, 0.20], defaultColor: '#38bdf8' },
+      { key: 'paute', label: 'Complejo Hidroeléctrico Paute', bbox: [-79.38, -3.30, -78.40, -2.25], defaultColor: '#a855f7' }
+    ];
+
     // Geo to Pixel Projection
     function projectGeoToPixel(lat, lon, bbox, width = 800, height = 800) {
       const [minLon, minLat, maxLon, maxLat] = bbox;
@@ -360,17 +429,156 @@
             textY = 24.5;
           }
 
+          const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
           g.innerHTML = `
-            <circle cx="0" cy="0" r="10" fill="#38bdf8" fill-opacity="0.25" />
-            <circle cx="0" cy="0" r="5.5" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
-            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="#38bdf8" stroke-width="1.2" />
-            <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'Outfit', DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="12">${pin.label}</text>
+            <circle cx="0" cy="0" r="10" fill="${color}" fill-opacity="0.25" />
+            <circle cx="0" cy="0" r="5.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+            <rect x="${boxX}" y="${boxY}" width="${boxW}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${color}" stroke-width="1.2" />
+            <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12">${pin.label}</text>
           `;
           allPinsLayer.appendChild(g);
         }
       });
+    }
+
+    // Render Basin Storm Detection Boundary Boxes
+    function renderDetectionBoxes() {
+      const layer = document.getElementById('detectionBoxesLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+
+      const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
+      const showBoxes = showDetectionBoxesCheckbox && showDetectionBoxesCheckbox.checked && isEcuador;
+      if (!showBoxes) {
+        renderPubStatusBadge(false);
+        return;
+      }
+
+      const simCcs = simCcsStormCheckbox && simCcsStormCheckbox.checked;
+      const simPaute = simPauteStormCheckbox && simPauteStormCheckbox.checked;
+
+      // Auto-detect storm state if currently viewing historical frame
+      const currentIso = (timestamps && timestamps[currentFrameIdx]) || '';
+      let isCcsActive = simCcs;
+      let isPauteActive = simPaute;
+
+      // Paute Oct 7-8 storm period: 2026-10-07T23:30Z to 2026-10-08T05:30Z
+      if (currentIso >= '2026-10-07T23:30:00.000Z' && currentIso <= '2026-10-08T05:30:00.000Z') {
+        isPauteActive = true;
+      }
+      // CCS Oct 7 storm period: 2026-10-07T17:30Z to 2026-10-07T22:30Z
+      if (currentIso >= '2026-10-07T17:30:00.000Z' && currentIso <= '2026-10-07T22:30:00.000Z') {
+        isCcsActive = true;
+      }
+
+      MONITORED_BASINS.forEach((b) => {
+        const isActiveStorm = (b.key === 'cocaCodoSinclair' && isCcsActive) || (b.key === 'paute' && isPauteActive);
+        const color = isActiveStorm ? '#ef4444' : b.defaultColor;
+        const strokeWidth = isActiveStorm ? 5.2 : 2.0;
+        const strokeDash = isActiveStorm ? '12,4' : '7,4';
+        const shadowStrokeWidth = isActiveStorm ? 9.5 : 4.5;
+        const fillOpacity = isActiveStorm ? 0.22 : 0.08;
+        const cornerLen = isActiveStorm ? 22 : 12;
+        const cornerStroke = isActiveStorm ? 6.5 : 3.0;
+
+        const tl = projectGeoToPixel(b.bbox[3], b.bbox[0], currentGeometry.bbox, 800, 800);
+        const br = projectGeoToPixel(b.bbox[1], b.bbox[2], currentGeometry.bbox, 800, 800);
+        const boxX = Math.min(tl.x, br.x);
+        const boxY = Math.min(tl.y, br.y);
+        const boxW = Math.abs(br.x - tl.x);
+        const boxH = Math.abs(br.y - tl.y);
+
+        const tagText = isActiveStorm ? `🚨 TORMENTA ACTIVA • ${b.label}` : b.label;
+        const tagW = measureTextWidth(tagText, 11, 'bold') + (isActiveStorm ? 48 : 28);
+        const tagH = 22;
+        const tagY = (boxY - tagH - 4 < 70) ? boxY + 6 : boxY - tagH - 4;
+        const textY = tagY + 15;
+        const tagBg = isActiveStorm ? '#7f1d1d' : '#0b1120';
+        const tagBorder = isActiveStorm ? '#ef4444' : color;
+        const tagBorderWidth = isActiveStorm ? 2.0 : 1.5;
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.innerHTML = `
+          <!-- Semi-transparent colored basin area fill -->
+          <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
+                fill="${color}" fill-opacity="${fillOpacity}" />
+
+          <!-- Dark shadow underlay for maximum contrast against clouds -->
+          <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
+                fill="none" stroke="#000000" stroke-width="${shadowStrokeWidth}" stroke-opacity="0.90" />
+
+          <!-- High-visibility dashed boundary (substantially thickened during storm) -->
+          <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
+                fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" />
+
+          <!-- Corner reinforcement brackets -->
+          <path d="M ${boxX} ${boxY + cornerLen} L ${boxX} ${boxY} L ${boxX + cornerLen} ${boxY}
+                   M ${boxX + boxW - cornerLen} ${boxY} L ${boxX + boxW} ${boxY} L ${boxX + boxW} ${boxY + cornerLen}
+                   M ${boxX} ${boxY + boxH - cornerLen} L ${boxX} ${boxY + boxH} L ${boxX + cornerLen} ${boxY + boxH}
+                   M ${boxX + boxW - cornerLen} ${boxY + boxH} L ${boxX + boxW} ${boxY + boxH} L ${boxX + boxW} ${boxY + boxH - cornerLen}"
+                fill="none" stroke="${color}" stroke-width="${cornerStroke}" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Tag Badge -->
+          <rect x="${boxX}" y="${tagY}" width="${tagW}" height="${tagH}" rx="5"
+                fill="${tagBg}" fill-opacity="0.96" stroke="${tagBorder}" stroke-width="${tagBorderWidth}" />
+          ${isActiveStorm ? `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="6.5" fill="#ef4444" fill-opacity="0.4" />` : ''}
+          <circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.5" fill="${color}" />
+          <text x="${boxX + 20}" y="${textY}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">${tagText}</text>
+        `;
+        layer.appendChild(g);
+      });
+
+      renderPubStatusBadge(isCcsActive || isPauteActive);
+    }
+
+    // Render Publication Status Badge (matching VideoCompilerService)
+    function renderPubStatusBadge(isAnyActive) {
+      const group = document.getElementById('pubStatusBadgeGroup');
+      const topRect = document.getElementById('topHeaderRect');
+      const title = document.getElementById('overlayTitle');
+      if (!group) return;
+
+      const show = showPubBadgeCheckbox && showPubBadgeCheckbox.checked;
+      if (!show) {
+        group.style.display = 'none';
+        if (topRect) topRect.setAttribute('height', '68');
+        if (title) title.setAttribute('y', '38');
+        return;
+      }
+
+      group.style.display = 'block';
+      if (topRect) topRect.setAttribute('height', '92');
+      if (title) title.setAttribute('y', '34');
+
+      const rect = document.getElementById('pubBadgeRect');
+      const dotOuter = document.getElementById('pubBadgeDotOuter');
+      const dotInner = document.getElementById('pubBadgeDotInner');
+      const text = document.getElementById('pubBadgeText');
+
+      if (isAnyActive) {
+        rect.setAttribute('width', '315');
+        rect.setAttribute('fill', '#7f1d1d');
+        rect.setAttribute('stroke', '#ef4444');
+        rect.setAttribute('stroke-width', '1.2');
+        dotOuter.setAttribute('fill', '#ef4444');
+        dotOuter.setAttribute('r', '5');
+        dotInner.style.display = 'block';
+        text.textContent = '🚨 ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN';
+        text.setAttribute('fill', '#ffffff');
+      } else {
+        rect.setAttribute('width', '220');
+        rect.setAttribute('fill', '#064e3b');
+        rect.setAttribute('stroke', '#10b981');
+        rect.setAttribute('stroke-width', '1');
+        dotOuter.setAttribute('fill', '#10b981');
+        dotOuter.setAttribute('r', '4.5');
+        dotInner.style.display = 'none';
+        text.textContent = '🟢 CONDICIÓN NORMAL • SIN ALERTA';
+        text.setAttribute('fill', '#a7f3d0');
+      }
     }
 
     // Fast Timestamp-only update for fluid playback ticks
@@ -427,8 +635,9 @@
         singlePinGroup.style.display = 'none';
       }
 
-      // All Pins
+      // All Pins & Detection Boxes
       renderAllPins();
+      renderDetectionBoxes();
     }
 
     const ALL_BASIN_KEYS = ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
@@ -588,6 +797,7 @@
       scrubSlider.value = currentFrameIdx;
       frameCounter.textContent = `${currentFrameIdx + 1} / ${timestamps.length}`;
       updateTimestampDisplay();
+      renderDetectionBoxes();
     }
 
     // Fetch Timestamps & Geometries
@@ -773,6 +983,45 @@
     pinLabelInput.addEventListener('input', updateOverlay);
     showSinglePinCheckbox.addEventListener('change', updateOverlay);
     showAllPinsCheckbox.addEventListener('change', updateOverlay);
+
+    if (showDetectionBoxesCheckbox) showDetectionBoxesCheckbox.addEventListener('change', updateOverlay);
+    if (showPubBadgeCheckbox) showPubBadgeCheckbox.addEventListener('change', updateOverlay);
+    if (simCcsStormCheckbox) simCcsStormCheckbox.addEventListener('change', updateOverlay);
+    if (simPauteStormCheckbox) simPauteStormCheckbox.addEventListener('change', updateOverlay);
+
+    function applyFitScreen() {
+      if (!fitScreenCheckbox) return;
+      if (fitScreenCheckbox.checked) {
+        if (videoCardWrapper) videoCardWrapper.classList.add('fit-screen');
+        if (playerControls) playerControls.classList.add('fit-screen');
+      } else {
+        if (videoCardWrapper) videoCardWrapper.classList.remove('fit-screen');
+        if (playerControls) playerControls.classList.remove('fit-screen');
+      }
+    }
+    if (fitScreenCheckbox) {
+      fitScreenCheckbox.addEventListener('change', applyFitScreen);
+      applyFitScreen();
+    }
+
+    async function onPresetChange() {
+      if (!presetSelect) return;
+      const preset = presetSelect.value;
+      preloadStatusText.textContent = '⏳ Cargando fotogramas...';
+      try {
+        const res = await fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}`);
+        const data = await res.json();
+        timestamps = data.timestamps || [];
+        const maxIdx = Math.max(0, timestamps.length - 1);
+        scrubSlider.max = maxIdx;
+        currentFrameIdx = maxIdx;
+        renderCurrentFrame();
+        preloadSequence();
+      } catch (err) {
+        console.error('Error changing preset:', err);
+      }
+    }
+    if (presetSelect) presetSelect.addEventListener('change', onPresetChange);
 
     // Compilation Action
     async function triggerCompile(format = 'mp4') {
