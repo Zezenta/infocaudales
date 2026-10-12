@@ -433,11 +433,11 @@ const afternoonCronJob = new CronJob(
   'America/Guayaquil'
 );
 
-// 7:15 PM (Evening Run - 4 plants including Sopladora)
+// 7:15 PM (Evening Run - 5 plants including Mazar and Sopladora)
 const eveningCronJob = new CronJob(
   '15 19 * * *',
   async () => {
-    const eveningPlants = ['sopladora', 'minasSanFrancisco', 'agoyan', 'cocaCodoSinclair'];
+    const eveningPlants = ['mazar', 'sopladora', 'minasSanFrancisco', 'agoyan', 'cocaCodoSinclair'];
     console.log('[CronJob] Running Evening Publishing Cycle...');
     await runPublishingCycle(eveningPlants, false);
   },
