@@ -119,6 +119,6 @@ export const DEFAULT_REFERENCE_CITIES: CityPin[] = [
   { lat: -0.180, lon: -78.468, label: 'Quito', placement: 'left' },
   { lat: -2.189, lon: -79.889, label: 'Guayaquil', placement: 'right' },
   { lat: -2.900, lon: -79.006, label: 'Cuenca', placement: 'bottom-left' },
-  { lat: -0.954, lon: -80.709, label: 'Manta', placement: 'left' },
+  { lat: -1.054, lon: -80.454, label: 'Portoviejo', placement: 'left' },
   { lat: -0.844, lon: -80.164, label: 'Calceta', placement: 'top-right' }
 ];

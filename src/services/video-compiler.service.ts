@@ -50,6 +50,7 @@ export interface OverlayCustomizationOptions {
   showPublicationStatusBadge?: boolean;
   stormWindow?: StormWindow;
   activeBasinResolver?: (frame: SatelliteFrame, index: number) => Set<string> | string[];
+  customDateSubtitle?: string;
   showCityPins?: boolean;
   cityPins?: CityPin[];
   layer?: string;
@@ -470,8 +471,9 @@ export class VideoCompilerService {
       </defs>
 
       <!-- Header Top Bar -->
-      <rect x="0" y="0" width="${width}" height="${showPublicationBadge ? 92 : 68}" fill="url(#topBarGrad)"/>
-      <text x="20" y="${showPublicationBadge ? 34 : 38}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="20">${title}</text>
+      <rect x="0" y="0" width="${width}" height="${options.customDateSubtitle ? 78 : (showPublicationBadge ? 92 : 68)}" fill="url(#topBarGrad)"/>
+      <text x="20" y="${options.customDateSubtitle ? 31 : (showPublicationBadge ? 34 : 38)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="${options.customDateSubtitle ? 18 : 20}">${title}</text>
+      ${options.customDateSubtitle ? `<text x="20" y="52" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="12.5">${escapeXml(options.customDateSubtitle)}</text>` : ''}
       ${pubStatusSvg}
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->

@@ -853,7 +853,7 @@ export class RainMonitorService {
       'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ];
-    return `${days[d.getDay()]}, ${day} de ${months[d.getMonth()]} de ${year}`;
+    return `${days[d.getDay()]}, ${day} de ${months[d.getMonth()]} del ${year}`;
   }
 
   /**
@@ -939,6 +939,7 @@ export class RainMonitorService {
 
     const framerate = options.framerate || 8;
     const outputName = `resumen_satelital_24h_${targetDate.replace(/[^0-9]/g, '')}`;
+    const dateFormatted = this.formatDateToSpanish(targetDate);
 
     const compilation = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
       plantKey: 'ecuador',
@@ -946,6 +947,7 @@ export class RainMonitorService {
       framerate,
       minDurationSeconds: 12,
       customTitle: 'Resumen Satelital 24h • Ecuador Continental',
+      customDateSubtitle: dateFormatted,
       showAllPins: true,
       showCityPins: true,
       showDetectionBoxes: true,
@@ -954,8 +956,6 @@ export class RainMonitorService {
       createGif: false,
       activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set()
     });
-
-    const dateFormatted = this.formatDateToSpanish(targetDate);
     const basinSummaries = targetBasins.map(bKey => {
       const stats = basinStats.get(bKey)!;
       return {
