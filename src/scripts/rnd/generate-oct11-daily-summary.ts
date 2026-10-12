@@ -38,6 +38,13 @@ async function main() {
     console.log(`• ${b.plantKey}: ${b.hasRain ? 'Lluvia detectada' : 'Sin lluvia'} | Pico: ${b.peakCoveragePct.toFixed(1)}% | Frames activos: ${b.rainFrames}`);
   }
 
+  if (result.regionPeaks) {
+    console.log('\n📊 Picos máximos por región:');
+    console.log(`• Costa: ${result.regionPeaks.costa.toFixed(1)}%`);
+    console.log(`• Sierra: ${result.regionPeaks.sierra.toFixed(1)}%`);
+    console.log(`• Amazonía: ${result.regionPeaks.amazonia.toFixed(1)}%`);
+  }
+
   // Extract preview frames into artifact directory and generated directory
   const artifactDir = '/home/zezenta/.gemini/antigravity-cli/brain/6b1bfaaf-ca18-4138-bcdd-0de0981636ac';
   const generatedDir = path.join(process.cwd(), 'generated');

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { db } from '../utils/db.js';
-import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, COSTA_SIERRA_DIVIDE, SIERRA_AMAZONIA_DIVIDE, interpolateDivideLon } from '../data/basin-geometries.js';
 import { SatelliteMapService, SatelliteFrame } from './satellite-map.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
 import { XService } from './x.service.js';
@@ -843,6 +843,69 @@ export class RainMonitorService {
   }
 
   /**
+   * Measures convective cloud coverage percentages across Costa, Sierra and Amazonía.
+   */
+  public measureRegionalCoveragesInEcuadorImage(
+    px: Uint8Array,
+    imgWidth: number,
+    imgHeight: number,
+    nationalBbox: [number, number, number, number]
+  ): { costa: number; sierra: number; amazonia: number } {
+    const [minLon, minLat, maxLon, maxLat] = nationalBbox;
+    let tc = 0, cc = 0, ts = 0, cs = 0, ta = 0, ca = 0;
+
+    for (let y = 0; y < imgHeight; y++) {
+      const lat = maxLat - (y / imgHeight) * (maxLat - minLat);
+      if (lat > 1.45 || lat < -4.95) continue;
+
+      const csLon = interpolateDivideLon(COSTA_SIERRA_DIVIDE, lat);
+      const saLon = interpolateDivideLon(SIERRA_AMAZONIA_DIVIDE, lat);
+
+      for (let x = 0; x < imgWidth; x++) {
+        const lon = minLon + (x / imgWidth) * (maxLon - minLon);
+
+        let reg = 0;
+        if (lon >= -81.10 && lon < csLon && lat >= -4.65) {
+          reg = 1; // Costa
+        } else if (lon >= csLon && lon < saLon) {
+          reg = 2; // Sierra
+        } else if (lon >= saLon && lon <= -75.20 && lat <= 0.75) {
+          reg = 3; // Amazonia
+        }
+
+        if (reg === 0) continue;
+
+        const i = (y * imgWidth + x) * 4;
+        const r = px[i];
+        const g = px[i + 1];
+        const b = px[i + 2];
+
+        const isYellow = (r > 160 && g > 160 && b < 120);
+        const isRed = (r > 130 && g < 100 && b < 100);
+        const isWhite = (r > 210 && g > 210 && b > 210);
+        const isSevere = isYellow || isRed || isWhite;
+        const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
+
+        if (isSevere || isGreen) {
+          if (reg === 1) cc++;
+          else if (reg === 2) cs++;
+          else if (reg === 3) ca++;
+        }
+
+        if (reg === 1) tc++;
+        else if (reg === 2) ts++;
+        else if (reg === 3) ta++;
+      }
+    }
+
+    return {
+      costa: tc > 0 ? parseFloat(((cc / tc) * 100).toFixed(1)) : 0,
+      sierra: ts > 0 ? parseFloat(((cs / ts) * 100).toFixed(1)) : 0,
+      amazonia: ta > 0 ? parseFloat(((ca / ta) * 100).toFixed(1)) : 0
+    };
+  }
+
+  /**
    * Formats YYYY-MM-DD date string to formal Spanish text (e.g. "Domingo, 11 de octubre de 2026").
    */
   public formatDateToSpanish(dateStr: string): string {
@@ -870,6 +933,7 @@ export class RainMonitorService {
     postText: string;
     publishedTweetId?: string;
     basinSummaries: Array<{ plantKey: string; hasRain: boolean; peakCoveragePct: number; rainFrames: number }>;
+    regionPeaks?: { costa: number; sierra: number; amazonia: number };
   }> {
     let targetDate = options.dateEcuador;
     if (!targetDate) {
@@ -897,6 +961,16 @@ export class RainMonitorService {
       basinStats.set(bKey, { maxCoverage: 0, rainFrames: 0 });
     }
 
+    const frameMetrics = new Map<number, {
+      ccs: number;
+      paute: number;
+      costa: number;
+      sierra: number;
+      amazonia: number;
+    }>();
+
+    const regionPeaks = { costa: 0, sierra: 0, amazonia: 0 };
+
     const ecuadorBbox = BASIN_GEOMETRIES.ecuador.bbox;
     const framesToCompile: SatelliteFrame[] = [];
 
@@ -917,6 +991,10 @@ export class RainMonitorService {
       });
 
       const activeBasins = new Set<string>();
+      let frameCcs = 0;
+      let framePaute = 0;
+      let frameRegions = { costa: 0, sierra: 0, amazonia: 0 };
+
       try {
         const img = this.decodePng(buffer);
         const px = this.unfilterScanlines(img.raw, img.width, img.height);
@@ -931,10 +1009,25 @@ export class RainMonitorService {
             activeBasins.add(bKey);
             stats.rainFrames++;
           }
+
+          if (bKey === 'cocaCodoSinclair') frameCcs = cov;
+          if (bKey === 'paute') framePaute = cov;
         }
+
+        frameRegions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox);
+        if (frameRegions.costa > regionPeaks.costa) regionPeaks.costa = frameRegions.costa;
+        if (frameRegions.sierra > regionPeaks.sierra) regionPeaks.sierra = frameRegions.sierra;
+        if (frameRegions.amazonia > regionPeaks.amazonia) regionPeaks.amazonia = frameRegions.amazonia;
       } catch (err) {}
 
       activePerFrame.set(i, activeBasins);
+      frameMetrics.set(i, {
+        ccs: frameCcs,
+        paute: framePaute,
+        costa: frameRegions.costa,
+        sierra: frameRegions.sierra,
+        amazonia: frameRegions.amazonia
+      });
     }
 
     const framerate = options.framerate || 8;
@@ -951,13 +1044,6 @@ export class RainMonitorService {
       };
     });
 
-    const summaryCardItems = basinSummaries.map(b => ({
-      label: b.plantKey === 'cocaCodoSinclair' ? 'Coca Codo Sinclair' : 'Complejo Paute',
-      peakPct: b.peakCoveragePct,
-      hasRain: b.hasRain,
-      color: b.plantKey === 'cocaCodoSinclair' ? '#38bdf8' : '#c084fc'
-    }));
-
     const compilation = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
       plantKey: 'ecuador',
       outputName,
@@ -967,17 +1053,57 @@ export class RainMonitorService {
       customDateSubtitle: dateFormatted,
       showAllPins: true,
       showCityPins: true,
-      summaryCardItems,
       showDetectionBoxes: true,
       showThermalScale: true,
       createMp4: true,
       createGif: false,
-      activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set()
+      activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set(),
+      summaryCardsResolver: (frame, idx) => {
+        const m = frameMetrics.get(idx) || { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
+        const active = activePerFrame.get(idx) || new Set();
+        return {
+          basins: [
+            {
+              label: 'Coca Codo Sinclair',
+              value: `${m.ccs.toFixed(1)}%`,
+              color: '#38bdf8',
+              highlight: active.has('cocaCodoSinclair')
+            },
+            {
+              label: 'Complejo Paute',
+              value: `${m.paute.toFixed(1)}%`,
+              color: '#c084fc',
+              highlight: active.has('paute')
+            }
+          ],
+          regions: [
+            {
+              label: 'Costa',
+              value: `${m.costa.toFixed(1)}%`,
+              color: '#38bdf8',
+              highlight: m.costa >= 10.0
+            },
+            {
+              label: 'Sierra',
+              value: `${m.sierra.toFixed(1)}%`,
+              color: '#34d399',
+              highlight: m.sierra >= 10.0
+            },
+            {
+              label: 'Amazonía',
+              value: `${m.amazonia.toFixed(1)}%`,
+              color: '#f59e0b',
+              highlight: m.amazonia >= 10.0
+            }
+          ]
+        };
+      }
     });
 
     const postText = buildDailySatelliteSummaryPostText({
       dateEcuador: dateFormatted,
-      basinSummaries
+      basinSummaries,
+      regionPeaks
     });
 
     let publishedTweetId: string | undefined;
@@ -998,7 +1124,8 @@ export class RainMonitorService {
       compilation,
       postText,
       publishedTweetId,
-      basinSummaries
+      basinSummaries,
+      regionPeaks
     };
   }
 }

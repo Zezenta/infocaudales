@@ -54,8 +54,14 @@ export interface OverlayCustomizationOptions {
   showCityPins?: boolean;
   cityPins?: CityPin[];
   summaryCardItems?: BasinSummaryCardItem[];
+  summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
   layers?: string | string[];
+}
+
+export interface DynamicSummaryCards {
+  basins?: Array<{ label: string; value: string; color?: string; highlight?: boolean }>;
+  regions?: Array<{ label: string; value: string; color?: string; highlight?: boolean }>;
 }
 
 export interface BasinSummaryCardItem {
@@ -443,52 +449,100 @@ export class VideoCompilerService {
         `;
       }
     }
-    // Render Lower-Right Summary Card if items provided (utilizing empty ocean/border space)
+    // Render Lower-Right Summary Cards (Cuencas and Regiones)
     let summaryCardSvg = '';
-    if (options.summaryCardItems && options.summaryCardItems.length > 0) {
-      const items = options.summaryCardItems;
-      const cardW = 240;
-      const cardH = items.length * 44 + 36;
-      const cardX = width - cardW - 20;
-      const cardY = height - 60 - 16 - cardH;
+    const dynamicCards = options.summaryCardsResolver
+      ? options.summaryCardsResolver(frame, frame.index || 0)
+      : undefined;
 
-      let itemsSvg = '';
-      for (let idx = 0; idx < items.length; idx++) {
-        const item = items[idx];
-        const itemY = 38 + idx * 44;
+    const basinsList = dynamicCards?.basins || (options.summaryCardItems ? options.summaryCardItems.map(b => ({
+      label: b.label,
+      value: `${b.peakPct.toFixed(1)}%`,
+      color: b.color || '#38bdf8',
+      highlight: b.hasRain
+    })) : undefined);
+
+    const regionsList = dynamicCards?.regions;
+
+    const cardW = 228;
+    const cardX = width - cardW - 20;
+
+    let card2H = 0;
+    let card2Y = 0;
+    let card1H = 0;
+    let card1Y = 0;
+
+    if (regionsList && regionsList.length > 0) {
+      card2H = 22 + regionsList.length * 24 + 6;
+      card2Y = height - 60 - 12 - card2H;
+    }
+
+    if (basinsList && basinsList.length > 0) {
+      card1H = 22 + basinsList.length * 24 + 6;
+      card1Y = card2Y > 0 ? (card2Y - 8 - card1H) : (height - 60 - 12 - card1H);
+    }
+
+    // Build Card 1: Cuencas Hidroeléctricas
+    let card1Svg = '';
+    if (basinsList && basinsList.length > 0) {
+      let rowsSvg = '';
+      for (let idx = 0; idx < basinsList.length; idx++) {
+        const item = basinsList[idx];
+        const rowY = 34 + idx * 24;
         const color = item.color || '#38bdf8';
-        const statusText = item.hasRain
-          ? `Pico: ${item.peakPct.toFixed(1)}% • Lluvia activa`
-          : `Pico: ${item.peakPct.toFixed(1)}% • Sin lluvias`;
-        const statusColor = item.hasRain ? '#f87171' : '#94a3b8';
+        const valColor = item.highlight ? '#f87171' : '#cbd5e1';
 
-        itemsSvg += `
-        <circle cx="14" cy="${itemY}" r="3.8" fill="${color}" />
-        <text x="24" y="${itemY + 3.5}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">${escapeXml(item.label)}</text>
-        <text x="24" y="${itemY + 18}" fill="${statusColor}" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(statusText)}</text>
+        rowsSvg += `
+        <circle cx="12" cy="${rowY}" r="3.2" fill="${color}" />
+        <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(item.label)}</text>
+        <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${escapeXml(item.value)}</text>
         `;
-
-        if (idx < items.length - 1) {
-          itemsSvg += `
-          <line x1="14" y1="${itemY + 26}" x2="${cardW - 14}" y2="${itemY + 26}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="3,3" />
-          `;
-        }
       }
 
-      summaryCardSvg = `
-      <g transform="translate(${cardX}, ${cardY})">
-        <!-- Container card -->
-        <rect x="0" y="0" width="${cardW}" height="${cardH}" rx="8"
-              fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1.2" />
-        <!-- Top header bar -->
-        <rect x="0" y="0" width="${cardW}" height="26" rx="8" fill="#1e293b" fill-opacity="0.75" />
-        <circle cx="14" cy="13" r="3.5" fill="#38bdf8" />
-        <text x="24" y="17" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.05em">PICOS DE LLUVIA (24H)</text>
-        <line x1="0" y1="26" x2="${cardW}" y2="26" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
-        ${itemsSvg}
+      card1Svg = `
+      <g transform="translate(${cardX}, ${card1Y})">
+        <rect x="0" y="0" width="${cardW}" height="${card1H}" rx="7"
+              fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
+        <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
+        <circle cx="12" cy="11" r="3.2" fill="#38bdf8" />
+        <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">CUENCAS HIDROELÉCTRICAS</text>
+        <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+        ${rowsSvg}
       </g>
       `;
     }
+
+    // Build Card 2: Cobertura por Región
+    let card2Svg = '';
+    if (regionsList && regionsList.length > 0) {
+      let rowsSvg = '';
+      for (let idx = 0; idx < regionsList.length; idx++) {
+        const item = regionsList[idx];
+        const rowY = 34 + idx * 24;
+        const color = item.color || '#38bdf8';
+        const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+
+        rowsSvg += `
+        <circle cx="12" cy="${rowY}" r="3.2" fill="${color}" />
+        <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(item.label)}</text>
+        <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${escapeXml(item.value)}</text>
+        `;
+      }
+
+      card2Svg = `
+      <g transform="translate(${cardX}, ${card2Y})">
+        <rect x="0" y="0" width="${cardW}" height="${card2H}" rx="7"
+              fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
+        <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
+        <circle cx="12" cy="11" r="3.2" fill="#f59e0b" />
+        <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">POR REGIÓN</text>
+        <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+        ${rowsSvg}
+      </g>
+      `;
+    }
+
+    summaryCardSvg = `${card1Svg}\n${card2Svg}`;
 
     return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">

@@ -258,13 +258,18 @@ export function buildStormAlertPostText(options: StormAlertPostOptions): string 
 }
 
 export interface DailySatelliteSummaryPostOptions {
-  dateEcuador: string; // e.g. "Domingo, 11 de octubre de 2026"
+  dateEcuador: string; // e.g. "Domingo, 11 de octubre del 2026"
   basinSummaries: Array<{
     plantKey: string;
     hasRain: boolean;
     peakCoveragePct?: number;
     description?: string;
   }>;
+  regionPeaks?: {
+    costa: number;
+    sierra: number;
+    amazonia: number;
+  };
 }
 
 /**
@@ -273,7 +278,7 @@ export interface DailySatelliteSummaryPostOptions {
 export function buildDailySatelliteSummaryPostText(options: DailySatelliteSummaryPostOptions): string {
   let text = `🛰️ Resumen Satelital 24h • Ecuador Continental\n` +
     `📅 ${options.dateEcuador}\n\n` +
-    `Evolución de nubosidad y convección en las principales cuencas hidroeléctricas en las últimas 24 horas:\n`;
+    `Evolución de nubosidad y convección en las cuencas hidroeléctricas (24h):\n`;
 
   for (const b of options.basinSummaries) {
     const basin = BASIN_GEOMETRIES[b.plantKey];
@@ -281,10 +286,17 @@ export function buildDailySatelliteSummaryPostText(options: DailySatelliteSummar
     if (b.hasRain) {
       const peakStr = b.peakCoveragePct ? ` (Pico: ${b.peakCoveragePct.toFixed(1)}%)` : '';
       const desc = b.description ? ` (${b.description})` : peakStr;
-      text += `• ${name}: Actividad lluviosa registrada${desc}\n`;
+      text += `• ${name}: Lluvia registrada${desc}\n`;
     } else {
       text += `• ${name}: Sin lluvias significativas\n`;
     }
+  }
+
+  if (options.regionPeaks) {
+    text += `\nCobertura máxima por región:\n` +
+      `• Costa: ${options.regionPeaks.costa.toFixed(1)}%\n` +
+      `• Sierra: ${options.regionPeaks.sierra.toFixed(1)}%\n` +
+      `• Amazonía: ${options.regionPeaks.amazonia.toFixed(1)}%\n`;
   }
 
   text += `\nTimelapse completo adjunto (GOES-16 Banda 13 IR).\n\n` +

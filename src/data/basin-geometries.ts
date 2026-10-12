@@ -122,3 +122,49 @@ export const DEFAULT_REFERENCE_CITIES: CityPin[] = [
   { lat: -1.054, lon: -80.454, label: 'Portoviejo', placement: 'left' },
   { lat: -0.844, lon: -80.164, label: 'Calceta', placement: 'top-right' }
 ];
+
+export const COSTA_SIERRA_DIVIDE: Array<[number, number]> = [
+  [-78.80, 1.45],
+  [-78.95, 0.85],
+  [-79.10, 0.10],
+  [-79.20, -0.30],
+  [-79.25, -0.95],
+  [-79.30, -1.45],
+  [-79.38, -1.85],
+  [-79.48, -2.30],
+  [-79.58, -2.75],
+  [-79.68, -3.20],
+  [-79.82, -3.70],
+  [-79.98, -4.10],
+  [-80.20, -4.45],
+  [-80.45, -4.65]
+];
+
+export const SIERRA_AMAZONIA_DIVIDE: Array<[number, number]> = [
+  [-77.55, 0.75],
+  [-77.85, -0.05],
+  [-77.95, -0.55],
+  [-78.05, -1.05],
+  [-78.18, -1.45],
+  [-78.32, -2.05],
+  [-78.45, -2.85],
+  [-78.60, -3.45],
+  [-78.85, -4.00],
+  [-79.05, -4.65],
+  [-79.15, -4.95]
+];
+
+export function interpolateDivideLon(divide: Array<[number, number]>, lat: number): number {
+  if (lat >= divide[0][1]) return divide[0][0];
+  if (lat <= divide[divide.length - 1][1]) return divide[divide.length - 1][0];
+  for (let i = 0; i < divide.length - 1; i++) {
+    const [lon1, lat1] = divide[i];
+    const [lon2, lat2] = divide[i + 1];
+    if (lat <= lat1 && lat >= lat2) {
+      const t = (lat - lat2) / (lat1 - lat2);
+      return lon2 + t * (lon1 - lon2);
+    }
+  }
+  return divide[0][0];
+}
+
