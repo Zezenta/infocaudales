@@ -53,8 +53,16 @@ export interface OverlayCustomizationOptions {
   customDateSubtitle?: string;
   showCityPins?: boolean;
   cityPins?: CityPin[];
+  summaryCardItems?: BasinSummaryCardItem[];
   layer?: string;
   layers?: string | string[];
+}
+
+export interface BasinSummaryCardItem {
+  label: string;
+  peakPct: number;
+  hasRain: boolean;
+  color?: string;
 }
 
 export interface CompileOptions extends OverlayCustomizationOptions {
@@ -435,6 +443,52 @@ export class VideoCompilerService {
         `;
       }
     }
+    // Render Lower-Right Summary Card if items provided (utilizing empty ocean/border space)
+    let summaryCardSvg = '';
+    if (options.summaryCardItems && options.summaryCardItems.length > 0) {
+      const items = options.summaryCardItems;
+      const cardW = 240;
+      const cardH = items.length * 44 + 36;
+      const cardX = width - cardW - 20;
+      const cardY = height - 60 - 16 - cardH;
+
+      let itemsSvg = '';
+      for (let idx = 0; idx < items.length; idx++) {
+        const item = items[idx];
+        const itemY = 38 + idx * 44;
+        const color = item.color || '#38bdf8';
+        const statusText = item.hasRain
+          ? `Pico: ${item.peakPct.toFixed(1)}% • Lluvia activa`
+          : `Pico: ${item.peakPct.toFixed(1)}% • Sin lluvias`;
+        const statusColor = item.hasRain ? '#f87171' : '#94a3b8';
+
+        itemsSvg += `
+        <circle cx="14" cy="${itemY}" r="3.8" fill="${color}" />
+        <text x="24" y="${itemY + 3.5}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">${escapeXml(item.label)}</text>
+        <text x="24" y="${itemY + 18}" fill="${statusColor}" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(statusText)}</text>
+        `;
+
+        if (idx < items.length - 1) {
+          itemsSvg += `
+          <line x1="14" y1="${itemY + 26}" x2="${cardW - 14}" y2="${itemY + 26}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="3,3" />
+          `;
+        }
+      }
+
+      summaryCardSvg = `
+      <g transform="translate(${cardX}, ${cardY})">
+        <!-- Container card -->
+        <rect x="0" y="0" width="${cardW}" height="${cardH}" rx="8"
+              fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1.2" />
+        <!-- Top header bar -->
+        <rect x="0" y="0" width="${cardW}" height="26" rx="8" fill="#1e293b" fill-opacity="0.75" />
+        <circle cx="14" cy="13" r="3.5" fill="#38bdf8" />
+        <text x="24" y="17" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.05em">PICOS DE LLUVIA (24H)</text>
+        <line x1="0" y1="26" x2="${cardW}" y2="26" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+        ${itemsSvg}
+      </g>
+      `;
+    }
 
     return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -497,6 +551,9 @@ export class VideoCompilerService {
 
       <!-- Reference City Pin Markers -->
       ${citiesSvg}
+
+      <!-- Lower-Right 24h Summary Card -->
+      ${summaryCardSvg}
 
       ${thermalScaleSvg}
 

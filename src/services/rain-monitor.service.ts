@@ -941,6 +941,23 @@ export class RainMonitorService {
     const outputName = `resumen_satelital_24h_${targetDate.replace(/[^0-9]/g, '')}`;
     const dateFormatted = this.formatDateToSpanish(targetDate);
 
+    const basinSummaries = targetBasins.map(bKey => {
+      const stats = basinStats.get(bKey)!;
+      return {
+        plantKey: bKey,
+        hasRain: stats.rainFrames > 0,
+        peakCoveragePct: stats.maxCoverage,
+        rainFrames: stats.rainFrames
+      };
+    });
+
+    const summaryCardItems = basinSummaries.map(b => ({
+      label: b.plantKey === 'cocaCodoSinclair' ? 'Coca Codo Sinclair' : 'Complejo Paute',
+      peakPct: b.peakCoveragePct,
+      hasRain: b.hasRain,
+      color: b.plantKey === 'cocaCodoSinclair' ? '#38bdf8' : '#c084fc'
+    }));
+
     const compilation = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
       plantKey: 'ecuador',
       outputName,
@@ -950,20 +967,12 @@ export class RainMonitorService {
       customDateSubtitle: dateFormatted,
       showAllPins: true,
       showCityPins: true,
+      summaryCardItems,
       showDetectionBoxes: true,
       showThermalScale: true,
       createMp4: true,
       createGif: false,
       activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set()
-    });
-    const basinSummaries = targetBasins.map(bKey => {
-      const stats = basinStats.get(bKey)!;
-      return {
-        plantKey: bKey,
-        hasRain: stats.rainFrames > 0,
-        peakCoveragePct: stats.maxCoverage,
-        rainFrames: stats.rainFrames
-      };
     });
 
     const postText = buildDailySatelliteSummaryPostText({
