@@ -107,3 +107,18 @@ export const ALL_HYDRO_PLANTS_PINS: PlantPin[] = [
   { lat: -1.40, lon: -78.36, label: 'Agoyán', placement: 'right' },
   { lat: -3.34, lon: -79.48, label: 'Minas San Francisco', placement: 'right' }
 ];
+
+export interface CityPin {
+  lat: number;
+  lon: number;
+  label: string;
+  placement?: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+}
+
+export const DEFAULT_REFERENCE_CITIES: CityPin[] = [
+  { lat: -0.180, lon: -78.468, label: 'Quito', placement: 'left' },
+  { lat: -2.189, lon: -79.889, label: 'Guayaquil', placement: 'right' },
+  { lat: -2.900, lon: -79.006, label: 'Cuenca', placement: 'bottom-left' },
+  { lat: -0.954, lon: -80.709, label: 'Manta', placement: 'left' },
+  { lat: -0.844, lon: -80.164, label: 'Calceta', placement: 'top-right' }
+];

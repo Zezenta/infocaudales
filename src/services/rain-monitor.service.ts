@@ -947,6 +947,7 @@ export class RainMonitorService {
       minDurationSeconds: 12,
       customTitle: 'Resumen Satelital 24h • Ecuador Continental',
       showAllPins: true,
+      showCityPins: true,
       showDetectionBoxes: true,
       showThermalScale: true,
       createMp4: true,

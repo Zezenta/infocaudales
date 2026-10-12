@@ -38,12 +38,14 @@ async function main() {
     console.log(`• ${b.plantKey}: ${b.hasRain ? 'Lluvia detectada' : 'Sin lluvia'} | Pico: ${b.peakCoveragePct.toFixed(1)}% | Frames activos: ${b.rainFrames}`);
   }
 
-  // Extract preview frames into artifact directory
+  // Extract preview frames into artifact directory and generated directory
   const artifactDir = '/home/zezenta/.gemini/antigravity-cli/brain/6b1bfaaf-ca18-4138-bcdd-0de0981636ac';
+  const generatedDir = path.join(process.cwd(), 'generated');
 
   // 1. Frame around 04:40 ECT: Paute active in early morning
   // At 8 fps, 04:40 is approx frame 28 -> t = 28 / 8 = 3.5s
   const pauteActiveFrame = path.join(artifactDir, 'oct11_24h_paute_active_frame.png');
+  const pauteActiveFrameGen = path.join(generatedDir, 'oct11_24h_paute_active_frame.png');
   await execFileAsync('ffmpeg', [
     '-y',
     '-ss', '00:00:03.5',
@@ -52,11 +54,13 @@ async function main() {
     '-q:v', '2',
     pauteActiveFrame
   ]);
-  console.log(`📸 Preview Paute activa (madrugada): ${pauteActiveFrame}`);
+  fs.copyFileSync(pauteActiveFrame, pauteActiveFrameGen);
+  console.log(`📸 Preview Paute activa (madrugada): ${pauteActiveFrameGen}`);
 
   // 2. Frame around 14:20 ECT: Coca Codo Sinclair active in afternoon
   // At 8 fps, 14:20 is approx frame 85 -> t = 85 / 8 = 10.6s
   const ccsActiveFrame = path.join(artifactDir, 'oct11_24h_ccs_active_frame.png');
+  const ccsActiveFrameGen = path.join(generatedDir, 'oct11_24h_ccs_active_frame.png');
   await execFileAsync('ffmpeg', [
     '-y',
     '-ss', '00:00:10.6',
@@ -65,11 +69,13 @@ async function main() {
     '-q:v', '2',
     ccsActiveFrame
   ]);
-  console.log(`📸 Preview Coca Codo activa (tarde): ${ccsActiveFrame}`);
+  fs.copyFileSync(ccsActiveFrame, ccsActiveFrameGen);
+  console.log(`📸 Preview Coca Codo activa (tarde): ${ccsActiveFrameGen}`);
 
-  // 3. Frame around 09:30 ECT: Calm state across both basins
+  // 3. Frame around 09:30 ECT: Calm state across both basins (clear view of city labels)
   // At 8 fps, 09:30 is approx frame 57 -> t = 57 / 8 = 7.1s
   const calmFrame = path.join(artifactDir, 'oct11_24h_calm_state_frame.png');
+  const calmFrameGen = path.join(generatedDir, 'oct11_24h_calm_state_frame.png');
   await execFileAsync('ffmpeg', [
     '-y',
     '-ss', '00:00:07.1',
@@ -78,7 +84,8 @@ async function main() {
     '-q:v', '2',
     calmFrame
   ]);
-  console.log(`📸 Preview estado en calma: ${calmFrame}`);
+  fs.copyFileSync(calmFrame, calmFrameGen);
+  console.log(`📸 Preview estado en calma (etiquetas de ciudades): ${calmFrameGen}`);
 
   console.log('\n========================================================================');
   console.log('📝 TEXTO QUE SE PUBLICARÍA EN X (TWITTER) A LAS 00:00 ECT:');

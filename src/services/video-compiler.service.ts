@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin } from '../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../data/basin-geometries.js';
 import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
 import { systemLogger } from '../utils/logger.js';
 import { db } from '../utils/db.js';
@@ -50,6 +50,8 @@ export interface OverlayCustomizationOptions {
   showPublicationStatusBadge?: boolean;
   stormWindow?: StormWindow;
   activeBasinResolver?: (frame: SatelliteFrame, index: number) => Set<string> | string[];
+  showCityPins?: boolean;
+  cityPins?: CityPin[];
   layer?: string;
   layers?: string | string[];
 }
@@ -134,22 +136,11 @@ export class VideoCompilerService {
   /**
    * Generates a modern, clean SVG overlay with badges, plant pin, and timestamps.
    */
-  public generateSvgOverlay(options: {
+  public generateSvgOverlay(options: OverlayCustomizationOptions & {
     frame: SatelliteFrame;
     geometry: BasinGeometry;
     width: number;
     height: number;
-    customTitle?: string;
-    customBadge?: string;
-    showAllPins?: boolean;
-    showSinglePin?: boolean;
-    singlePinLabel?: string;
-    showThermalScale?: boolean;
-    showDetectionBoxes?: boolean;
-    highlightBasinKey?: string;
-    activeBasinKeys?: string[] | Set<string>;
-    customMonitoredBasins?: MonitoredBasinBox[];
-    showPublicationStatusBadge?: boolean;
   }): string {
     const { frame, geometry, width, height } = options;
     const title = escapeXml(options.customTitle || 'Vista Satelital En Vivo');
@@ -334,6 +325,68 @@ export class VideoCompilerService {
       }
     }
 
+    // Render Reference City Pins if enabled (specifically for Ecuador 24h timelapse)
+    let citiesSvg = '';
+    const showCityPins = options.showCityPins === true;
+    if (showCityPins) {
+      const citiesToRender = options.cityPins || DEFAULT_REFERENCE_CITIES;
+      for (const city of citiesToRender) {
+        if (city.lon >= frame.bbox[0] && city.lat >= frame.bbox[1] && city.lon <= frame.bbox[2] && city.lat <= frame.bbox[3]) {
+          const { x, y } = this.projectGeoToPixel(city.lat, city.lon, frame.bbox, width, height);
+          if (x >= -10 && x <= width + 10 && y >= -10 && y <= height + 10) {
+            const padX = 6;
+            const textWidth = this.estimateTextWidth(city.label, 9.5);
+            const boxWidth = textWidth + (padX * 2);
+            const boxHeight = 17;
+            let boxX = 6;
+            let boxY = -8.5;
+            let textX = 6 + padX;
+            let textY = 4;
+
+            if (city.placement === 'left') {
+              boxX = -boxWidth - 6;
+              boxY = -8.5;
+              textX = -boxWidth - 6 + padX;
+              textY = 4;
+            } else if (city.placement === 'top-left') {
+              boxX = -boxWidth - 6;
+              boxY = -18;
+              textX = -boxWidth - 6 + padX;
+              textY = -5.5;
+            } else if (city.placement === 'top-right' || city.placement === 'top') {
+              boxX = 6;
+              boxY = -18;
+              textX = 6 + padX;
+              textY = -5.5;
+            } else if (city.placement === 'bottom-left' || city.placement === 'bottom') {
+              boxX = -boxWidth - 6;
+              boxY = 6;
+              textX = -boxWidth - 6 + padX;
+              textY = 18.5;
+            } else if (city.placement === 'bottom-right') {
+              boxX = 6;
+              boxY = 6;
+              textX = 6 + padX;
+              textY = 18.5;
+            }
+
+            const safeCityLabel = escapeXml(city.label);
+            citiesSvg += `
+            <g transform="translate(${x}, ${y})">
+              <!-- Subtle city locator dot -->
+              <circle cx="0" cy="0" r="4.5" fill="#ffffff" fill-opacity="0.30" />
+              <circle cx="0" cy="0" r="2.5" fill="#ffffff" stroke="#0f172a" stroke-width="0.8" />
+              <!-- Compact clean city pill badge -->
+              <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="3.5"
+                    fill="#030712" fill-opacity="0.88" stroke="rgba(255, 255, 255, 0.28)" stroke-width="0.8" />
+              <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'DejaVu Sans', sans-serif" font-weight="600" font-size="9.5">${safeCityLabel}</text>
+            </g>
+            `;
+          }
+        }
+      }
+    }
+
     const badgeText = subtitleBadge;
     const badgeTextWidth = this.estimateTextWidth(badgeText, 11.5);
     const badgeTotalWidth = badgeTextWidth + 32;
@@ -439,6 +492,9 @@ export class VideoCompilerService {
 
       <!-- Plant Pin Markers -->
       ${pinsSvg}
+
+      <!-- Reference City Pin Markers -->
+      ${citiesSvg}
 
       ${thermalScaleSvg}
 
@@ -579,21 +635,12 @@ export class VideoCompilerService {
             }
 
             const svgContent = this.generateSvgOverlay({
+              ...options,
               frame,
               geometry,
               width,
               height,
-              customTitle: options.customTitle,
-              customBadge: options.customBadge,
-              showAllPins: options.showAllPins,
-              showSinglePin: options.showSinglePin,
-              singlePinLabel: options.singlePinLabel,
-              showThermalScale: options.showThermalScale,
-              showDetectionBoxes: options.showDetectionBoxes,
-              highlightBasinKey: options.highlightBasinKey,
-              activeBasinKeys,
-              customMonitoredBasins: options.customMonitoredBasins,
-              showPublicationStatusBadge: options.showPublicationStatusBadge
+              activeBasinKeys
             });
             fs.writeFileSync(svgPath, svgContent);
 
