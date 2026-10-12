@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMessageText, formatVal } from './post-formatter.js';
+import { buildMessageText, formatVal, buildStormAlertPostText } from './post-formatter.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 
 describe('post-formatter', () => {
@@ -119,5 +119,49 @@ describe('post-formatter', () => {
     expect(text).toContain('Hidroeléctrica Coca Codo Sinclair');
     expect(text).not.toContain('💧Cota');
     expect(text).toContain('Está generando el 24.89% de la energía usada en Ecuador en este momento.');
+  });
+
+  describe('buildStormAlertPostText', () => {
+    it('formats Paute storm alert with peak coverage and duration', () => {
+      const text = buildStormAlertPostText({
+        plantKey: 'paute',
+        peakCoveragePct: 42.67,
+        durationMinutes: 90,
+        dateEcuador: '2026-10-10',
+        timeEcuador: '15:30'
+      });
+
+      expect(text).toContain('Complejo Hidroeléctrico Paute');
+      expect(text).toContain('Pico de cobertura: 42.7%');
+      expect(text).toContain('Duración aproximada: 90 min');
+      expect(text).toContain('Registro: 2026-10-10 15:30 ECT');
+      expect(text).toContain('#Paute');
+      expect(text).toContain('#Lluvias');
+    });
+
+    it('formats Coca Codo Sinclair storm alert with proper hashtags', () => {
+      const text = buildStormAlertPostText({
+        plantKey: 'cocaCodoSinclair',
+        peakCoveragePct: 65.0,
+        durationMinutes: 120
+      });
+
+      expect(text).toContain('Cuenca Coca Codo Sinclair');
+      expect(text).toContain('Pico de cobertura: 65%');
+      expect(text).toContain('Duración aproximada: 120 min');
+      expect(text).toContain('#CocaCodoSinclair #CCS');
+    });
+
+    it('does not duplicate timestamp when dateEcuador and timeEcuador are identical', () => {
+      const text = buildStormAlertPostText({
+        plantKey: 'paute',
+        peakCoveragePct: 20.0,
+        dateEcuador: '2026-10-10 18:40',
+        timeEcuador: '2026-10-10 18:40'
+      });
+
+      expect(text).toContain('• Registro: 2026-10-10 18:40 ECT');
+      expect(text).not.toContain('2026-10-10 18:40 2026-10-10 18:40');
+    });
   });
 });

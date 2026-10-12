@@ -24,6 +24,10 @@ import { CenaceService } from './services/cenace.service.js';
 import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
 import { PredictionService } from './services/prediction.service.js';
 import { XService } from './services/x.service.js';
+import { SatelliteMapService } from './services/satellite-map.service.js';
+import { VideoCompilerService } from './services/video-compiler.service.js';
+import { RainMonitorService } from './services/rain-monitor.service.js';
+import { SatelliteArchiverService } from './services/satellite-archiver.service.js';
 import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from './utils/post-formatter.js';
 import {
   recordForecastBatch,
@@ -58,6 +62,13 @@ const celecService = new CelecService();
 const cenaceService = new CenaceService();
 const xService = new XService();
 const predictionService = new PredictionService();
+const satelliteService = new SatelliteMapService();
+const videoCompilerService = new VideoCompilerService(satelliteService);
+const rainMonitorService = new RainMonitorService(satelliteService, videoCompilerService, xService);
+const satelliteArchiverService = new SatelliteArchiverService(satelliteService);
+
+// Target basins monitored continuously for convective rain
+export const MONITORED_RAIN_BASINS = ['cocaCodoSinclair', 'paute'];
 
 class DataPendingError extends Error {
   constructor(message: string) {
@@ -422,11 +433,11 @@ const afternoonCronJob = new CronJob(
   'America/Guayaquil'
 );
 
-// 7:15 PM (Evening Run - 4 plants including Sopladora)
+// 7:15 PM (Evening Run - 5 plants including Mazar and Sopladora)
 const eveningCronJob = new CronJob(
   '15 19 * * *',
   async () => {
-    const eveningPlants = ['sopladora', 'minasSanFrancisco', 'agoyan', 'cocaCodoSinclair'];
+    const eveningPlants = ['mazar', 'sopladora', 'minasSanFrancisco', 'agoyan', 'cocaCodoSinclair'];
     console.log('[CronJob] Running Evening Publishing Cycle...');
     await runPublishingCycle(eveningPlants, false);
   },
@@ -868,6 +879,96 @@ const sundayAccuracyCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+/**
+ * Continuous Satellite Rain & Convective Activity Monitoring Cycle.
+ * Evaluates target basins every 10 minutes in sync with GOES-16 Full Disk scans.
+ */
+async function runRainMonitoringCycle() {
+  const isRainMonitorEnabled = process.env.ENABLE_RAIN_MONITOR !== 'false';
+  if (!isRainMonitorEnabled) {
+    return;
+  }
+
+  const autoPublish = process.env.AUTO_PUBLISH_RAIN_ALERTS !== 'false';
+
+  // 1. Sync latest satellite frame to SQLite archive
+  try {
+    await satelliteArchiverService.archiveLatestFrames({ limit: 2, plantKey: 'ecuador' });
+  } catch (archErr: any) {
+    systemLogger.warn(`[RainMonitor Cron] Satellite archival warning: ${archErr?.message || archErr}`);
+  }
+
+  // 2. Evaluate target basins
+  for (const basinKey of MONITORED_RAIN_BASINS) {
+    try {
+      const result = await rainMonitorService.checkBasin(basinKey, {
+        autoPublishToX: autoPublish
+      });
+
+      if (result.action === 'STORM_STARTED') {
+        console.log(`[RainMonitor] 🚨 Inicio de actividad lluviosa detectada en ${basinKey} (${result.coveragePct}% cobertura)`);
+      } else if (result.action === 'VIDEO_COMPILED') {
+        console.log(`[RainMonitor] 🎬 Alerta de lluvia compilada para ${basinKey}. Pico: ${result.peakCoveragePct}%. Tweet ID: ${result.publishedTweetId || 'N/A'}`);
+      } else if (result.action === 'STORM_MONITORING') {
+        console.log(`[RainMonitor] ⚡ Actividad lluviosa en curso en ${basinKey} (${result.elapsedMinutes} min). Pico: ${result.peakCoveragePct}%, Actual: ${result.coveragePct}%`);
+      }
+    } catch (basinErr: any) {
+      console.error(`[RainMonitor] Error evaluando cuenca ${basinKey}:`, basinErr?.message || basinErr);
+    }
+  }
+}
+
+// GOES-16 Rain Monitoring Job: Every 10 minutes
+const rainMonitoringCronJob = new CronJob(
+  '*/10 * * * *',
+  async () => {
+    await runRainMonitoringCycle();
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
+// Daily Cleanup of Expired Videos (> 30 days old): Every day at 03:00 AM ECT
+const dailyVideoCleanupCronJob = new CronJob(
+  '00 3 * * *',
+  () => {
+    try {
+      const deleted = rainMonitorService.cleanupOldPublishedVideos(30);
+      if (deleted > 0) {
+        console.log(`[CronJob] [Cleanup] Se eliminaron ${deleted} video(s) con más de 30 días de antigüedad.`);
+      }
+    } catch (err: any) {
+      console.warn('[CronJob] [Cleanup] Error durante la limpieza diaria de videos:', err?.message || err);
+    }
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
+// Daily 24h Satellite Timelapse Video: Every midnight at 00:00 AM ECT
+const dailySatelliteTimelapseCronJob = new CronJob(
+  '00 0 * * *',
+  async () => {
+    const isEnabled = process.env.ENABLE_RAIN_MONITOR !== 'false';
+    if (!isEnabled) return;
+    const autoPublish = process.env.AUTO_PUBLISH_RAIN_ALERTS !== 'false';
+
+    try {
+      console.log('[CronJob] Running 24h Daily Satellite Summary Video Generation (00:00 AM)...');
+      await rainMonitorService.generateDailySummaryVideo({
+        autoPublishToX: autoPublish
+      });
+    } catch (err: any) {
+      console.error('[CronJob] Error generating 24h daily satellite summary video:', err?.message || err);
+    }
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
 morningCronJob.start();
 afternoonCronJob.start();
 eveningCronJob.start();
@@ -876,6 +977,9 @@ dailyReportCronJob.start();
 morningForecastCronJob.start();
 afternoonForecastCronJob.start();
 sundayAccuracyCronJob.start();
+rainMonitoringCronJob.start();
+dailyVideoCleanupCronJob.start();
+dailySatelliteTimelapseCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
@@ -922,4 +1026,28 @@ if (process.env.FORCE_ACCURACY_REPORT === 'true') {
       console.error('[FORCE ACCURACY REPORT] Forced weekly accuracy report failed:', err?.message || err);
     }
   }, 8000);
+}
+
+if (process.env.FORCE_RAIN_CHECK === 'true') {
+  console.log('[FORCE RAIN CHECK] Triggering immediate satellite rain monitoring check in 5 seconds...');
+  setTimeout(async () => {
+    try {
+      await runRainMonitoringCycle();
+    } catch (err: any) {
+      console.error('[FORCE RAIN CHECK] Forced rain monitoring check failed:', err?.message || err);
+    }
+  }, 5000);
+}
+
+if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
+  console.log('[FORCE DAILY TIMELAPSE] Triggering 24h daily satellite summary generation in 5 seconds...');
+  setTimeout(async () => {
+    try {
+      await rainMonitorService.generateDailySummaryVideo({
+        autoPublishToX: false
+      });
+    } catch (err: any) {
+      console.error('[FORCE DAILY TIMELAPSE] Forced daily timelapse failed:', err?.message || err);
+    }
+  }, 5000);
 }

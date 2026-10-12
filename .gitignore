@@ -12,7 +12,7 @@ dist/
 *cenace-history.json
 temp
 *coca-codo-hourly-log.csv
-data/
+/data/
 *.db
 logs/
 .local-validation/
