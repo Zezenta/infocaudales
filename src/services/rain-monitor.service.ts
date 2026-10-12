@@ -495,11 +495,16 @@ export class RainMonitorService {
         publishedTweetId = postRes?.data?.id || postRes?.id;
         systemLogger.info(`[RainMonitor] 🐦 Successfully published storm alert video to X (Tweet ID: ${publishedTweetId})`);
 
+        // Move published video to persistent archive directory (data/published_videos/)
+        const archivedPath = this.archivePublishedVideo(compilationResult.mp4Path);
+        compilationResult.mp4Path = archivedPath;
+        existingEvent.video_path = archivedPath;
+
         db.prepare(`
           UPDATE rain_events 
-          SET published_at = ?, tweet_id = ? 
+          SET published_at = ?, tweet_id = ?, video_path = ? 
           WHERE id = ?
-        `).run(Date.now(), publishedTweetId || null, existingEvent.id);
+        `).run(Date.now(), publishedTweetId || null, archivedPath, existingEvent.id);
 
         existingEvent.published_at = Date.now();
         existingEvent.tweet_id = publishedTweetId;
@@ -547,16 +552,97 @@ export class RainMonitorService {
     const postRes = await xClient.postVideo(message, event.video_path);
     const tweetId = postRes?.data?.id || postRes?.id;
 
+    // Archive published video
+    const archivedPath = this.archivePublishedVideo(event.video_path);
+    event.video_path = archivedPath;
+
     db.prepare(`
       UPDATE rain_events 
-      SET published_at = ?, tweet_id = ? 
+      SET published_at = ?, tweet_id = ?, video_path = ? 
       WHERE id = ?
-    `).run(Date.now(), tweetId || null, event.id);
+    `).run(Date.now(), tweetId || null, archivedPath, event.id);
 
     event.published_at = Date.now();
     event.tweet_id = tweetId;
 
     return postRes;
+  }
+
+  /**
+   * Moves a published video to the persistent archive directory (data/published_videos/).
+   * Directory is ignored by git and maintained for debugging and historic records.
+   */
+  public archivePublishedVideo(sourcePath: string): string {
+    const archiveDir = path.join(process.cwd(), 'data', 'published_videos');
+    if (!fs.existsSync(archiveDir)) {
+      fs.mkdirSync(archiveDir, { recursive: true });
+    }
+
+    if (!fs.existsSync(sourcePath)) {
+      return sourcePath;
+    }
+
+    const fileName = path.basename(sourcePath);
+    const targetPath = path.join(archiveDir, fileName);
+
+    if (path.resolve(sourcePath) === path.resolve(targetPath)) {
+      return targetPath;
+    }
+
+    try {
+      fs.renameSync(sourcePath, targetPath);
+      systemLogger.info(`[RainMonitor] Video archived to: ${targetPath}`);
+      return targetPath;
+    } catch (err: any) {
+      try {
+        fs.copyFileSync(sourcePath, targetPath);
+        fs.unlinkSync(sourcePath);
+        systemLogger.info(`[RainMonitor] Video copied to archive: ${targetPath}`);
+        return targetPath;
+      } catch (fallbackErr: any) {
+        systemLogger.warn(`[RainMonitor] Failed to archive video from ${sourcePath} to ${targetPath}: ${fallbackErr?.message || fallbackErr}`);
+        return sourcePath;
+      }
+    }
+  }
+
+  /**
+   * Deletes archived videos older than maxAgeDays (default: 30 days) to keep disk storage lean.
+   */
+  public cleanupOldPublishedVideos(maxAgeDays: number = 30): number {
+    const archiveDir = path.join(process.cwd(), 'data', 'published_videos');
+    const generatedDir = path.join(process.cwd(), 'generated');
+    const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let deletedCount = 0;
+
+    const directoriesToClean = [archiveDir, generatedDir];
+
+    for (const dir of directoriesToClean) {
+      if (!fs.existsSync(dir)) continue;
+
+      try {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          if (!file.endsWith('.mp4') && !file.endsWith('.gif')) continue;
+          const fullPath = path.join(dir, file);
+          try {
+            const stats = fs.statSync(fullPath);
+            if (now - stats.mtimeMs > maxAgeMs) {
+              fs.unlinkSync(fullPath);
+              deletedCount++;
+              systemLogger.info(`[VideoCleanup] Removed expired video (> ${maxAgeDays} days old): ${fullPath}`);
+            }
+          } catch (statErr: any) {
+            systemLogger.warn(`[VideoCleanup] Error checking/deleting file ${fullPath}: ${statErr?.message || statErr}`);
+          }
+        }
+      } catch (dirErr: any) {
+        systemLogger.warn(`[VideoCleanup] Error reading directory ${dir}: ${dirErr?.message || dirErr}`);
+      }
+    }
+
+    return deletedCount;
   }
 
   /**

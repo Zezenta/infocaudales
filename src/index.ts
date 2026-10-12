@@ -929,6 +929,24 @@ const rainMonitoringCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+// Daily Cleanup of Expired Videos (> 30 days old): Every day at 03:00 AM ECT
+const dailyVideoCleanupCronJob = new CronJob(
+  '00 3 * * *',
+  () => {
+    try {
+      const deleted = rainMonitorService.cleanupOldPublishedVideos(30);
+      if (deleted > 0) {
+        console.log(`[CronJob] [Cleanup] Se eliminaron ${deleted} video(s) con más de 30 días de antigüedad.`);
+      }
+    } catch (err: any) {
+      console.warn('[CronJob] [Cleanup] Error durante la limpieza diaria de videos:', err?.message || err);
+    }
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
 morningCronJob.start();
 afternoonCronJob.start();
 eveningCronJob.start();
@@ -938,6 +956,7 @@ morningForecastCronJob.start();
 afternoonForecastCronJob.start();
 sundayAccuracyCronJob.start();
 rainMonitoringCronJob.start();
+dailyVideoCleanupCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
