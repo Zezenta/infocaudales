@@ -257,3 +257,39 @@ export function buildStormAlertPostText(options: StormAlertPostOptions): string 
   return text;
 }
 
+export interface DailySatelliteSummaryPostOptions {
+  dateEcuador: string; // e.g. "Domingo, 11 de octubre de 2026"
+  basinSummaries: Array<{
+    plantKey: string;
+    hasRain: boolean;
+    peakCoveragePct?: number;
+    description?: string;
+  }>;
+}
+
+/**
+ * Builds the text for the 24-hour daily satellite summary post published to X.
+ */
+export function buildDailySatelliteSummaryPostText(options: DailySatelliteSummaryPostOptions): string {
+  let text = `🛰️ Resumen Satelital 24h • Ecuador Continental\n` +
+    `📅 ${options.dateEcuador}\n\n` +
+    `Evolución de nubosidad y convección en las principales cuencas hidroeléctricas en las últimas 24 horas:\n`;
+
+  for (const b of options.basinSummaries) {
+    const basin = BASIN_GEOMETRIES[b.plantKey];
+    const name = basin?.name || b.plantKey;
+    if (b.hasRain) {
+      const peakStr = b.peakCoveragePct ? ` (Pico: ${b.peakCoveragePct.toFixed(1)}%)` : '';
+      const desc = b.description ? ` (${b.description})` : peakStr;
+      text += `• ${name}: Actividad lluviosa registrada${desc}\n`;
+    } else {
+      text += `• ${name}: Sin lluvias significativas\n`;
+    }
+  }
+
+  text += `\nTimelapse completo adjunto (GOES-16 Banda 13 IR).\n\n` +
+    `#Ecuador #Energía #Hidrología #GOES16 #Lluvias`;
+
+  return text;
+}
+

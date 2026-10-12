@@ -6,7 +6,7 @@ import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
 import { SatelliteMapService, SatelliteFrame } from './satellite-map.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
 import { XService } from './x.service.js';
-import { buildStormAlertPostText } from '../utils/post-formatter.js';
+import { buildStormAlertPostText, buildDailySatelliteSummaryPostText } from '../utils/post-formatter.js';
 import { systemLogger } from '../utils/logger.js';
 
 export interface RainEventRecord {
@@ -736,5 +736,259 @@ export class RainMonitorService {
     }
 
     return frames;
+  }
+
+  /**
+   * Decodes PNG IDAT chunks from buffer.
+   */
+  private decodePng(buf: Buffer): { width: number; height: number; raw: Buffer } {
+    let offset = 8;
+    let width = 0, height = 0;
+    const idatChunks: Buffer[] = [];
+    while (offset < buf.length) {
+      const len = buf.readUInt32BE(offset);
+      const type = buf.toString('ascii', offset + 4, offset + 8);
+      if (type === 'IHDR') {
+        width = buf.readUInt32BE(offset + 8);
+        height = buf.readUInt32BE(offset + 12);
+      } else if (type === 'IDAT') {
+        idatChunks.push(buf.subarray(offset + 8, offset + 8 + len));
+      } else if (type === 'IEND') break;
+      offset += 12 + len;
+    }
+    const raw = zlib.inflateSync(Buffer.concat(idatChunks));
+    return { width, height, raw };
+  }
+
+  /**
+   * Unfilters PNG RGBA scanlines (RFC 2083).
+   */
+  private unfilterScanlines(raw: Buffer, width: number, height: number): Buffer {
+    const stride = width * 4;
+    const out = Buffer.alloc(width * height * 4);
+    let rOff = 0, oOff = 0;
+    for (let y = 0; y < height; y++) {
+      const f = raw[rOff++];
+      for (let x = 0; x < stride; x++) {
+        const byte = raw[rOff++];
+        const a = x >= 4 ? out[oOff - 4 + (x % 4)] : 0;
+        const b = y > 0 ? out[(y - 1) * stride + x] : 0;
+        const c = (x >= 4 && y > 0) ? out[(y - 1) * stride + x - 4] : 0;
+        let val = byte;
+        if (f === 1) val = (byte + a) & 0xff;
+        else if (f === 2) val = (byte + b) & 0xff;
+        else if (f === 3) val = (byte + Math.floor((a + b) / 2)) & 0xff;
+        else if (f === 4) {
+          const p = a + b - c;
+          const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+          const pr = (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c);
+          val = (byte + pr) & 0xff;
+        }
+        out[oOff++] = val;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Measures convective rain cloud coverage inside a basin's geographic bounding box
+   * directly from a full Continental Ecuador RGBA image buffer.
+   */
+  public measureBasinCoverageInEcuadorImage(
+    px: Buffer,
+    imgWidth: number,
+    imgHeight: number,
+    ecuadorBbox: [number, number, number, number],
+    basinBbox: [number, number, number, number]
+  ): number {
+    const [minLon, minLat, maxLon, maxLat] = ecuadorBbox;
+    const projectX = (lon: number) => Math.max(0, Math.min(imgWidth - 1, Math.round(((lon - minLon) / (maxLon - minLon)) * imgWidth)));
+    const projectY = (lat: number) => Math.max(0, Math.min(imgHeight - 1, Math.round(((maxLat - lat) / (maxLat - minLat)) * imgHeight)));
+
+    const x1 = Math.min(projectX(basinBbox[0]), projectX(basinBbox[2]));
+    const x2 = Math.max(projectX(basinBbox[0]), projectX(basinBbox[2]));
+    const y1 = Math.min(projectY(basinBbox[3]), projectY(basinBbox[1]));
+    const y2 = Math.max(projectY(basinBbox[3]), projectY(basinBbox[1]));
+
+    let total = 0;
+    let convCount = 0;
+    let sevCount = 0;
+
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        total++;
+        const i = (y * imgWidth + x) * 4;
+        const r = px[i];
+        const g = px[i + 1];
+        const b = px[i + 2];
+
+        const isYellow = (r > 160 && g > 160 && b < 120);
+        const isRed = (r > 130 && g < 100 && b < 100);
+        const isWhite = (r > 210 && g > 210 && b > 210);
+        const isSevere = isYellow || isRed || isWhite;
+        const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
+
+        if (isSevere) {
+          sevCount++;
+          convCount++;
+        } else if (isGreen) {
+          convCount++;
+        }
+      }
+    }
+
+    if (total === 0) return 0;
+    const eff = (convCount / total) * 100 + ((sevCount / total) * 100 * 1.5);
+    return parseFloat(eff.toFixed(1));
+  }
+
+  /**
+   * Formats YYYY-MM-DD date string to formal Spanish text (e.g. "Domingo, 11 de octubre de 2026").
+   */
+  public formatDateToSpanish(dateStr: string): string {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const d = new Date(year, month - 1, day, 12, 0, 0);
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+    return `${days[d.getDay()]}, ${day} de ${months[d.getMonth()]} de ${year}`;
+  }
+
+  /**
+   * Generates a 24-hour daily satellite summary timelapse video of Continental Ecuador.
+   * Scans all frames for the given day (default: yesterday), activates basin boxes dynamically
+   * when rain is detected in each frame, and optionally publishes to X.
+   */
+  public async generateDailySummaryVideo(options: {
+    dateEcuador?: string;
+    autoPublishToX?: boolean;
+    framerate?: number;
+  } = {}): Promise<{
+    compilation: CompiledAnimationResult;
+    postText: string;
+    publishedTweetId?: string;
+    basinSummaries: Array<{ plantKey: string; hasRain: boolean; peakCoveragePct: number; rainFrames: number }>;
+  }> {
+    let targetDate = options.dateEcuador;
+    if (!targetDate) {
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      targetDate = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+    }
+
+    systemLogger.info(`[RainMonitor] Generating 24h satellite daily summary video for ${targetDate}...`);
+
+    const rows = db.prepare(`
+      SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
+      FROM satellite_archive
+      WHERE date_ecuador = ?
+      ORDER BY timestamp_iso ASC
+    `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+
+    if (!rows || rows.length < 6) {
+      throw new Error(`[RainMonitor] Not enough archived satellite frames for date ${targetDate} (found: ${rows?.length || 0})`);
+    }
+
+    const targetBasins = ['cocaCodoSinclair', 'paute'];
+    const activePerFrame = new Map<number, Set<string>>();
+    const basinStats = new Map<string, { maxCoverage: number; rainFrames: number }>();
+    for (const bKey of targetBasins) {
+      basinStats.set(bKey, { maxCoverage: 0, rainFrames: 0 });
+    }
+
+    const ecuadorBbox = BASIN_GEOMETRIES.ecuador.bbox;
+    const framesToCompile: SatelliteFrame[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!fs.existsSync(r.file_path)) continue;
+      const buffer = fs.readFileSync(r.file_path);
+
+      framesToCompile.push({
+        index: i,
+        timestampIso: r.timestamp_iso,
+        dateEcuador: r.date_ecuador,
+        timeEcuador: r.time_ecuador,
+        buffer,
+        bbox: ecuadorBbox,
+        plantKey: 'ecuador',
+        source: 'geoserver'
+      });
+
+      const activeBasins = new Set<string>();
+      try {
+        const img = this.decodePng(buffer);
+        const px = this.unfilterScanlines(img.raw, img.width, img.height);
+
+        for (const bKey of targetBasins) {
+          const threshold = DEFAULT_STORM_THRESHOLDS[bKey] ?? 10.0;
+          const cov = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES[bKey].bbox);
+          const stats = basinStats.get(bKey)!;
+          if (cov > stats.maxCoverage) stats.maxCoverage = cov;
+
+          if (cov >= threshold) {
+            activeBasins.add(bKey);
+            stats.rainFrames++;
+          }
+        }
+      } catch (err) {}
+
+      activePerFrame.set(i, activeBasins);
+    }
+
+    const framerate = options.framerate || 8;
+    const outputName = `resumen_satelital_24h_${targetDate.replace(/[^0-9]/g, '')}`;
+
+    const compilation = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
+      plantKey: 'ecuador',
+      outputName,
+      framerate,
+      minDurationSeconds: 12,
+      customTitle: 'Resumen Satelital 24h • Ecuador Continental',
+      showAllPins: true,
+      showDetectionBoxes: true,
+      showThermalScale: true,
+      createMp4: true,
+      createGif: false,
+      activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set()
+    });
+
+    const dateFormatted = this.formatDateToSpanish(targetDate);
+    const basinSummaries = targetBasins.map(bKey => {
+      const stats = basinStats.get(bKey)!;
+      return {
+        plantKey: bKey,
+        hasRain: stats.rainFrames > 0,
+        peakCoveragePct: stats.maxCoverage,
+        rainFrames: stats.rainFrames
+      };
+    });
+
+    const postText = buildDailySatelliteSummaryPostText({
+      dateEcuador: dateFormatted,
+      basinSummaries
+    });
+
+    let publishedTweetId: string | undefined;
+    if (options.autoPublishToX && this.xService && compilation.mp4Path) {
+      try {
+        const postRes = await this.xService.postVideo(postText, compilation.mp4Path);
+        publishedTweetId = postRes?.data?.id || postRes?.id;
+        systemLogger.info(`[RainMonitor] 🐦 Successfully published 24h daily summary to X (Tweet ID: ${publishedTweetId})`);
+
+        const archivedPath = this.archivePublishedVideo(compilation.mp4Path);
+        compilation.mp4Path = archivedPath;
+      } catch (pubErr: any) {
+        systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary video to X: ${pubErr?.message || pubErr}`);
+      }
+    }
+
+    return {
+      compilation,
+      postText,
+      publishedTweetId,
+      basinSummaries
+    };
   }
 }

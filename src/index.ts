@@ -947,6 +947,28 @@ const dailyVideoCleanupCronJob = new CronJob(
   'America/Guayaquil'
 );
 
+// Daily 24h Satellite Timelapse Video: Every midnight at 00:00 AM ECT
+const dailySatelliteTimelapseCronJob = new CronJob(
+  '00 0 * * *',
+  async () => {
+    const isEnabled = process.env.ENABLE_RAIN_MONITOR !== 'false';
+    if (!isEnabled) return;
+    const autoPublish = process.env.AUTO_PUBLISH_RAIN_ALERTS !== 'false';
+
+    try {
+      console.log('[CronJob] Running 24h Daily Satellite Summary Video Generation (00:00 AM)...');
+      await rainMonitorService.generateDailySummaryVideo({
+        autoPublishToX: autoPublish
+      });
+    } catch (err: any) {
+      console.error('[CronJob] Error generating 24h daily satellite summary video:', err?.message || err);
+    }
+  },
+  null,
+  true,
+  'America/Guayaquil'
+);
+
 morningCronJob.start();
 afternoonCronJob.start();
 eveningCronJob.start();
@@ -957,6 +979,7 @@ afternoonForecastCronJob.start();
 sundayAccuracyCronJob.start();
 rainMonitoringCronJob.start();
 dailyVideoCleanupCronJob.start();
+dailySatelliteTimelapseCronJob.start();
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;
@@ -1012,6 +1035,19 @@ if (process.env.FORCE_RAIN_CHECK === 'true') {
       await runRainMonitoringCycle();
     } catch (err: any) {
       console.error('[FORCE RAIN CHECK] Forced rain monitoring check failed:', err?.message || err);
+    }
+  }, 5000);
+}
+
+if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
+  console.log('[FORCE DAILY TIMELAPSE] Triggering 24h daily satellite summary generation in 5 seconds...');
+  setTimeout(async () => {
+    try {
+      await rainMonitorService.generateDailySummaryVideo({
+        autoPublishToX: false
+      });
+    } catch (err: any) {
+      console.error('[FORCE DAILY TIMELAPSE] Forced daily timelapse failed:', err?.message || err);
     }
   }, 5000);
 }

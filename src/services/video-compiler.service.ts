@@ -49,6 +49,7 @@ export interface OverlayCustomizationOptions {
   customMonitoredBasins?: MonitoredBasinBox[];
   showPublicationStatusBadge?: boolean;
   stormWindow?: StormWindow;
+  activeBasinResolver?: (frame: SatelliteFrame, index: number) => Set<string> | string[];
   layer?: string;
   layers?: string | string[];
 }
@@ -558,7 +559,18 @@ export class VideoCompilerService {
               }
             }
 
-            if (options.activeBasinKeys === undefined && !options.highlightBasinKey && frameTime > 0 && dbRainEvents.length > 0) {
+            if (options.activeBasinResolver) {
+              const resolved = options.activeBasinResolver(frame, idx);
+              if (resolved) {
+                if (resolved instanceof Set) {
+                  resolved.forEach(k => activeBasinKeys.add(k));
+                } else if (Array.isArray(resolved)) {
+                  resolved.forEach(k => activeBasinKeys.add(k));
+                }
+              }
+            }
+
+            if (options.activeBasinKeys === undefined && !options.highlightBasinKey && !options.activeBasinResolver && frameTime > 0 && dbRainEvents.length > 0) {
               for (const ev of dbRainEvents) {
                 if (frameTime >= ev.detected_at && frameTime <= ev.last_checked_at) {
                   activeBasinKeys.add(ev.plant_key);
