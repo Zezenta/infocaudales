@@ -61,7 +61,9 @@ db.exec(`
     video_compiled_at INTEGER,
     video_path TEXT,
     video_duration_seconds REAL,
-    cooldown_until INTEGER NOT NULL
+    cooldown_until INTEGER NOT NULL,
+    published_at INTEGER,
+    tweet_id TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_rain_events_plant_status 
@@ -80,5 +82,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_satellite_archive_ts 
     ON satellite_archive (timestamp_iso);
 `);
+
+try {
+  db.exec(`ALTER TABLE rain_events ADD COLUMN published_at INTEGER;`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE rain_events ADD COLUMN tweet_id TEXT;`);
+} catch {}
 
 console.log('[SQLite] Database initialized at:', DB_PATH);

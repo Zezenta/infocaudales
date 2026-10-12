@@ -148,6 +148,7 @@ export class SatelliteArchiverService {
     endDate?: string;   // ISO string or 'YYYY-MM-DD'
     limit?: number;
     plantKey?: string;
+    latest?: boolean;
   } = {}): SatelliteFrame[] {
     const limit = options.limit || 50;
     const plantKey = options.plantKey || 'ecuador';
@@ -165,10 +166,17 @@ export class SatelliteArchiverService {
       params.push(options.endDate);
     }
 
-    query += ` ORDER BY timestamp_iso ASC LIMIT ?`;
+    if (options.latest) {
+      query += ` ORDER BY timestamp_iso DESC LIMIT ?`;
+    } else {
+      query += ` ORDER BY timestamp_iso ASC LIMIT ?`;
+    }
     params.push(limit);
 
-    const rows = db.prepare(query).all(...params) as ArchivedFrameRecord[];
+    let rows = db.prepare(query).all(...params) as ArchivedFrameRecord[];
+    if (options.latest) {
+      rows.reverse();
+    }
     const frames: SatelliteFrame[] = [];
 
     for (let i = 0; i < rows.length; i++) {

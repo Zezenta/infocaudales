@@ -70,7 +70,7 @@
             <rect id="pubBadgeRect" x="0" y="0" width="220" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
             <circle id="pubBadgeDotOuter" cx="12" cy="12" r="4.5" fill="#10b981" />
             <circle id="pubBadgeDotInner" cx="12" cy="12" r="2.5" fill="#ffffff" style="display: none;" />
-            <text id="pubBadgeText" x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">🟢 CONDICIÓN NORMAL • SIN ALERTA</text>
+            <text id="pubBadgeText" x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">CONDICIÓN NORMAL • SIN ALERTA</text>
           </g>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
@@ -491,8 +491,8 @@
         const boxW = Math.abs(br.x - tl.x);
         const boxH = Math.abs(br.y - tl.y);
 
-        const tagText = isActiveStorm ? `🚨 TORMENTA ACTIVA • ${b.label}` : b.label;
-        const tagW = measureTextWidth(tagText, 11, 'bold') + (isActiveStorm ? 48 : 28);
+        const tagText = isActiveStorm ? `ACTIVIDAD LLUVIOSA • ${b.label}` : b.label;
+        const tagW = measureTextWidth(tagText, 11, 'bold') + 26;
         const tagH = 22;
         const tagY = (boxY - tagH - 4 < 70) ? boxY + 6 : boxY - tagH - 4;
         const textY = tagY + 15;
@@ -559,24 +559,24 @@
       const text = document.getElementById('pubBadgeText');
 
       if (isAnyActive) {
-        rect.setAttribute('width', '315');
+        rect.setAttribute('width', '300');
         rect.setAttribute('fill', '#7f1d1d');
         rect.setAttribute('stroke', '#ef4444');
         rect.setAttribute('stroke-width', '1.2');
         dotOuter.setAttribute('fill', '#ef4444');
         dotOuter.setAttribute('r', '5');
         dotInner.style.display = 'block';
-        text.textContent = '🚨 ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN';
+        text.textContent = 'ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN';
         text.setAttribute('fill', '#ffffff');
       } else {
-        rect.setAttribute('width', '220');
+        rect.setAttribute('width', '210');
         rect.setAttribute('fill', '#064e3b');
         rect.setAttribute('stroke', '#10b981');
         rect.setAttribute('stroke-width', '1');
         dotOuter.setAttribute('fill', '#10b981');
         dotOuter.setAttribute('r', '4.5');
         dotInner.style.display = 'none';
-        text.textContent = '🟢 CONDICIÓN NORMAL • SIN ALERTA';
+        text.textContent = 'CONDICIÓN NORMAL • SIN ALERTA';
         text.setAttribute('fill', '#a7f3d0');
       }
     }

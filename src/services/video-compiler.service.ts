@@ -29,6 +29,13 @@ export interface MonitoredBasinBox {
   defaultColor?: string;
 }
 
+export interface StormWindow {
+  startTime?: string | number; // ISO string or epoch ms
+  endTime?: string | number;   // ISO string or epoch ms
+  startFrameIndex?: number;    // 0-based frame index where storm mode begins
+  endFrameIndex?: number;      // 0-based frame index where storm mode ends
+}
+
 export interface OverlayCustomizationOptions {
   customTitle?: string;
   customBadge?: string;
@@ -41,6 +48,7 @@ export interface OverlayCustomizationOptions {
   activeBasinKeys?: string[] | Set<string>;
   customMonitoredBasins?: MonitoredBasinBox[];
   showPublicationStatusBadge?: boolean;
+  stormWindow?: StormWindow;
   layer?: string;
   layers?: string | string[];
 }
@@ -160,16 +168,23 @@ export class VideoCompilerService {
 
       for (const b of monitoredBasins) {
         const isHighlighted = options.highlightBasinKey === b.key;
-        const isActiveStorm = (options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.has(b.key) : options.activeBasinKeys.includes(b.key))) || isHighlighted;
+        const isActiveStorm = options.activeBasinKeys !== undefined
+          ? (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.has(b.key) : options.activeBasinKeys.includes(b.key))
+          : isHighlighted;
 
-        const color = isActiveStorm ? '#ef4444' : (b.key === 'cocaCodoSinclair' ? '#38bdf8' : '#a855f7');
-        // When storm is active, significantly thicken the borders!
-        const strokeWidth = isActiveStorm ? 5.2 : 2.0;
-        const strokeDash = isActiveStorm ? '12,4' : '7,4';
-        const shadowStrokeWidth = isActiveStorm ? 9.5 : 4.5;
-        const fillOpacity = isActiveStorm ? 0.22 : 0.08;
-        const cornerLen = isActiveStorm ? 22 : 12;
-        const cornerStroke = isActiveStorm ? 6.5 : 3.0;
+        const frameIndex = frame.index !== undefined ? frame.index : 0;
+
+        let color: string;
+        let strokeWidth: number;
+        let strokeDash: string;
+        let shadowStrokeWidth: number;
+        let fillOpacity: number;
+        let cornerLen: number;
+        let cornerStroke: number;
+        let tagBg: string;
+        let tagBorder: string;
+        let tagBorderWidth: number;
+        let dotSvg: string;
 
         const tl = this.projectGeoToPixel(b.bbox[3], b.bbox[0], frame.bbox, width, height);
         const br = this.projectGeoToPixel(b.bbox[1], b.bbox[2], frame.bbox, width, height);
@@ -178,14 +193,47 @@ export class VideoCompilerService {
         const boxW = Math.abs(br.x - tl.x);
         const boxH = Math.abs(br.y - tl.y);
 
-        const tagText = isActiveStorm ? `🚨 TORMENTA ACTIVA • ${b.label}` : b.label;
-        const tagW = this.estimateTextWidth(tagText, 11) + (isActiveStorm ? 48 : 28);
+        const tagText = isActiveStorm ? `ACTIVIDAD LLUVIOSA • ${b.label}` : b.label;
+        const tagW = this.estimateTextWidth(tagText, 11) + 26;
         const tagH = 22;
         const tagY = (boxY - tagH - 4 < 70) ? boxY + 6 : boxY - tagH - 4;
         const textY = tagY + 15;
-        const tagBg = isActiveStorm ? '#7f1d1d' : '#0b1120';
-        const tagBorder = isActiveStorm ? '#ef4444' : color;
-        const tagBorderWidth = isActiveStorm ? 2.0 : 1.5;
+
+        if (isActiveStorm) {
+          // Calm, authoritative breathing beacon pulse (1.0 second per cycle at 8 fps)
+          // Smooth sine modulation avoids jerky toggling or feeling like a malfunctioning sensor
+          const pulseNorm = (Math.sin((frameIndex * 2 * Math.PI) / 8) + 1) / 2; // 0.0 to 1.0 smoothly
+
+          color = '#ef4444';
+          strokeWidth = parseFloat((4.0 + 2.2 * pulseNorm).toFixed(1));
+          strokeDash = '10,5'; // Stable dash pattern to prevent jumping/jittering borders
+          shadowStrokeWidth = parseFloat((7.0 + 4.0 * pulseNorm).toFixed(1));
+          fillOpacity = parseFloat((0.16 + 0.12 * pulseNorm).toFixed(2)); // Always visibly tinted (never looks turned off)
+          cornerLen = Math.round(18 + 5 * pulseNorm);
+          cornerStroke = parseFloat((5.0 + 2.5 * pulseNorm).toFixed(1));
+          tagBg = '#991b1b';
+          tagBorder = pulseNorm > 0.4 ? '#ff4444' : '#ef4444';
+          tagBorderWidth = 2.0;
+
+          const beaconHaloR = (5.2 + 2.3 * pulseNorm).toFixed(1);
+          const beaconHaloOpacity = (0.40 + 0.35 * pulseNorm).toFixed(2);
+          dotSvg = `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="${beaconHaloR}" fill="#ff4444" fill-opacity="${beaconHaloOpacity}" />
+                   <circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.2" fill="#ffffff" />`;
+        } else {
+          // Normal monitoring state
+          color = b.key === 'cocaCodoSinclair' ? '#38bdf8' : '#a855f7';
+          strokeWidth = 2.0;
+          strokeDash = '7,4';
+          shadowStrokeWidth = 4.5;
+          fillOpacity = 0.08;
+          cornerLen = 12;
+          cornerStroke = 3.0;
+          tagBg = '#0b1120';
+          tagBorder = color;
+          tagBorderWidth = 1.5;
+
+          dotSvg = `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.5" fill="${color}" />`;
+        }
 
         detectionBoxesSvg += `
         <g id="detection-box-${b.key}">
@@ -211,8 +259,7 @@ export class VideoCompilerService {
           <!-- Tag Badge -->
           <rect x="${boxX}" y="${tagY}" width="${tagW}" height="${tagH}" rx="5"
                 fill="${tagBg}" fill-opacity="0.96" stroke="${tagBorder}" stroke-width="${tagBorderWidth}" />
-          ${isActiveStorm ? `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="6.5" fill="#ef4444" fill-opacity="0.4" />` : ''}
-          <circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.5" fill="${color}" />
+          ${dotSvg}
           <text x="${boxX + 20}" y="${textY}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">${escapeXml(tagText)}</text>
         </g>
         `;
@@ -313,22 +360,22 @@ export class VideoCompilerService {
     const showPublicationBadge = options.showPublicationStatusBadge === true;
     let pubStatusSvg = '';
     if (showPublicationBadge) {
-      const isAnyActive = options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.size > 0 : options.activeBasinKeys.length > 0);
+      const isAnyActive = (options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.size > 0 : options.activeBasinKeys.length > 0)) || Boolean(options.highlightBasinKey);
       if (isAnyActive) {
         pubStatusSvg = `
         <g transform="translate(20, 44)">
-          <rect x="0" y="0" width="315" height="24" rx="5" fill="#7f1d1d" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.2" />
+          <rect x="0" y="0" width="300" height="24" rx="5" fill="#7f1d1d" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.2" />
           <circle cx="12" cy="12" r="5" fill="#ef4444" />
           <circle cx="12" cy="12" r="2.5" fill="#ffffff" />
-          <text x="24" y="16.5" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">🚨 ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN</text>
+          <text x="24" y="16.5" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN</text>
         </g>
         `;
       } else {
         pubStatusSvg = `
         <g transform="translate(20, 44)">
-          <rect x="0" y="0" width="220" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
+          <rect x="0" y="0" width="210" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
           <circle cx="12" cy="12" r="4.5" fill="#10b981" />
-          <text x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">🟢 CONDICIÓN NORMAL • SIN ALERTA</text>
+          <text x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">CONDICIÓN NORMAL • SIN ALERTA</text>
         </g>
         `;
       }
@@ -466,6 +513,7 @@ export class VideoCompilerService {
         await Promise.all(
           chunk.map(async (frame, chunkIdx) => {
             const idx = i + chunkIdx;
+            frame.index = idx;
             const pad = String(idx).padStart(3, '0');
             const rawPath = path.join(workDir, `raw_${pad}.png`);
             const svgPath = path.join(workDir, `overlay_${pad}.svg`);
@@ -473,21 +521,44 @@ export class VideoCompilerService {
 
             fs.writeFileSync(rawPath, frame.buffer);
 
-            // Determine which basins are actively in a storm during this specific frame
+            // Determine if this specific frame falls within the active storm window
             const ts = frame.timestampIso || (frame as any).timestamp;
             const frameTime = ts ? new Date(ts).getTime() : 0;
             const activeBasinKeys = new Set<string>();
-            if (options.highlightBasinKey) {
-              activeBasinKeys.add(options.highlightBasinKey);
-            }
-            if (options.activeBasinKeys) {
-              if (options.activeBasinKeys instanceof Set) {
-                options.activeBasinKeys.forEach(k => activeBasinKeys.add(k));
-              } else if (Array.isArray(options.activeBasinKeys)) {
-                options.activeBasinKeys.forEach(k => activeBasinKeys.add(k));
+
+            let isWithinStormWindow = true;
+            if (options.stormWindow) {
+              const { startTime, endTime, startFrameIndex, endFrameIndex } = options.stormWindow;
+              if (startFrameIndex !== undefined && idx < startFrameIndex) {
+                isWithinStormWindow = false;
+              }
+              if (endFrameIndex !== undefined && idx > endFrameIndex) {
+                isWithinStormWindow = false;
+              }
+              if (startTime !== undefined && frameTime > 0) {
+                const startMs = typeof startTime === 'number' ? startTime : new Date(startTime).getTime();
+                if (frameTime < startMs) isWithinStormWindow = false;
+              }
+              if (endTime !== undefined && frameTime > 0) {
+                const endMs = typeof endTime === 'number' ? endTime : new Date(endTime).getTime();
+                if (frameTime > endMs) isWithinStormWindow = false;
               }
             }
-            if (frameTime > 0 && dbRainEvents.length > 0) {
+
+            if (isWithinStormWindow) {
+              if (options.highlightBasinKey) {
+                activeBasinKeys.add(options.highlightBasinKey);
+              }
+              if (options.activeBasinKeys) {
+                if (options.activeBasinKeys instanceof Set) {
+                  options.activeBasinKeys.forEach(k => activeBasinKeys.add(k));
+                } else if (Array.isArray(options.activeBasinKeys)) {
+                  options.activeBasinKeys.forEach(k => activeBasinKeys.add(k));
+                }
+              }
+            }
+
+            if (options.activeBasinKeys === undefined && !options.highlightBasinKey && frameTime > 0 && dbRainEvents.length > 0) {
               for (const ev of dbRainEvents) {
                 if (frameTime >= ev.detected_at && frameTime <= ev.last_checked_at) {
                   activeBasinKeys.add(ev.plant_key);

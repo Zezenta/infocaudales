@@ -230,5 +230,61 @@ describe('RainMonitorService', () => {
       expect(result.coveragePct).toBeLessThanOrEqual(100);
       expect(result.timestampIso).toBeDefined();
     });
+
+    it('automatically publishes video to X when autoPublishToX is enabled', async () => {
+      const mockSat = new SatelliteMapService();
+      vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(20, 20, 4)); // 10% coverage
+
+      const mockVideo = new VideoCompilerService();
+      vi.spyOn(mockVideo, 'generateBasinAnimation').mockResolvedValue({
+        plantKey: 'ecuador',
+        mp4Path: '/tmp/test_rain_autopublish.mp4',
+        durationSeconds: 10,
+        frameCount: 18,
+        timestamps: {
+          start: '2026-10-10T14:00:00Z',
+          end: '2026-10-10T16:00:00Z',
+          startEcuador: '2026-10-10 09:00',
+          endEcuador: '2026-10-10 11:00'
+        }
+      });
+
+      let publishedMessage = '';
+      let publishedVideoPath = '';
+      const mockXService = {
+        postVideo: async (msg: string, vidPath: string) => {
+          publishedMessage = msg;
+          publishedVideoPath = vidPath;
+          return { data: { id: 'tweet_storm_999' } };
+        }
+      } as any;
+
+      const rainMonitor = new RainMonitorService(mockSat, mockVideo, mockXService);
+
+      const now = Date.now();
+      const detectedAt = now - 90 * 60 * 1000;
+      db.prepare(`
+        INSERT INTO rain_events (
+          plant_key, status, detected_at, last_checked_at,
+          peak_coverage_pct, last_coverage_pct, cooldown_until
+        ) VALUES ('cocaCodoSinclair', 'ACTIVE', ?, ?, 40, 30, 0)
+      `).run(detectedAt, now - 15 * 60 * 1000);
+
+      const result = await rainMonitor.checkBasin('cocaCodoSinclair', {
+        autoPublishToX: true,
+        dissipationRatio: 0.50
+      });
+
+      expect(result.action).toBe('VIDEO_COMPILED');
+      expect(result.publishedTweetId).toBe('tweet_storm_999');
+      expect(publishedVideoPath).toBe('/tmp/test_rain_autopublish.mp4');
+      expect(publishedMessage).toContain('Coca Codo Sinclair');
+      expect(publishedMessage).toContain('#CocaCodoSinclair');
+
+      const savedEvent = rainMonitor.getActiveOrCooldownEvent('cocaCodoSinclair');
+      expect(savedEvent?.tweet_id).toBe('tweet_storm_999');
+      expect(savedEvent?.published_at).toBeDefined();
+    });
   });
 });
+

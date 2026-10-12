@@ -1,5 +1,6 @@
 import { HydroelectricPlant } from '../types/hydroelectric.js';
 import { TelemetryData } from '../services/report-generator.service.js';
+import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
 
 /**
  * Formats a number cleanly, omitting trailing decimals if it is an integer.
@@ -211,5 +212,48 @@ export function buildCompactWeeklyAccuracyReportText(summary: import('../service
     `• Cobertura Rango 50%: ${p25Pct}%\n` +
     `${topPlantStr}\n` +
     `#Ecuador #Energía #Hidrología`;
+}
+
+export interface StormAlertPostOptions {
+  plantKey: string;
+  peakCoveragePct: number;
+  durationMinutes?: number;
+  dateEcuador?: string;
+  timeEcuador?: string;
+}
+
+/**
+ * Builds the post text for a satellite storm alert on X.
+ */
+export function buildStormAlertPostText(options: StormAlertPostOptions): string {
+  const basin = BASIN_GEOMETRIES[options.plantKey] || { name: options.plantKey };
+  const basinName = basin.name || options.plantKey;
+  const peakPct = formatVal(options.peakCoveragePct, 1);
+  const durStr = options.durationMinutes && options.durationMinutes > 0
+    ? `${Math.round(options.durationMinutes)} min`
+    : '';
+
+  let hashtag = '#Paute';
+  if (options.plantKey === 'cocaCodoSinclair') {
+    hashtag = '#CocaCodoSinclair #CCS';
+  } else if (options.plantKey === 'agoyan') {
+    hashtag = '#Agoyan #Pastaza';
+  }
+
+  let text = `🌧️ Monitoreo Satelital GOES-16: Evento de Lluvia en ${basinName}\n\n` +
+    `Se registró actividad convectiva relevante sobre la cuenca de recarga hídrica:\n` +
+    `• Pico de cobertura: ${peakPct}%\n`;
+
+  if (durStr) {
+    text += `• Duración aproximada: ${durStr}\n`;
+  }
+  if (options.dateEcuador && options.timeEcuador) {
+    text += `• Registro: ${options.dateEcuador} ${options.timeEcuador} ECT\n`;
+  }
+
+  text += `\nEvolución y desplazamiento de nubosidad en timelapse adjunto.\n\n` +
+    `#Lluvias #Ecuador #Hidrología ${hashtag}`;
+
+  return text;
 }
 

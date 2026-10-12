@@ -7,10 +7,10 @@ import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
 
 const CHECK_INTERVAL_SECONDS = parseInt(process.env.CHECK_INTERVAL_SECONDS || '900', 10); // default: 15 min
 const TARGET_BASINS = (process.env.TARGET_BASINS || 'cocaCodoSinclair,paute').split(',').map(s => s.trim());
-const STORM_THRESHOLD = parseFloat(process.env.STORM_THRESHOLD || '6.0');
+const STORM_THRESHOLD = process.env.STORM_THRESHOLD ? parseFloat(process.env.STORM_THRESHOLD) : undefined;
 const DISSIPATION_RATIO = parseFloat(process.env.DISSIPATION_RATIO || '0.50');
 const MIN_DURATION_MINUTES = parseInt(process.env.MIN_DURATION_MINUTES || '30', 10); // 30 min in testing mode
-const MAX_DURATION_MINUTES = parseInt(process.env.MAX_DURATION_MINUTES || '150', 10);
+const MAX_DURATION_MINUTES = parseInt(process.env.MAX_DURATION_MINUTES || '360', 10);
 
 const generatedDir = path.join(process.cwd(), 'generated');
 if (!fs.existsSync(generatedDir)) {

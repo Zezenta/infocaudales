@@ -5,6 +5,8 @@ import { db } from '../utils/db.js';
 import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
 import { SatelliteMapService, SatelliteFrame } from './satellite-map.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
+import { XService } from './x.service.js';
+import { buildStormAlertPostText } from '../utils/post-formatter.js';
 import { systemLogger } from '../utils/logger.js';
 
 export interface RainEventRecord {
@@ -19,15 +21,18 @@ export interface RainEventRecord {
   video_path?: string;
   video_duration_seconds?: number;
   cooldown_until: number;
+  published_at?: number;
+  tweet_id?: string;
 }
 
 export interface RainCheckOptions {
   stormThresholdPct?: number;      // Coverage % to declare a rain storm started (default: 18%)
   dissipationRatio?: number;       // Ratio of peak coverage to declare rain is passing (default: 0.50)
   minRainDurationMinutes?: number; // Minimum elapsed minutes before compiling on dissipation (default: 60 min)
-  maxRainDurationMinutes?: number; // Maximum elapsed minutes before forced compile timeout (default: 150 min / 2.5h)
+  maxRainDurationMinutes?: number; // Maximum elapsed minutes before forced compile timeout (default: 360 min / 6h)
   cooldownHours?: number;          // Hours to wait before allowing another event for this basin (default: 6h)
   autoCompileVideo?: boolean;      // Whether to compile MP4 video automatically when triggered (default: true)
+  autoPublishToX?: boolean;        // Whether to automatically post video to X if XService is available (default: true)
   tileResolution?: number;         // Tile width & height in pixels for analysis (default: 80)
 }
 
@@ -39,6 +44,7 @@ export interface RainCheckResult {
   elapsedMinutes?: number;
   event?: RainEventRecord;
   compilationResult?: CompiledAnimationResult;
+  publishedTweetId?: string;
   message: string;
 }
 
@@ -165,10 +171,21 @@ export function analyzeStormCloudCoverage(pngBuf: Buffer): number {
   return parseFloat(effectiveCoverage.toFixed(1));
 }
 
+export const DEFAULT_STORM_THRESHOLDS: Record<string, number> = {
+  cocaCodoSinclair: 10.0,
+  paute: 8.0,
+  mazar: 8.0,
+  molino: 8.0,
+  sopladora: 8.0,
+  agoyan: 10.0,
+  minasSanFrancisco: 8.0
+};
+
 export class RainMonitorService {
   constructor(
     private readonly satelliteService: SatelliteMapService = new SatelliteMapService(),
-    private readonly videoCompilerService: VideoCompilerService = new VideoCompilerService()
+    private readonly videoCompilerService: VideoCompilerService = new VideoCompilerService(satelliteService),
+    private readonly xService?: XService
   ) {}
 
   /**
@@ -247,12 +264,14 @@ export class RainMonitorService {
     plantKey: string = 'cocaCodoSinclair',
     options: RainCheckOptions = {}
   ): Promise<RainCheckResult> {
-    const stormThreshold = options.stormThresholdPct ?? 6.0;
+    const defaultThreshold = DEFAULT_STORM_THRESHOLDS[plantKey] ?? 10.0;
+    const stormThreshold = options.stormThresholdPct ?? defaultThreshold;
     const dissipationRatio = options.dissipationRatio ?? 0.50;
     const minRainDurationMinutes = options.minRainDurationMinutes ?? 60;
-    const maxRainDurationMinutes = options.maxRainDurationMinutes ?? 150;
+    const maxRainDurationMinutes = options.maxRainDurationMinutes ?? 360;
     const cooldownHours = options.cooldownHours ?? 6;
     const autoCompileVideo = options.autoCompileVideo ?? true;
+    const autoPublishToX = options.autoPublishToX ?? true;
     const tileResolution = options.tileResolution ?? 80;
 
     const now = Date.now();
@@ -400,13 +419,19 @@ export class RainMonitorService {
     if (cachedFrames.length >= 4) {
       compilationResult = await this.videoCompilerService.compileFramesToVideo(cachedFrames, {
         plantKey: 'ecuador',
-        customTitle: `Tormenta en ${basinName}`,
+        customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
         minDurationSeconds: 10,
+        framerate: 8,
         createMp4: true,
         createGif: false,
         showAllPins: true,
         showDetectionBoxes: true,
-        highlightBasinKey: plantKey
+        highlightBasinKey: plantKey,
+        activeBasinKeys: [plantKey],
+        stormWindow: {
+          startTime: existingEvent.detected_at,
+          endTime: existingEvent.last_checked_at - 60000 // Last checked was dissipation; storm ended before it
+        }
       });
       try {
         fs.rmSync(framesDir, { recursive: true, force: true });
@@ -416,13 +441,19 @@ export class RainMonitorService {
       compilationResult = await this.videoCompilerService.generateBasinAnimation({
         plantKey: 'ecuador',
         hoursBack,
-        customTitle: `Tormenta en ${basinName}`,
+        customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
         minDurationSeconds: 10,
+        framerate: 8,
         createMp4: true,
         createGif: false,
         showAllPins: true,
         showDetectionBoxes: true,
-        highlightBasinKey: plantKey
+        highlightBasinKey: plantKey,
+        activeBasinKeys: [plantKey],
+        stormWindow: {
+          startTime: existingEvent.detected_at,
+          endTime: existingEvent.last_checked_at - 60000
+        }
       });
     }
 
@@ -450,6 +481,33 @@ export class RainMonitorService {
     existingEvent.video_duration_seconds = compilationResult.durationSeconds;
     existingEvent.cooldown_until = cooldownUntil;
 
+    let publishedTweetId: string | undefined = undefined;
+    if (options.autoPublishToX && this.xService && compilationResult.mp4Path) {
+      try {
+        const postText = buildStormAlertPostText({
+          plantKey,
+          peakCoveragePct: newPeak,
+          durationMinutes: elapsedMinutes,
+          dateEcuador: compilationResult.timestamps.endEcuador,
+          timeEcuador: compilationResult.timestamps.endEcuador
+        });
+        const postRes = await this.xService.postVideo(postText, compilationResult.mp4Path);
+        publishedTweetId = postRes?.data?.id || postRes?.id;
+        systemLogger.info(`[RainMonitor] 🐦 Successfully published storm alert video to X (Tweet ID: ${publishedTweetId})`);
+
+        db.prepare(`
+          UPDATE rain_events 
+          SET published_at = ?, tweet_id = ? 
+          WHERE id = ?
+        `).run(Date.now(), publishedTweetId || null, existingEvent.id);
+
+        existingEvent.published_at = Date.now();
+        existingEvent.tweet_id = publishedTweetId;
+      } catch (pubErr: any) {
+        systemLogger.error(`[RainMonitor] Failed to auto-publish storm video to X: ${pubErr?.message || pubErr}`);
+      }
+    }
+
     return {
       plantKey,
       action: 'VIDEO_COMPILED',
@@ -458,8 +516,47 @@ export class RainMonitorService {
       elapsedMinutes,
       event: existingEvent,
       compilationResult,
-      message: `Video satelital compilado exitosamente (${compilationResult.durationSeconds}s, ${compilationResult.frameCount} frames). Cuenca en cooldown de ${cooldownHours}h.`
+      publishedTweetId,
+      message: `Video satelital compilado exitosamente (${compilationResult.durationSeconds}s, ${compilationResult.frameCount} frames). Cuenca en cooldown de ${cooldownHours}h.${publishedTweetId ? ` Publicado en X (ID: ${publishedTweetId})` : ''}`
     };
+  }
+
+  /**
+   * Manually or programmatically publishes an existing rain event video to X.
+   */
+  public async publishStormAlert(
+    event: RainEventRecord,
+    options: { customText?: string; xService?: XService } = {}
+  ): Promise<any> {
+    const xClient = options.xService || this.xService;
+    if (!xClient) {
+      throw new Error('[RainMonitor] Cannot publish storm alert: No XService configured.');
+    }
+    if (!event.video_path || !fs.existsSync(event.video_path)) {
+      throw new Error(`[RainMonitor] Cannot publish storm alert: Video not found at path "${event.video_path}"`);
+    }
+
+    const elapsedMinutes = Math.round((event.last_checked_at - event.detected_at) / (60 * 1000));
+    const message = options.customText || buildStormAlertPostText({
+      plantKey: event.plant_key,
+      peakCoveragePct: event.peak_coverage_pct,
+      durationMinutes: elapsedMinutes > 0 ? elapsedMinutes : undefined
+    });
+
+    systemLogger.info(`[RainMonitor] Publishing storm alert to X for event ${event.id} (${event.plant_key})...`);
+    const postRes = await xClient.postVideo(message, event.video_path);
+    const tweetId = postRes?.data?.id || postRes?.id;
+
+    db.prepare(`
+      UPDATE rain_events 
+      SET published_at = ?, tweet_id = ? 
+      WHERE id = ?
+    `).run(Date.now(), tweetId || null, event.id);
+
+    event.published_at = Date.now();
+    event.tweet_id = tweetId;
+
+    return postRes;
   }
 
   /**
