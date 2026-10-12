@@ -151,5 +151,17 @@ describe('post-formatter', () => {
       expect(text).toContain('Duración aproximada: 120 min');
       expect(text).toContain('#CocaCodoSinclair #CCS');
     });
+
+    it('does not duplicate timestamp when dateEcuador and timeEcuador are identical', () => {
+      const text = buildStormAlertPostText({
+        plantKey: 'paute',
+        peakCoveragePct: 20.0,
+        dateEcuador: '2026-10-10 18:40',
+        timeEcuador: '2026-10-10 18:40'
+      });
+
+      expect(text).toContain('• Registro: 2026-10-10 18:40 ECT');
+      expect(text).not.toContain('2026-10-10 18:40 2026-10-10 18:40');
+    });
   });
 });

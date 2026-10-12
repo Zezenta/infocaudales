@@ -97,6 +97,8 @@ export interface CompiledAnimationResult {
     end: string;
     startEcuador: string;
     endEcuador: string;
+    endDateEcuador?: string;
+    endTimeEcuador?: string;
   };
 }
 
@@ -838,7 +840,9 @@ export class VideoCompilerService {
           start: firstFrame.timestampIso,
           end: lastFrame.timestampIso,
           startEcuador: `${firstFrame.dateEcuador} ${firstFrame.timeEcuador}`,
-          endEcuador: `${lastFrame.dateEcuador} ${lastFrame.timeEcuador}`
+          endEcuador: `${lastFrame.dateEcuador} ${lastFrame.timeEcuador}`,
+          endDateEcuador: lastFrame.dateEcuador,
+          endTimeEcuador: lastFrame.timeEcuador
         }
       };
     } finally {

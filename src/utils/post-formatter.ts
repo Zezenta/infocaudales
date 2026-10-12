@@ -248,7 +248,13 @@ export function buildStormAlertPostText(options: StormAlertPostOptions): string 
     text += `• Duración aproximada: ${durStr}\n`;
   }
   if (options.dateEcuador && options.timeEcuador) {
-    text += `• Registro: ${options.dateEcuador} ${options.timeEcuador} ECT\n`;
+    if (options.dateEcuador === options.timeEcuador) {
+      text += `• Registro: ${options.dateEcuador} ECT\n`;
+    } else {
+      text += `• Registro: ${options.dateEcuador} ${options.timeEcuador} ECT\n`;
+    }
+  } else if (options.dateEcuador) {
+    text += `• Registro: ${options.dateEcuador} ECT\n`;
   }
 
   text += `\nEvolución y desplazamiento de nubosidad en timelapse adjunto.\n\n` +

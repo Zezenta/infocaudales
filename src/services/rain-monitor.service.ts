@@ -484,12 +484,14 @@ export class RainMonitorService {
     let publishedTweetId: string | undefined = undefined;
     if (options.autoPublishToX && this.xService && compilationResult.mp4Path) {
       try {
+        const endDate = compilationResult.timestamps.endDateEcuador || compilationResult.timestamps.endEcuador.split(' ')[0];
+        const endTime = compilationResult.timestamps.endTimeEcuador || compilationResult.timestamps.endEcuador.split(' ')[1];
         const postText = buildStormAlertPostText({
           plantKey,
           peakCoveragePct: newPeak,
           durationMinutes: elapsedMinutes,
-          dateEcuador: compilationResult.timestamps.endEcuador,
-          timeEcuador: compilationResult.timestamps.endEcuador
+          dateEcuador: endDate,
+          timeEcuador: endTime
         });
         const postRes = await this.xService.postVideo(postText, compilationResult.mp4Path);
         publishedTweetId = postRes?.data?.id || postRes?.id;
@@ -542,10 +544,15 @@ export class RainMonitorService {
     }
 
     const elapsedMinutes = Math.round((event.last_checked_at - event.detected_at) / (60 * 1000));
+    const lastCheckDate = new Date(event.last_checked_at - 5 * 3600 * 1000);
+    const dateEcuador = lastCheckDate.toISOString().slice(0, 10);
+    const timeEcuador = lastCheckDate.toISOString().slice(11, 16);
     const message = options.customText || buildStormAlertPostText({
       plantKey: event.plant_key,
       peakCoveragePct: event.peak_coverage_pct,
-      durationMinutes: elapsedMinutes > 0 ? elapsedMinutes : undefined
+      durationMinutes: elapsedMinutes > 0 ? elapsedMinutes : undefined,
+      dateEcuador,
+      timeEcuador
     });
 
     systemLogger.info(`[RainMonitor] Publishing storm alert to X for event ${event.id} (${event.plant_key})...`);
