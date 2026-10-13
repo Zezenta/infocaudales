@@ -184,6 +184,25 @@ export async function reconcileForecastsWithCelec(
 }
 
 /**
+ * Evaluates whether the predicted flow direction matches the observed change,
+ * incorporating a small deadband (±1.5 m³/s or ±2% of initial flow) so that steady
+ * river regimes are correctly counted as directional successes.
+ */
+export function isDirectionallyAccurate(initialFlow: number, predictedFlow: number, actualFlow: number): boolean {
+  const predictedDelta = predictedFlow - initialFlow;
+  const actualDelta = actualFlow - initialFlow;
+  const deadband = Math.max(1.5, initialFlow * 0.02);
+
+  const isFlatActual = Math.abs(actualDelta) <= deadband;
+  const isFlatPredicted = Math.abs(predictedDelta) <= deadband;
+
+  if (isFlatActual && isFlatPredicted) {
+    return true;
+  }
+  return (predictedDelta >= 0 && actualDelta >= 0) || (predictedDelta <= 0 && actualDelta <= 0);
+}
+
+/**
  * Calculates accuracy metrics (MAE, directional accuracy, confidence interval coverage)
  * over a specified time window (defaulting to the past 7 days) for the weekly report.
  */
@@ -247,9 +266,7 @@ export function calculateWeeklyAccuracyMetrics(
     totalAbsError += absError;
 
     // Directional Accuracy: Did flow go up/down as predicted relative to T0?
-    const predictedDelta = row.predictedFlow - row.initialFlow;
-    const actualDelta = row.actualFlow - row.initialFlow;
-    const isDirCorrect = (predictedDelta >= 0 && actualDelta >= 0) || (predictedDelta <= 0 && actualDelta <= 0);
+    const isDirCorrect = isDirectionallyAccurate(row.initialFlow, row.predictedFlow, row.actualFlow);
     if (isDirCorrect) totalDirCorrect++;
 
     // Percentile Coverage
@@ -280,9 +297,7 @@ export function calculateWeeklyAccuracyMetrics(
       plantExpMaeSum += r.maeExpected;
       plantBiasSum += (r.predictedFlow - r.actualFlow);
 
-      const predD = r.predictedFlow - r.initialFlow;
-      const actD = r.actualFlow - r.initialFlow;
-      const dirOk = (predD >= 0 && actD >= 0) || (predD <= 0 && actD <= 0);
+      const dirOk = isDirectionallyAccurate(r.initialFlow, r.predictedFlow, r.actualFlow);
       if (dirOk) plantDirCorr++;
 
       if (r.actualFlow >= r.p25 && r.actualFlow <= r.p75) plantP25P75++;

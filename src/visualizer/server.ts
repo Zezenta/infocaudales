@@ -1,12 +1,16 @@
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
-import { BASIN_GEOMETRIES, ALL_HYDRO_PLANTS_PINS } from '../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, ALL_HYDRO_PLANTS_PINS, DEFAULT_REFERENCE_CITIES } from '../data/basin-geometries.js';
 import { SatelliteMapService } from '../services/satellite-map.service.js';
 import { VideoCompilerService } from '../services/video-compiler.service.js';
 import { RainMonitorService } from '../services/rain-monitor.service.js';
 import { db } from '../utils/db.js';
+
+const execFileAsync = promisify(execFile);
 
 const PORT = 3000;
 const TEMPLATE_DIR = path.join(__dirname, '..', 'templates');
@@ -22,6 +26,177 @@ satelliteMapService.preloadAllOptionsBackground();
 
 // Keep track of active SSE connections
 const clients: Set<http.ServerResponse> = new Set();
+
+// Persistent Satellite Frame Metrics Table for instant Visualizer playback
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS satellite_frame_metrics (
+      timestamp_iso TEXT PRIMARY KEY,
+      ccs REAL NOT NULL,
+      paute REAL NOT NULL,
+      costa REAL NOT NULL,
+      sierra REAL NOT NULL,
+      amazonia REAL NOT NULL,
+      computed_at INTEGER NOT NULL
+    );
+  `);
+} catch (err) {}
+
+function getOrComputeMetricsForRows(rows: Array<{ timestamp_iso: string; file_path: string }>): Record<string, { ccs: number; paute: number; costa: number; sierra: number; amazonia: number }> {
+  const result: Record<string, any> = {};
+  if (!rows || rows.length === 0) return result;
+
+  const placeholders = rows.map(() => '?').join(',');
+  let cachedRows: any[] = [];
+  try {
+    cachedRows = db.prepare(`SELECT * FROM satellite_frame_metrics WHERE timestamp_iso IN (${placeholders})`).all(...rows.map(r => r.timestamp_iso)) as any[];
+  } catch (err) {}
+
+  const cachedMap = new Map<string, any>();
+  for (const c of cachedRows) {
+    cachedMap.set(c.timestamp_iso, { ccs: c.ccs, paute: c.paute, costa: c.costa, sierra: c.sierra, amazonia: c.amazonia });
+  }
+
+  const insertStmt = db.prepare(`
+    INSERT INTO satellite_frame_metrics (timestamp_iso, ccs, paute, costa, sierra, amazonia, computed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(timestamp_iso) DO UPDATE SET
+      ccs = excluded.ccs, paute = excluded.paute, costa = excluded.costa, sierra = excluded.sierra, amazonia = excluded.amazonia
+  `);
+
+  for (const r of rows) {
+    if (cachedMap.has(r.timestamp_iso)) {
+      result[r.timestamp_iso] = cachedMap.get(r.timestamp_iso);
+      continue;
+    }
+
+    if (r.file_path && fs.existsSync(r.file_path)) {
+      try {
+        const buf = fs.readFileSync(r.file_path);
+        const m = rainMonitorService.computeEcuadorFrameMetrics(buf);
+        insertStmt.run(r.timestamp_iso, m.ccs, m.paute, m.costa, m.sierra, m.amazonia, Date.now());
+        result[r.timestamp_iso] = m;
+      } catch (err) {
+        result[r.timestamp_iso] = { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
+      }
+    } else {
+      result[r.timestamp_iso] = { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
+    }
+  }
+
+  return result;
+}
+
+let isSyncingFrames = false;
+async function syncRecentVisualizerFrames(): Promise<void> {
+  if (isSyncingFrames) return;
+  isSyncingFrames = true;
+  try {
+    const lastRow = db.prepare(`
+      SELECT timestamp_iso FROM satellite_archive
+      WHERE date_ecuador = date('now', '-5 hours')
+      ORDER BY timestamp_iso DESC LIMIT 1
+    `).get() as { timestamp_iso: string } | undefined;
+
+    const nowMs = Date.now();
+    const latest10MinMs = Math.floor(nowMs / (10 * 60 * 1000)) * (10 * 60 * 1000);
+    const startMs = lastRow ? (new Date(lastRow.timestamp_iso).getTime() + 10 * 60 * 1000) : (latest10MinMs - 3 * 3600 * 1000);
+
+    if (startMs > latest10MinMs) return;
+
+    // Fetch provincias overlay once
+    const provBuf = await satelliteMapService.fetchMapTile({
+      source: 'geoserver',
+      layers: 'ecuador:provincias',
+      plantKey: 'ecuador',
+      transparent: true,
+      width: 800,
+      height: 800
+    });
+    const provPath = '/tmp/prov_overlay_800.png';
+    fs.writeFileSync(provPath, provBuf);
+
+    const yearMonth = new Date(nowMs - 5 * 3600 * 1000).toISOString().slice(0, 7);
+    const targetDir = path.join(process.cwd(), 'data/satellite_archive', yearMonth);
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+
+    for (let ms = startMs; ms <= latest10MinMs; ms += 10 * 60 * 1000) {
+      const timeIso = new Date(ms).toISOString();
+      const existing = db.prepare('SELECT file_path FROM satellite_archive WHERE timestamp_iso = ?').get(timeIso) as any;
+      if (existing && fs.existsSync(existing.file_path)) continue;
+
+      try {
+        const gibsBuf = await satelliteMapService.fetchMapTile({
+          source: 'nasa_gibs',
+          layers: 'GOES-East_ABI_Band13_Clean_Infrared',
+          plantKey: 'ecuador',
+          time: timeIso,
+          width: 800,
+          height: 800
+        });
+
+        // Skip gap if empty/transparent tile
+        if (gibsBuf.length < 20000) continue;
+
+        const tempGibsPath = `/tmp/gibs_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
+        fs.writeFileSync(tempGibsPath, gibsBuf);
+
+        const safeTs = timeIso.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const outFilePath = path.join(targetDir, `goes16_ecuador_${safeTs}.png`);
+        const metaPath = path.join(targetDir, `goes16_ecuador_${safeTs}.json`);
+
+        await execFileAsync('ffmpeg', [
+          '-y',
+          '-i', tempGibsPath,
+          '-i', provPath,
+          '-filter_complex', '[0:v][1:v]overlay=0:0[out]',
+          '-map', '[out]',
+          outFilePath
+        ]);
+
+        try { fs.unlinkSync(tempGibsPath); } catch (e) {}
+
+        const { dateEcuador, timeEcuador } = satelliteMapService.formatEcuadorTimestamp(timeIso);
+        const stats = fs.statSync(outFilePath);
+
+        fs.writeFileSync(metaPath, JSON.stringify({
+          timestampIso: timeIso,
+          dateEcuador,
+          timeEcuador,
+          plantKey: 'ecuador',
+          sizeBytes: stats.size,
+          source: 'nasa_gibs+provincias',
+          archivedAt: Date.now()
+        }, null, 2));
+
+        db.prepare(`
+          INSERT INTO satellite_archive (
+            timestamp_iso, date_ecuador, time_ecuador, plant_key,
+            file_path, file_size_bytes, recorded_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(timestamp_iso) DO UPDATE SET
+            file_path = excluded.file_path,
+            file_size_bytes = excluded.file_size_bytes
+        `).run(timeIso, dateEcuador, timeEcuador, 'ecuador', outFilePath, stats.size, Date.now());
+
+        const finalBuf = fs.readFileSync(outFilePath);
+        const metrics = rainMonitorService.computeEcuadorFrameMetrics(finalBuf);
+        db.prepare(`
+          INSERT INTO satellite_frame_metrics (timestamp_iso, ccs, paute, costa, sierra, amazonia, computed_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(timestamp_iso) DO UPDATE SET
+            ccs = excluded.ccs, paute = excluded.paute, costa = excluded.costa, sierra = excluded.sierra, amazonia = excluded.amazonia
+        `).run(timeIso, metrics.ccs, metrics.paute, metrics.costa, metrics.sierra, metrics.amazonia, Date.now());
+      } catch (e) {
+        // Skip gap gracefully
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Visualizer] Warning syncing recent frames:', err?.message || err);
+  } finally {
+    isSyncingFrames = false;
+  }
+}
 
 function generatePlantsConfigScript() {
   const plantsData: Record<string, any> = {};
@@ -215,15 +390,31 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // All Hydroelectric Plants Pins API
+  if (req.method === 'GET' && req.url === '/api/all-hydro-pins') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(ALL_HYDRO_PLANTS_PINS));
+    return;
+  }
+
+  // Reference Cities Pins API (Quito, Guayaquil, Cuenca, etc.)
+  if (req.method === 'GET' && req.url === '/api/reference-cities') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(DEFAULT_REFERENCE_CITIES));
+    return;
+  }
+
   // Satellite Archive Presets API
   if (req.method === 'GET' && req.url && req.url.startsWith('/api/archive-presets')) {
     try {
       const presets = [
-        { id: 'live', name: '📡 En Vivo: Últimas 3 horas (INAMHI GeoServer)' },
+        { id: 'today', name: '📅 Resumen de Hoy (desde 00:00 ECT hasta ahora)' },
+        { id: 'yesterday_24h', name: '📅 Resumen 24h Ayer (11 de Octubre • 133 fotogramas)' },
         { id: 'storm_paute_oct7', name: '⚡ Tormenta Severa en Paute (07-08 Oct • 37 fotogramas)' },
         { id: 'storm_ccs_oct7', name: '🌧️ Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)' },
         { id: 'recent_50', name: '📁 Últimos 50 fotogramas archivados' },
-        { id: 'all_966', name: '📁 Archivo Histórico Completo (966 fotogramas)' }
+        { id: 'all_frames', name: '📁 Archivo Histórico Completo' },
+        { id: 'live', name: '📡 En Vivo: Últimas 3 horas (INAMHI GeoServer directo)' }
       ];
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ presets }));
@@ -234,35 +425,76 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Satellite Timestamps by Preset API
+  // Satellite Timestamps by Preset API (includes live metrics per frame)
   if (req.method === 'GET' && req.url && req.url.startsWith('/api/archive-timestamps')) {
     const urlObj = new URL(req.url, `http://localhost:${PORT}`);
-    const preset = urlObj.searchParams.get('preset') || 'live';
+    const preset = urlObj.searchParams.get('preset') || 'today';
 
     try {
-      if (preset === 'storm_paute_oct7') {
-        const rows = db.prepare(`SELECT timestamp_iso FROM satellite_archive WHERE timestamp_iso >= '2026-10-07T23:30:00.000Z' AND timestamp_iso <= '2026-10-08T05:30:00.000Z' ORDER BY timestamp_iso ASC`).all() as any[];
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ timestamps: rows.map(r => r.timestamp_iso) }));
+      let rows: Array<{ timestamp_iso: string; file_path: string }> = [];
+
+      if (preset === 'today' || preset === 'live_today') {
+        await syncRecentVisualizerFrames();
+
+        rows = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          WHERE date_ecuador = date('now', '-5 hours')
+          ORDER BY timestamp_iso ASC
+        `).all() as any[];
+
+        if (rows.length < 6) {
+          // Early morning fallback: include frames from last 20 hours
+          rows = db.prepare(`
+            SELECT timestamp_iso, file_path FROM satellite_archive
+            WHERE timestamp_iso >= datetime('now', '-5 hours', '-20 hours')
+            ORDER BY timestamp_iso ASC
+          `).all() as any[];
+        }
+      } else if (preset === 'yesterday_24h') {
+        rows = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          WHERE date_ecuador = date('now', '-5 hours', '-1 day')
+          ORDER BY timestamp_iso ASC
+        `).all() as any[];
+      } else if (preset === 'storm_paute_oct7') {
+        rows = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          WHERE timestamp_iso >= '2026-10-07T23:30:00.000Z' AND timestamp_iso <= '2026-10-08T05:30:00.000Z'
+          ORDER BY timestamp_iso ASC
+        `).all() as any[];
       } else if (preset === 'storm_ccs_oct7') {
-        const rows = db.prepare(`SELECT timestamp_iso FROM satellite_archive WHERE timestamp_iso >= '2026-10-07T17:30:00.000Z' AND timestamp_iso <= '2026-10-07T22:30:00.000Z' ORDER BY timestamp_iso ASC`).all() as any[];
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ timestamps: rows.map(r => r.timestamp_iso) }));
+        rows = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          WHERE timestamp_iso >= '2026-10-07T17:30:00.000Z' AND timestamp_iso <= '2026-10-07T22:30:00.000Z'
+          ORDER BY timestamp_iso ASC
+        `).all() as any[];
       } else if (preset === 'recent_50') {
-        const rows = db.prepare(`SELECT timestamp_iso FROM satellite_archive ORDER BY timestamp_iso DESC LIMIT 50`).all() as any[];
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ timestamps: rows.map(r => r.timestamp_iso).reverse() }));
-      } else if (preset === 'all_966') {
-        const rows = db.prepare(`SELECT timestamp_iso FROM satellite_archive ORDER BY timestamp_iso ASC`).all() as any[];
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ timestamps: rows.map(r => r.timestamp_iso) }));
+        const recentRows = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          ORDER BY timestamp_iso DESC LIMIT 50
+        `).all() as any[];
+        rows = recentRows.reverse();
+      } else if (preset === 'all_frames' || preset === 'all_966') {
+        rows = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          ORDER BY timestamp_iso ASC
+        `).all() as any[];
       } else {
-        // live
+        // live GeoServer
         const timestamps = await satelliteMapService.fetchGoesTimestamps({ limit: 18 });
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ timestamps }));
+        res.end(JSON.stringify({ timestamps, metrics: {} }));
+        return;
       }
+
+      const metricsMap = getOrComputeMetricsForRows(rows);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        timestamps: rows.map(r => r.timestamp_iso),
+        metrics: metricsMap
+      }));
     } catch (err: any) {
+      console.error('[Visualizer] Error loading archive timestamps:', err);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: err.message }));
     }
@@ -364,21 +596,97 @@ const server = http.createServer(async (req, res) => {
         const layer = payload.layer || 'goes16_inamhi';
         const showThermalScale = layer === 'goes16_inamhi';
 
-        console.log(`[Visualizer] Compiling rain animation for ${plantKey} (layer: ${layer}, title: "${customTitle}")...`);
-        const result = await videoCompilerService.generateBasinAnimation({
+        console.log(`[Visualizer] Compiling rain animation for ${plantKey} (preset: ${payload.preset || 'live'}, layer: ${layer}, title: "${customTitle}")...`);
+        const showSummaryCards = payload.showSummaryCards !== false && plantKey === 'ecuador';
+
+        const preset = payload.preset;
+        let diskFrames: any[] = [];
+        if (preset && preset !== 'live') {
+          let rows: any[] = [];
+          if (preset === 'today' || preset === 'live_today') {
+            rows = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive WHERE date_ecuador = date('now', '-5 hours') ORDER BY timestamp_iso ASC`).all() as any[];
+            if (rows.length < 6) {
+              rows = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive WHERE timestamp_iso >= datetime('now', '-5 hours', '-20 hours') ORDER BY timestamp_iso ASC`).all() as any[];
+            }
+          } else if (preset === 'yesterday_24h') {
+            rows = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive WHERE date_ecuador = date('now', '-5 hours', '-1 day') ORDER BY timestamp_iso ASC`).all() as any[];
+          } else if (preset === 'storm_paute_oct7') {
+            rows = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive WHERE timestamp_iso >= '2026-10-07T23:30:00.000Z' AND timestamp_iso <= '2026-10-08T05:30:00.000Z' ORDER BY timestamp_iso ASC`).all() as any[];
+          } else if (preset === 'storm_ccs_oct7') {
+            rows = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive WHERE timestamp_iso >= '2026-10-07T17:30:00.000Z' AND timestamp_iso <= '2026-10-07T22:30:00.000Z' ORDER BY timestamp_iso ASC`).all() as any[];
+          } else if (preset === 'recent_50') {
+            const recent = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive ORDER BY timestamp_iso DESC LIMIT 50`).all() as any[];
+            rows = recent.reverse();
+          } else if (preset === 'all_frames' || preset === 'all_966') {
+            rows = db.prepare(`SELECT timestamp_iso, file_path FROM satellite_archive ORDER BY timestamp_iso ASC`).all() as any[];
+          }
+
+          if (rows.length > 0) {
+            diskFrames = rows
+              .filter(r => r.file_path && fs.existsSync(r.file_path))
+              .map((r, idx) => {
+                const { dateEcuador, timeEcuador } = satelliteMapService.formatEcuadorTimestamp(r.timestamp_iso);
+                return {
+                  index: idx,
+                  timestampIso: r.timestamp_iso,
+                  dateEcuador,
+                  timeEcuador,
+                  buffer: fs.readFileSync(r.file_path),
+                  bbox: (BASIN_GEOMETRIES as any)[plantKey]?.bbox || [-81.5, -5.2, -75.0, 1.8],
+                  plantKey,
+                  source: 'geoserver'
+                };
+              });
+          }
+        }
+
+        const compileOptions: any = {
           plantKey,
           createMp4,
           createGif,
           framerate,
           customTitle,
           customBadge,
+          customDateSubtitle: payload.customDateSubtitle,
           singlePinLabel: pinLabel,
           showSinglePin,
           showAllPins,
+          showCityPins: payload.showCityPins !== false && plantKey === 'ecuador',
+          showDetectionBoxes: payload.showDetectionBoxes !== undefined ? payload.showDetectionBoxes : true,
+          activeBasinKeys: payload.activeBasinKeys,
+          highlightBasinKey: payload.activeBasinKeys?.[0],
           showThermalScale,
           layer,
-          minDurationSeconds: payload.minDurationSeconds !== undefined ? payload.minDurationSeconds : 10
-        });
+          minDurationSeconds: payload.minDurationSeconds !== undefined ? payload.minDurationSeconds : 10,
+          summaryCardsResolver: showSummaryCards ? (frame: any, idx: number) => {
+            let m: any = null;
+            try {
+              m = db.prepare('SELECT ccs, paute, costa, sierra, amazonia FROM satellite_frame_metrics WHERE timestamp_iso = ?').get(frame.timestampIso);
+            } catch (e) {}
+            if (!m && frame.buffer) {
+              m = rainMonitorService.computeEcuadorFrameMetrics(frame.buffer);
+            }
+            if (!m) m = { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
+            return {
+              basins: [
+                { label: 'Coca Codo Sinclair', value: `${m.ccs.toFixed(1)}%`, color: '#38bdf8', highlight: m.ccs >= 10.0 },
+                { label: 'Paute', value: `${m.paute.toFixed(1)}%`, color: '#a855f7', highlight: m.paute >= 15.0 }
+              ],
+              regions: [
+                { label: 'Costa', value: `${m.costa.toFixed(1)}%`, color: '#38bdf8', highlight: m.costa >= 10.0 },
+                { label: 'Sierra', value: `${m.sierra.toFixed(1)}%`, color: '#34d399', highlight: m.sierra >= 10.0 },
+                { label: 'Amazonía', value: `${m.amazonia.toFixed(1)}%`, color: '#f59e0b', highlight: m.amazonia >= 10.0 }
+              ]
+            };
+          } : undefined
+        };
+
+        let result;
+        if (diskFrames.length > 0) {
+          result = await videoCompilerService.compileFramesToVideo(diskFrames, compileOptions);
+        } else {
+          result = await videoCompilerService.generateBasinAnimation(compileOptions);
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, result }));

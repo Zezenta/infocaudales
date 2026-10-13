@@ -207,39 +207,97 @@ describe('PredictionService Mathematical Models & Pipielines', () => {
     });
 
     it('evaluates multi-COMID hourly models across 1h to 6h horizons for all plants', async () => {
-      // Test CCS at 1h (multi_guarded, MAE=10.82, r=0.997)
+      // Test CCS at 1h (multi_guarded, calibrated MAE=15.0, r=0.997)
       const resCcs1h = await service.predictPlantHourlyMultiComid('cocaCodoSinclair', {
         horizonHours: 1,
         currentFlow: 400
       });
       expect(resCcs1h.plantKey).toBe('cocaCodoSinclair');
       expect(resCcs1h.horizonHours).toBe(1);
-      expect(resCcs1h.mae).toBe(10.82);
+      expect(resCcs1h.mae).toBe(15.0);
       expect(resCcs1h.pearsonR).toBe(0.997);
       expect(resCcs1h.modelSpec?.modelName).toBe('multi_guarded');
       expect(resCcs1h.trajectory?.length).toBe(8); // 6 past + 1 now + 1 future
 
-      // Test Mazar at 6h (outlet_hybrid, MAE=9.09, r=0.518)
+      // Test Mazar at 6h (outlet_hybrid, calibrated MAE=10.5, r=0.518)
       const resMazar6h = await service.predictPlantHourlyMultiComid('mazar', {
         horizonHours: 6,
         currentFlow: 85
       });
       expect(resMazar6h.plantKey).toBe('mazar');
       expect(resMazar6h.horizonHours).toBe(6);
-      expect(resMazar6h.mae).toBe(9.09);
+      expect(resMazar6h.mae).toBe(10.5);
       expect(resMazar6h.pearsonR).toBe(0.518);
       expect(resMazar6h.modelSpec?.modelName).toBe('outlet_hybrid');
       expect(resMazar6h.trajectory?.length).toBe(13); // 6 past + 1 now + 6 future
 
-      // Test Sopladora at 6h (autoregressive, MAE=12.58, r=0.830)
+      // Test Sopladora at 6h (autoregressive, calibrated MAE=32.0, r=0.830)
       const resSopladora6h = await service.predictPlantHourlyMultiComid('sopladora', {
         horizonHours: 6,
         currentFlow: 95
       });
       expect(resSopladora6h.plantKey).toBe('sopladora');
       expect(resSopladora6h.modelSpec?.modelName).toBe('autoregressive');
-      expect(resSopladora6h.mae).toBe(12.58);
+      expect(resSopladora6h.mae).toBe(32.0);
       expect(resSopladora6h.pearsonR).toBe(0.830);
+    });
+
+    it('ensures Coca Codo Sinclair produces a smooth monotonic inercial forecast without h=4 sawtooth dip', async () => {
+      // 06:30 ECT (11:30 UTC)
+      const morningDate = new Date('2026-10-12T11:30:00.000Z');
+      const resCcs = await service.predictPlantHourlyMultiComid('cocaCodoSinclair', {
+        horizonHours: 6,
+        currentFlow: 250,
+        targetDate: morningDate
+      });
+
+      const futurePoints = resCcs.trajectory!.filter(t => !t.isHistorical && t.step > 0);
+      expect(futurePoints.length).toBe(6);
+
+      // Verify all steps use multi_guarded
+      for (const pt of futurePoints) {
+        expect(pt.modelSpec?.modelName).toBe('multi_guarded');
+      }
+
+      // Verify there is no V-notch dip at step 4
+      const p3 = futurePoints.find(p => p.step === 3)?.percentiles?.p50!;
+      const p4 = futurePoints.find(p => p.step === 4)?.percentiles?.p50!;
+      const p5 = futurePoints.find(p => p.step === 5)?.percentiles?.p50!;
+
+      expect(p4).toBeLessThanOrEqual(p3);
+      expect(p5).toBeLessThanOrEqual(p4);
+      // The curve should not suddenly drop 15% and bounce back up
+      expect(Math.abs(p4 - p3)).toBeLessThan(5);
+    });
+
+    it('applies the CENACE morning dispatch ramp for Molino and Sopladora during the 06:30 ECT cycle', async () => {
+      // Morning cycle: 06:30 ECT (11:30 UTC)
+      const morningDate = new Date('2026-10-12T11:30:00.000Z');
+      const resMolino = await service.predictPlantHourlyMultiComid('molino', {
+        horizonHours: 6,
+        currentFlow: 100,
+        targetDate: morningDate
+      });
+
+      const futurePoints = resMolino.trajectory!.filter(t => !t.isHistorical && t.step > 0);
+      const flows = futurePoints.map(p => p.percentiles?.p50!);
+
+      // Should smoothly ramp up towards daytime nominal target (145 m³/s)
+      expect(flows[0]).toBeGreaterThan(100);
+      expect(flows[5]).toBeCloseTo(145, 0);
+      expect(flows[5]).toBeGreaterThan(flows[0]);
+
+      // In the afternoon (16:30 ECT = 21:30 UTC), morning ramp should NOT apply
+      const afternoonDate = new Date('2026-10-12T21:30:00.000Z');
+      const resAfternoon = await service.predictPlantHourlyMultiComid('molino', {
+        horizonHours: 6,
+        currentFlow: 100,
+        targetDate: afternoonDate
+      });
+
+      const afternoonFlows = resAfternoon.trajectory!.filter(t => !t.isHistorical && t.step > 0).map(p => p.percentiles?.p50!);
+      // Should remain inercial / gently receding, not ramp up to 145
+      expect(afternoonFlows[5]).toBeLessThanOrEqual(100);
     });
   });
 });

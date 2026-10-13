@@ -63,7 +63,8 @@
 
           <!-- Top Header Bar -->
           <rect id="topHeaderRect" x="0" y="0" width="800" height="68" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="20">Vista Satelital En Vivo</text>
+          <text id="overlayTitle" x="20" y="38" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="20">Vista Satelital GOES-16 • Ecuador Continental</text>
+          <text id="overlayDateSubtitle" x="20" y="53" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="12.5" style="display: none;"></text>
 
           <!-- Top-Left Publication Alert Badge (matches VideoCompilerService) -->
           <g id="pubStatusBadgeGroup" transform="translate(20, 48)" style="display: none;">
@@ -89,6 +90,9 @@
           <!-- Layer for Basin Storm Detection Boundary Boxes -->
           <g id="detectionBoxesLayer"></g>
 
+          <!-- Layer for Reference Cities Pins (Quito, Guayaquil, Cuenca, etc.) -->
+          <g id="citiesLayer"></g>
+
           <!-- Layer for Multiple Hydroelectric Plants Pins -->
           <g id="allPinsLayer"></g>
 
@@ -111,6 +115,9 @@
             <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
             <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
           </g>
+
+          <!-- Lower-Right 24h Summary Cards (Cuencas Hidroeléctricas & Regiones) -->
+          <g id="summaryCardsLayer"></g>
 
           <!-- Bottom Footer Bar -->
           <rect x="0" y="740" width="800" height="60" fill="url(#bottomBarGrad)"/>
@@ -200,16 +207,26 @@
         <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
           <select id="presetSelect" class="form-select">
-            <option value="live">📡 En Vivo: Últimas 3 horas (INAMHI GeoServer)</option>
+            <option value="today" selected>📅 Resumen de Hoy (desde 00:00 ECT hasta ahora)</option>
+            <option value="yesterday_24h">📅 Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
             <option value="storm_paute_oct7">⚡ Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
             <option value="storm_ccs_oct7">🌧️ Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
             <option value="recent_50">📁 Últimos 50 fotogramas archivados</option>
-            <option value="all_966">📁 Archivo Histórico Completo (966 fotogramas)</option>
+            <option value="all_frames">📁 Archivo Histórico Completo</option>
+            <option value="live">📡 En Vivo: Últimas 3 horas (INAMHI GeoServer directo)</option>
           </select>
         </div>
 
-        <!-- Pins Toggle & Screen Fit -->
+        <!-- Pins & Cards Toggles -->
         <div class="form-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #38bdf8; cursor: pointer;">
+            <input type="checkbox" id="showSummaryCardsCheckbox" checked>
+            📊 Mostrar Tarjetas de Cobertura (Cuencas & Regiones)
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+            <input type="checkbox" id="showCityPinsCheckbox" checked>
+            🏙️ Mostrar Ciudades de Referencia (Quito, GYE, etc.)
+          </label>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
             <input type="checkbox" id="showAllPinsCheckbox" checked>
             📍 Mostrar Pines de Todas las Centrales
@@ -235,7 +252,7 @@
           </label>
 
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
-            <input type="checkbox" id="showPubBadgeCheckbox" checked>
+            <input type="checkbox" id="showPubBadgeCheckbox">
             Mostrar Ticker de Publicación (🚨 / 🟢)
           </label>
 
@@ -253,7 +270,15 @@
 
         <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="customTitleInput">Título Superior</label>
-          <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital En Vivo">
+          <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital GOES-16 • Ecuador Continental">
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer; margin-bottom: 6px;">
+            <input type="checkbox" id="showDateSubtitleCheckbox" checked>
+            📅 Mostrar Subtítulo de Fecha (como en videos)
+          </label>
+          <input type="text" id="customDateSubtitleInput" class="form-input" placeholder="Automático (según fotograma)">
         </div>
 
         <div class="form-group">
@@ -341,12 +366,25 @@
     const showAllPinsCheckbox = document.getElementById('showAllPinsCheckbox');
     const singlePinGroup = document.getElementById('singlePinGroup');
     const allPinsLayer = document.getElementById('allPinsLayer');
+    const citiesLayer = document.getElementById('citiesLayer');
+    const summaryCardsLayer = document.getElementById('summaryCardsLayer');
     const pinBox = document.getElementById('pinBox');
     const pinLabel = document.getElementById('pinLabel');
     const overlayTitle = document.getElementById('overlayTitle');
+    const overlayDateSubtitle = document.getElementById('overlayDateSubtitle');
     const overlayBadge = document.getElementById('overlayBadge');
     const overlayTime = document.getElementById('overlayTime');
     const exportStatus = document.getElementById('exportStatus');
+
+    // Summary Cards & City Pins Controls
+    const showSummaryCardsCheckbox = document.getElementById('showSummaryCardsCheckbox');
+    const showCityPinsCheckbox = document.getElementById('showCityPinsCheckbox');
+    let currentMetricsMap = {};
+    let allReferenceCities = [];
+
+    // Date Subtitle Controls
+    const showDateSubtitleCheckbox = document.getElementById('showDateSubtitleCheckbox');
+    const customDateSubtitleInput = document.getElementById('customDateSubtitleInput');
 
     // New Detection & Preset DOM Elements
     const showDetectionBoxesCheckbox = document.getElementById('showDetectionBoxesCheckbox');
@@ -380,6 +418,21 @@
       const dateStr = ecDt.toISOString().slice(0, 10);
       const timeStr = ecDt.toISOString().slice(11, 16);
       return { dateStr, timeStr, full: `${dateStr}  ${timeStr} ECT` };
+    }
+
+    // Format YYYY-MM-DD date string to formal Spanish text (matches VideoCompilerService)
+    function formatDateToSpanish(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      const [year, month, day] = parts.map(Number);
+      const d = new Date(year, month - 1, day, 12, 0, 0);
+      const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const months = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ];
+      return `${days[d.getDay()]}, ${day} de ${months[d.getMonth()]} del ${year}`;
     }
 
     // Measure precise text width in Space Grotesk
@@ -444,6 +497,173 @@
       });
     }
 
+    // Render Reference Cities Pins (Quito, Guayaquil, Cuenca, etc.)
+    function renderReferenceCities() {
+      const layer = document.getElementById('citiesLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+
+      const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
+      const showCities = showCityPinsCheckbox && showCityPinsCheckbox.checked && isEcuador;
+      if (!showCities || !allReferenceCities.length) return;
+
+      const bbox = currentGeometry.bbox;
+      allReferenceCities.forEach((city) => {
+        const { x, y } = projectGeoToPixel(city.lat, city.lon, bbox, 800, 800);
+        if (x >= -10 && x <= 810 && y >= -10 && y <= 810) {
+          const padX = 6;
+          const textW = measureTextWidth(city.label, 9.5, '600');
+          const boxWidth = textW + (padX * 2);
+          const boxHeight = 17;
+          let boxX = 6;
+          let boxY = -9;
+          let textX = 6 + padX;
+          let textY = 4.5;
+
+          if (city.placement === 'left') {
+            boxX = -boxWidth - 6;
+            boxY = -9;
+            textX = -boxWidth - 6 + padX;
+            textY = 4.5;
+          } else if (city.placement === 'right') {
+            boxX = 6;
+            boxY = -9;
+            textX = 6 + padX;
+            textY = 4.5;
+          } else if (city.placement === 'top') {
+            boxX = -boxWidth / 2;
+            boxY = -22;
+            textX = -boxWidth / 2 + padX;
+            textY = -8.5;
+          } else if (city.placement === 'bottom') {
+            boxX = -boxWidth / 2;
+            boxY = 6;
+            textX = -boxWidth / 2 + padX;
+            textY = 18.5;
+          } else if (city.placement === 'top-left') {
+            boxX = -boxWidth - 6;
+            boxY = -20;
+            textX = -boxWidth - 6 + padX;
+            textY = -7.5;
+          } else if (city.placement === 'top-right') {
+            boxX = 6;
+            boxY = -20;
+            textX = 6 + padX;
+            textY = -7.5;
+          } else if (city.placement === 'bottom-left') {
+            boxX = -boxWidth - 6;
+            boxY = 6;
+            textX = -boxWidth - 6 + padX;
+            textY = 18.5;
+          } else if (city.placement === 'bottom-right') {
+            boxX = 6;
+            boxY = 6;
+            textX = 6 + padX;
+            textY = 18.5;
+          }
+
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${x}, ${y})`);
+          g.innerHTML = `
+            <!-- Subtle city locator dot -->
+            <circle cx="0" cy="0" r="4.5" fill="#ffffff" fill-opacity="0.30" />
+            <circle cx="0" cy="0" r="2.5" fill="#ffffff" stroke="#0f172a" stroke-width="0.8" />
+            <!-- Compact clean city pill badge -->
+            <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="3.5"
+                  fill="#030712" fill-opacity="0.88" stroke="rgba(255, 255, 255, 0.28)" stroke-width="0.8" />
+            <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="9.5">${city.label}</text>
+          `;
+          layer.appendChild(g);
+        }
+      });
+    }
+
+    // Render Lower-Right 24h Summary Cards (Cuencas Hidroeléctricas & Por Región)
+    function renderSummaryCards() {
+      const layer = document.getElementById('summaryCardsLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+
+      const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
+      const showCards = showSummaryCardsCheckbox && showSummaryCardsCheckbox.checked && isEcuador;
+      if (!showCards) return;
+
+      const currentIso = (timestamps && timestamps[currentFrameIdx]) || '';
+      const m = currentMetricsMap[currentIso] || null;
+
+      const ccsPct = m ? m.ccs : 0;
+      const pautePct = m ? m.paute : 0;
+      const costaPct = m ? m.costa : 0;
+      const sierraPct = m ? m.sierra : 0;
+      const amazoniaPct = m ? m.amazonia : 0;
+
+      const basinsList = [
+        { label: 'Coca Codo Sinclair', value: m ? `${ccsPct.toFixed(1)}%` : '--', color: '#38bdf8', highlight: ccsPct >= 10.0 },
+        { label: 'Paute', value: m ? `${pautePct.toFixed(1)}%` : '--', color: '#a855f7', highlight: pautePct >= 15.0 }
+      ];
+
+      const regionsList = [
+        { label: 'Costa', value: m ? `${costaPct.toFixed(1)}%` : '--', color: '#38bdf8', highlight: costaPct >= 10.0 },
+        { label: 'Sierra', value: m ? `${sierraPct.toFixed(1)}%` : '--', color: '#34d399', highlight: sierraPct >= 10.0 },
+        { label: 'Amazonía', value: m ? `${amazoniaPct.toFixed(1)}%` : '--', color: '#f59e0b', highlight: amazoniaPct >= 10.0 }
+      ];
+
+      const cardW = 228;
+      const cardX = 800 - cardW - 20; // 552
+      const card2H = 22 + regionsList.length * 24 + 6; // 100
+      const card2Y = 800 - 60 - 12 - card2H; // 628
+      const card1H = 22 + basinsList.length * 24 + 6; // 76
+      const card1Y = card2Y - 8 - card1H; // 544
+
+      let card1Rows = '';
+      basinsList.forEach((item, idx) => {
+        const rowY = 34 + idx * 24;
+        const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+        card1Rows += `
+          <circle cx="12" cy="${rowY}" r="3.2" fill="${item.color}" />
+          <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${item.label}</text>
+          <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${item.value}</text>
+        `;
+      });
+
+      let card2Rows = '';
+      regionsList.forEach((item, idx) => {
+        const rowY = 34 + idx * 24;
+        const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+        card2Rows += `
+          <circle cx="12" cy="${rowY}" r="3.2" fill="${item.color}" />
+          <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${item.label}</text>
+          <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${item.value}</text>
+        `;
+      });
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.innerHTML = `
+        <!-- Card 1: Cuencas Hidroeléctricas -->
+        <g transform="translate(${cardX}, ${card1Y})">
+          <rect x="0" y="0" width="${cardW}" height="${card1H}" rx="7"
+                fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
+          <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
+          <circle cx="12" cy="11" r="3.2" fill="#38bdf8" />
+          <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">CUENCAS HIDROELÉCTRICAS</text>
+          <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+          ${card1Rows}
+        </g>
+
+        <!-- Card 2: Cobertura por Región -->
+        <g transform="translate(${cardX}, ${card2Y})">
+          <rect x="0" y="0" width="${cardW}" height="${card2H}" rx="7"
+                fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
+          <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
+          <circle cx="12" cy="11" r="3.2" fill="#f59e0b" />
+          <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">POR REGIÓN</text>
+          <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+          ${card2Rows}
+        </g>
+      `;
+      layer.appendChild(g);
+    }
+
     // Render Basin Storm Detection Boundary Boxes
     function renderDetectionBoxes() {
       const layer = document.getElementById('detectionBoxesLayer');
@@ -460,10 +680,11 @@
       const simCcs = simCcsStormCheckbox && simCcsStormCheckbox.checked;
       const simPaute = simPauteStormCheckbox && simPauteStormCheckbox.checked;
 
-      // Auto-detect storm state if currently viewing historical frame
+      // Auto-detect storm state if currently viewing historical frame or live metrics
       const currentIso = (timestamps && timestamps[currentFrameIdx]) || '';
-      let isCcsActive = simCcs;
-      let isPauteActive = simPaute;
+      const m = currentMetricsMap[currentIso] || null;
+      let isCcsActive = simCcs || Boolean(m && m.ccs >= 10.0);
+      let isPauteActive = simPaute || Boolean(m && m.paute >= 15.0);
 
       // Paute Oct 7-8 storm period: 2026-10-07T23:30Z to 2026-10-08T05:30Z
       if (currentIso >= '2026-10-07T23:30:00.000Z' && currentIso <= '2026-10-08T05:30:00.000Z') {
@@ -581,6 +802,45 @@
       }
     }
 
+    // Update formal Spanish date subtitle (matches VideoCompilerService customDateSubtitle)
+    function updateDateSubtitleDisplay() {
+      const topRect = document.getElementById('topHeaderRect');
+      const title = document.getElementById('overlayTitle');
+      if (!overlayDateSubtitle || !topRect || !title) return;
+
+      const showDate = showDateSubtitleCheckbox && showDateSubtitleCheckbox.checked;
+      let dateText = '';
+      if (showDate) {
+        if (customDateSubtitleInput && customDateSubtitleInput.value.trim()) {
+          dateText = customDateSubtitleInput.value.trim();
+        } else if (timestamps.length > 0 && timestamps[currentFrameIdx]) {
+          const { dateStr } = formatEcuadorTime(timestamps[currentFrameIdx]);
+          dateText = formatDateToSpanish(dateStr);
+        }
+      }
+
+      const showBadge = showPubBadgeCheckbox && showPubBadgeCheckbox.checked;
+
+      if (dateText) {
+        overlayDateSubtitle.textContent = dateText;
+        overlayDateSubtitle.style.display = 'block';
+        topRect.setAttribute('height', '78');
+        title.setAttribute('y', '31');
+        title.setAttribute('font-size', '18');
+      } else {
+        overlayDateSubtitle.style.display = 'none';
+        if (!showBadge) {
+          topRect.setAttribute('height', '68');
+          title.setAttribute('y', '38');
+          title.setAttribute('font-size', '20');
+        } else {
+          topRect.setAttribute('height', '92');
+          title.setAttribute('y', '34');
+          title.setAttribute('font-size', '20');
+        }
+      }
+    }
+
     // Fast Timestamp-only update for fluid playback ticks
     function updateTimestampDisplay() {
       if (timestamps.length > 0 && timestamps[currentFrameIdx]) {
@@ -588,6 +848,7 @@
         overlayTime.textContent = full;
         currentTimeDisplay.textContent = full;
       }
+      updateDateSubtitleDisplay();
     }
 
     // Full Overlay update (when changing basin, titles, or pins)
@@ -635,72 +896,21 @@
         singlePinGroup.style.display = 'none';
       }
 
-      // All Pins & Detection Boxes
+      // All Pins, Reference Cities, Detection Boxes & Summary Cards
       renderAllPins();
+      renderReferenceCities();
       renderDetectionBoxes();
+      renderSummaryCards();
     }
 
     const ALL_BASIN_KEYS = ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
     const ALL_LAYER_KEYS = ['esri_satellite', 'goes16_inamhi', 'persiann_24h', 'wrf_daily', 'blue_marble'];
     let isBackgroundPreloadRunning = false;
 
-    // Background Progressive Preloader for all basins and layers (Zero Buffering on Switch)
+    // Background Preloader (delegates to preloadSequence for active view)
     async function preloadAllViewsInBackground() {
-      if (isBackgroundPreloadRunning || !timestamps.length) return;
-      isBackgroundPreloadRunning = true;
-
-      const currentBasin = basinSelect.value;
-      const currentLayer = layerSelect.value;
-      const tasks = [];
-
-      // Priority 1: Other basins with current layer
-      for (const b of ALL_BASIN_KEYS) {
-        if (b !== currentBasin) {
-          for (const t of timestamps) {
-            tasks.push({ plantKey: b, layer: currentLayer, time: t });
-          }
-        }
-      }
-
-      // Priority 2: Other layers across all basins
-      for (const l of ALL_LAYER_KEYS) {
-        if (l !== currentLayer) {
-          for (const b of ALL_BASIN_KEYS) {
-            for (const t of timestamps) {
-              tasks.push({ plantKey: b, layer: l, time: t });
-            }
-          }
-        }
-      }
-
-      // Run 4 parallel background workers
-      const CONCURRENCY = 4;
-      let taskIdx = 0;
-
-      async function worker() {
-        while (taskIdx < tasks.length) {
-          const task = tasks[taskIdx++];
-          const cacheKey = `${task.plantKey}_${task.layer}_${task.time}`;
-
-          if (!frameImageCache.has(cacheKey)) {
-            await new Promise((resolve) => {
-              const img = new Image();
-              img.onload = () => {
-                frameImageCache.set(cacheKey, img);
-                resolve();
-              };
-              img.onerror = () => {
-                resolve();
-              };
-              img.src = `/api/satellite-frame?time=${encodeURIComponent(task.time)}&plantKey=${encodeURIComponent(task.plantKey)}&layer=${encodeURIComponent(task.layer)}&width=800&height=800`;
-            });
-          }
-        }
-      }
-
-      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-      preloadStatusText.textContent = `⚡ Todo en RAM (${frameImageCache.size} frames)`;
-      console.log(`[Preloader] Background preloading complete: ${frameImageCache.size} frames cached in browser RAM.`);
+      // Intentionally lightweight: prioritize active sequence preloading
+      preloadSequence();
     }
 
     // Preload Sequence for Current View
@@ -764,15 +974,17 @@
       if (img.complete && img.naturalWidth > 0) {
         ctx.clearRect(0, 0, 800, 800);
         ctx.drawImage(img, 0, 0, 800, 800);
-      } else {
+      } else if (!img.complete) {
         img.onload = () => {
-          ctx.clearRect(0, 0, 800, 800);
-          ctx.drawImage(img, 0, 0, 800, 800);
+          if (img.naturalWidth > 0) {
+            ctx.clearRect(0, 0, 800, 800);
+            ctx.drawImage(img, 0, 0, 800, 800);
+          }
         };
       }
     }
 
-    // Render Current Frame Instantly from Memory
+    // Render Current Frame Instantly from Memory (skips gaps gracefully)
     function renderCurrentFrame() {
       if (!timestamps.length) return;
       currentFrameIdx = parseInt(currentFrameIdx, 10);
@@ -789,29 +1001,43 @@
         drawCanvasFrame(cachedImg);
       } else {
         const directImg = new Image();
+        directImg.onload = () => {
+          drawCanvasFrame(directImg);
+        };
+        directImg.onerror = () => {
+          console.warn(`[Visualizer] Gap detectado en ${t}, saltando fotograma...`);
+          if (isPlaying) {
+            currentFrameIdx = (currentFrameIdx + 1) % timestamps.length;
+            renderCurrentFrame();
+          }
+        };
         directImg.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
         frameImageCache.set(cacheKey, directImg);
-        drawCanvasFrame(directImg);
       }
 
       scrubSlider.value = currentFrameIdx;
       frameCounter.textContent = `${currentFrameIdx + 1} / ${timestamps.length}`;
       updateTimestampDisplay();
       renderDetectionBoxes();
+      renderSummaryCards();
     }
 
     // Fetch Timestamps & Geometries
     async function loadData() {
       try {
-        const [geoRes, timeRes, pinsRes] = await Promise.all([
+        const preset = (presetSelect && presetSelect.value) ? presetSelect.value : 'today';
+        const [geoRes, timeRes, pinsRes, citiesRes] = await Promise.all([
           fetch('/api/basin-geometries').then(r => r.json()),
-          fetch('/api/satellite-timestamps?limit=18').then(r => r.json()),
-          fetch('/api/all-hydro-pins').then(r => r.json())
+          fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}`).then(r => r.json()),
+          fetch('/api/all-hydro-pins').then(r => r.json()),
+          fetch('/api/reference-cities').then(r => r.json())
         ]);
 
         geometriesMap = geoRes;
         timestamps = timeRes.timestamps || [];
+        currentMetricsMap = timeRes.metrics || {};
         allHydroPins = pinsRes || [];
+        allReferenceCities = citiesRes || [];
 
         const maxIdx = Math.max(0, timestamps.length - 1);
         scrubSlider.max = maxIdx;
@@ -844,7 +1070,7 @@
         customTitleInput.value = isEcuador ? '🌦️ Pronóstico de Lluvias de Hoy' : `🌦️ ${basinName} • Pronóstico de Lluvias`;
         customBadgeInput.value = 'Pronóstico INAMHI';
       } else {
-        customTitleInput.value = isEcuador ? 'Vista Satelital En Vivo' : `⚡ ${basinName} • Vista Satelital`;
+        customTitleInput.value = isEcuador ? 'Vista Satelital GOES-16 • Ecuador Continental' : `⚡ ${basinName} • Vista Satelital`;
         customBadgeInput.value = isEcuador ? 'GOES-16 • Banda 13 IR (10.3 µm)' : (currentGeometry?.subtitle || 'GOES-16 • Banda 13 IR');
       }
 
@@ -988,6 +1214,10 @@
     if (showPubBadgeCheckbox) showPubBadgeCheckbox.addEventListener('change', updateOverlay);
     if (simCcsStormCheckbox) simCcsStormCheckbox.addEventListener('change', updateOverlay);
     if (simPauteStormCheckbox) simPauteStormCheckbox.addEventListener('change', updateOverlay);
+    if (showDateSubtitleCheckbox) showDateSubtitleCheckbox.addEventListener('change', updateOverlay);
+    if (customDateSubtitleInput) customDateSubtitleInput.addEventListener('input', updateOverlay);
+    if (showSummaryCardsCheckbox) showSummaryCardsCheckbox.addEventListener('change', updateOverlay);
+    if (showCityPinsCheckbox) showCityPinsCheckbox.addEventListener('change', updateOverlay);
 
     function applyFitScreen() {
       if (!fitScreenCheckbox) return;
@@ -1012,6 +1242,7 @@
         const res = await fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}`);
         const data = await res.json();
         timestamps = data.timestamps || [];
+        currentMetricsMap = data.metrics || {};
         const maxIdx = Math.max(0, timestamps.length - 1);
         scrubSlider.max = maxIdx;
         currentFrameIdx = maxIdx;
@@ -1032,14 +1263,30 @@
         const speedVal = parseInt(speedSelect.value, 10) || 125;
         const fps = Math.round(1000 / speedVal) || 8;
 
+        const isSimCcs = simCcsStormCheckbox && simCcsStormCheckbox.checked;
+        const isSimPaute = simPauteStormCheckbox && simPauteStormCheckbox.checked;
+        const activeBasinKeys = [];
+        if (isSimCcs) activeBasinKeys.push('cocaCodoSinclair');
+        if (isSimPaute) activeBasinKeys.push('paute');
+
+        const dateSubtitleVal = showDateSubtitleCheckbox && showDateSubtitleCheckbox.checked
+          ? (customDateSubtitleInput.value.trim() || (timestamps.length && timestamps[currentFrameIdx] ? formatDateToSpanish(formatEcuadorTime(timestamps[currentFrameIdx]).dateStr) : ''))
+          : undefined;
+
         const payload = {
           plantKey: basinSelect.value,
           layer: layerSelect.value,
+          preset: presetSelect ? presetSelect.value : 'today',
           customTitle: customTitleInput.value,
           customBadge: customBadgeInput.value,
+          customDateSubtitle: dateSubtitleVal,
           pinLabel: pinLabelInput.value,
           showSinglePin: showSinglePinCheckbox.checked,
           showAllPins: showAllPinsCheckbox.checked,
+          showCityPins: showCityPinsCheckbox ? showCityPinsCheckbox.checked : true,
+          showSummaryCards: showSummaryCardsCheckbox ? showSummaryCardsCheckbox.checked : true,
+          showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
+          activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
           createMp4: format === 'mp4',
           createGif: format === 'gif',
           framerate: fps

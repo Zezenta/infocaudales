@@ -66,15 +66,18 @@ export class SatelliteMapService {
    * Fetches available GOES-16 satellite timestamps from GEOGLOWS GeoServer GetCapabilities.
    * Returns sorted array of ISO timestamp strings (oldest to newest).
    */
-  public async fetchGoesTimestamps(options: { limit?: number } = {}): Promise<string[]> {
+  public async fetchGoesTimestamps(options: { limit?: number; layer?: string } = {}): Promise<string[]> {
     const limit = options.limit ?? 18;
+    const layerName = options.layer || 'goes_abi_l2_cmipf_13';
     const capabilitiesUrl = `${this.geoserverGoesUrl}?service=WMS&version=1.1.1&request=GetCapabilities`;
 
     try {
       const response = await axios.get(capabilitiesUrl, { timeout: 15000 });
       if (response.status === 200 && typeof response.data === 'string') {
         const xml = response.data;
-        const timeMatch = xml.match(/<Extent name="time"[^>]*>([\s\S]*?)<\/Extent>/i) ||
+        const layerBlockRegex = new RegExp(`<Layer[\\s\\S]*?<Name>(?:goes:)?${layerName}<\\/Name>[\\s\\S]*?<Extent name="time"[^>]*>([\\s\\S]*?)<\\/Extent>`, 'i');
+        const timeMatch = xml.match(layerBlockRegex) ||
+                          xml.match(/<Extent name="time"[^>]*>([\s\S]*?)<\/Extent>/i) ||
                           xml.match(/<Dimension name="time"[^>]*>([\s\S]*?)<\/Dimension>/i);
 
         if (timeMatch && timeMatch[1]) {
@@ -92,11 +95,11 @@ export class SatelliteMapService {
         }
       }
     } catch (error: any) {
-      systemLogger.warn(`[SatelliteMapService] Failed to fetch GOES capabilities from GeoServer: ${error?.message || error}`);
+      systemLogger.debug(`[SatelliteMapService] Failed to fetch GOES capabilities from GeoServer: ${error?.message || error}`);
     }
 
     // Fallback: Generate synthetic 10-minute intervals ending at latest 10-min mark
-    systemLogger.info('[SatelliteMapService] Generating synthetic 10-min interval timestamps as fallback...');
+    systemLogger.debug('[SatelliteMapService] Generating synthetic 10-min interval timestamps as fallback...');
     return this.generateFallbackTimestamps(limit);
   }
 
@@ -254,7 +257,7 @@ export class SatelliteMapService {
       }
       throw new Error(`Invalid response status: ${response.status}`);
     } catch (error: any) {
-      systemLogger.error(`[SatelliteMapService] Failed to fetch map tile: ${error?.message || error}`);
+      systemLogger.debug(`[SatelliteMapService] Failed to fetch map tile: ${error?.message || error}`);
       throw error;
     }
   }

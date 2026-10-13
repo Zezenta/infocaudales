@@ -126,7 +126,7 @@ export class SatelliteArchiverService {
           `[SatelliteArchiver] Archived frame: ${dateEcuador} ${timeEcuador} ECT (${timeIso}) -> ${filePath}`
         );
       } catch (err: any) {
-        systemLogger.warn(
+        systemLogger.debug(
           `[SatelliteArchiver] Could not archive frame ${timeIso} (GeoServer might be indexing): ${err?.message || err}`
         );
       }

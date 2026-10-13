@@ -171,6 +171,110 @@ export function analyzeStormCloudCoverage(pngBuf: Buffer): number {
   return parseFloat(effectiveCoverage.toFixed(1));
 }
 
+/**
+ * Analyzes cold cloud coverage for a specific basin directly from an Ecuador-wide satellite PNG frame.
+ */
+export function analyzeBasinCoverageFromEcuadorFrame(
+  ecuadorPngBuf: Buffer,
+  plantKey: string = 'cocaCodoSinclair'
+): number {
+  const basin = BASIN_GEOMETRIES[plantKey];
+  const ecBasin = BASIN_GEOMETRIES.ecuador;
+  if (!basin || !ecBasin || !ecuadorPngBuf || ecuadorPngBuf.length < 24) return 0;
+
+  // Read PNG dimensions and chunks
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  let plte: Buffer | null = null;
+  const idatChunks: Buffer[] = [];
+
+  while (offset < ecuadorPngBuf.length) {
+    const len = ecuadorPngBuf.readUInt32BE(offset);
+    const type = ecuadorPngBuf.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IHDR') {
+      width = ecuadorPngBuf.readUInt32BE(offset + 8);
+      height = ecuadorPngBuf.readUInt32BE(offset + 12);
+      colorType = ecuadorPngBuf.readUInt8(offset + 17);
+    } else if (type === 'PLTE') {
+      plte = ecuadorPngBuf.subarray(offset + 8, offset + 8 + len);
+    } else if (type === 'IDAT') {
+      idatChunks.push(ecuadorPngBuf.subarray(offset + 8, offset + 8 + len));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset += 12 + len;
+  }
+
+  if (width === 0 || height === 0 || idatChunks.length === 0) return 0;
+
+  const inflated = zlib.inflateSync(Buffer.concat(idatChunks));
+  const bpp = colorType === 6 ? 4 : (colorType === 3 ? 1 : 3);
+  const pixels = unfilterPngScanlines(inflated, width, height, bpp);
+
+  // Compute pixel bounding box for this basin inside Ecuador frame
+  const ecMinLon = ecBasin.bbox[0];
+  const ecMinLat = ecBasin.bbox[1];
+  const ecMaxLon = ecBasin.bbox[2];
+  const ecMaxLat = ecBasin.bbox[3];
+
+  const lonSpan = ecMaxLon - ecMinLon;
+  const latSpan = ecMaxLat - ecMinLat;
+
+  const minX = Math.max(0, Math.floor(((basin.bbox[0] - ecMinLon) / lonSpan) * width));
+  const maxX = Math.min(width - 1, Math.ceil(((basin.bbox[2] - ecMinLon) / lonSpan) * width));
+  const minY = Math.max(0, Math.floor(((ecMaxLat - basin.bbox[3]) / latSpan) * height));
+  const maxY = Math.min(height - 1, Math.ceil(((ecMaxLat - basin.bbox[1]) / latSpan) * height));
+
+  let convectiveCount = 0;
+  let severeCount = 0;
+  let totalBasinPixels = 0;
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      totalBasinPixels++;
+      const pIdx = (y * width + x) * bpp;
+      let r = 0, g = 0, b = 0;
+      if (colorType === 3 && plte) {
+        const idx = pixels[pIdx];
+        const pOff = idx * 3;
+        if (pOff + 2 < plte.length) {
+          r = plte[pOff];
+          g = plte[pOff + 1];
+          b = plte[pOff + 2];
+        }
+      } else {
+        r = pixels[pIdx];
+        g = pixels[pIdx + 1];
+        b = pixels[pIdx + 2];
+      }
+
+      // Severe Convective Cores: Yellow (-60°C), Red (-70°C to -85°C), White Core (-90°C)
+      const isYellow = (r > 160 && g > 160 && b < 120);
+      const isRed = (r > 130 && g < 100 && b < 100);
+      const isWhite = (r > 210 && g > 210 && b > 210);
+      const isSevere = isYellow || isRed || isWhite;
+
+      // Active Convective Rain: Green (-48°C to -58°C)
+      const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
+
+      if (isSevere) {
+        severeCount++;
+        convectiveCount++;
+      } else if (isGreen) {
+        convectiveCount++;
+      }
+    }
+  }
+
+  if (totalBasinPixels === 0) return 0;
+  const convPct = (convectiveCount / totalBasinPixels) * 100;
+  const sevPct = (severeCount / totalBasinPixels) * 100;
+  const effectiveCoverage = convPct + (sevPct * 1.5);
+  return parseFloat(effectiveCoverage.toFixed(1));
+}
+
 export const DEFAULT_STORM_THRESHOLDS: Record<string, number> = {
   cocaCodoSinclair: 10.0,
   paute: 8.0,
@@ -245,7 +349,88 @@ export class RainMonitorService {
       }
     }
 
+    // Fallback: Try most recent timestamps verified in local satellite_archive
     if (!tileBuffer) {
+      try {
+        const archivedRows = db.prepare(`
+          SELECT timestamp_iso FROM satellite_archive
+          ORDER BY timestamp_iso DESC
+          LIMIT 6
+        `).all() as Array<{ timestamp_iso: string }>;
+
+        for (const row of archivedRows) {
+          try {
+            tileBuffer = await this.satelliteService.fetchMapTile({
+              layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
+              bbox: basin.bbox,
+              time: row.timestamp_iso,
+              width: tileResolution,
+              height: tileResolution,
+              format: 'image/png'
+            });
+            selectedTimestamp = row.timestamp_iso;
+            break;
+          } catch (err: any) {
+            continue;
+          }
+        }
+      } catch (err: any) {
+        // ignore db error
+      }
+    }
+
+    if (!tileBuffer) {
+      // 1. Fallback: SQLite satellite_archive record (clean INAMHI GeoServer frame with provinces)
+      try {
+        const localArchived = db.prepare(`
+          SELECT timestamp_iso, file_path FROM satellite_archive
+          WHERE file_size_bytes > 50000
+          ORDER BY timestamp_iso DESC
+          LIMIT 1
+        `).get() as { timestamp_iso: string; file_path: string } | undefined;
+
+        if (localArchived && fs.existsSync(localArchived.file_path)) {
+          const fileBuf = fs.readFileSync(localArchived.file_path);
+          const coveragePct = analyzeBasinCoverageFromEcuadorFrame(fileBuf, plantKey);
+          return { coveragePct, timestampIso: localArchived.timestamp_iso };
+        }
+      } catch (archErr) {}
+
+      // 2. Fallback: Check disk archive directory directly
+      try {
+        const archiveBase = path.join(process.cwd(), 'data', 'satellite_archive');
+        if (fs.existsSync(archiveBase)) {
+          const subdirs = fs.readdirSync(archiveBase).filter(d => fs.statSync(path.join(archiveBase, d)).isDirectory()).sort().reverse();
+          for (const sub of subdirs) {
+            const files = fs.readdirSync(path.join(archiveBase, sub))
+              .filter(f => f.endsWith('.png') && fs.statSync(path.join(archiveBase, sub, f)).size > 50000)
+              .sort()
+              .reverse();
+            if (files.length > 0) {
+              const latestPath = path.join(archiveBase, sub, files[0]);
+              const fileBuf = fs.readFileSync(latestPath);
+              const coveragePct = analyzeBasinCoverageFromEcuadorFrame(fileBuf, plantKey);
+              return { coveragePct, timestampIso: new Date().toISOString() };
+            }
+          }
+        }
+      } catch (diskErr) {}
+
+      // 3. Fallback: NASA GIBS tile
+      try {
+        tileBuffer = await this.satelliteService.fetchMapTile({
+          source: 'nasa_gibs',
+          bbox: basin.bbox,
+          width: tileResolution,
+          height: tileResolution,
+          format: 'image/png'
+        });
+        if (tileBuffer && tileBuffer.length > 50000) {
+          const coveragePct = analyzeStormCloudCoverage(tileBuffer);
+          return { coveragePct, timestampIso: new Date().toISOString() };
+        }
+      } catch (gibsErr) {}
+
       throw new Error(`[RainMonitor] Unable to fetch valid satellite tile for basin "${plantKey}"`);
     }
 
@@ -795,6 +980,30 @@ export class RainMonitorService {
       }
     }
     return out;
+  }
+
+  /**
+   * Computes comprehensive convective rain coverage metrics for an Ecuador frame buffer:
+   * cuencas (CCS, Paute) and regiones (Costa, Sierra, Amazonía).
+   */
+  public computeEcuadorFrameMetrics(buffer: Buffer): {
+    ccs: number;
+    paute: number;
+    costa: number;
+    sierra: number;
+    amazonia: number;
+  } {
+    try {
+      const img = this.decodePng(buffer);
+      const px = this.unfilterScanlines(img.raw, img.width, img.height);
+      const ecuadorBbox = BASIN_GEOMETRIES.ecuador.bbox;
+      const ccs = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.cocaCodoSinclair.bbox);
+      const paute = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.paute.bbox);
+      const regions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox);
+      return { ccs, paute, ...regions };
+    } catch (err) {
+      return { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
+    }
   }
 
   /**
