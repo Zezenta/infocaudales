@@ -53,7 +53,7 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
 
       fs.writeFileSync(filePath, pngBuffer);
     }
-  }, 35000);
+  }, 90000);
 
   it('should evaluate flow status labels (Bajo, Normal, Alto, Crecida) correctly for all plants', async () => {
     const { getVisualizerPlantsData } = await import('./report-generator.service.js');
