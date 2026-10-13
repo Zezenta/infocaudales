@@ -891,9 +891,9 @@ async function runRainMonitoringCycle() {
 
   const autoPublish = process.env.AUTO_PUBLISH_RAIN_ALERTS !== 'false';
 
-  // 1. Sync latest satellite frame to SQLite archive
+  // 1. Sync latest satellite frame to SQLite archive (up to rolling window of 18 frames / ~3h to self-heal any gaps)
   try {
-    await satelliteArchiverService.archiveLatestFrames({ limit: 2, plantKey: 'ecuador' });
+    await satelliteArchiverService.archiveLatestFrames({ limit: 18, plantKey: 'ecuador' });
   } catch (archErr: any) {
     systemLogger.warn(`[RainMonitor Cron] Satellite archival warning: ${archErr?.message || archErr}`);
   }
@@ -980,6 +980,19 @@ sundayAccuracyCronJob.start();
 rainMonitoringCronJob.start();
 dailyVideoCleanupCronJob.start();
 dailySatelliteTimelapseCronJob.start();
+
+// Self-healing backfill on boot: retrieve all available frames in GeoServer's rolling window (~3h)
+if (process.env.ENABLE_RAIN_MONITOR !== 'false') {
+  console.log('[Startup] Executing initial satellite backfill sync (up to 18 frames)...');
+  satelliteArchiverService
+    .archiveLatestFrames({ limit: 18, plantKey: 'ecuador' })
+    .then((synced) => {
+      console.log(`[Startup] Initial satellite archival sync completed: ${synced.downloaded} new frame(s) downloaded (${synced.scanned} scanned, ${synced.skipped} skipped).`);
+    })
+    .catch((err) => {
+      console.warn('[Startup] Initial satellite archival sync warning:', err?.message || err);
+    });
+}
 
 if (process.env.FORCE_PUBLISH === 'true') {
   let forcePlants = TARGET_PLANT_KEYS;

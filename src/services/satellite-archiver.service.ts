@@ -43,6 +43,108 @@ export class SatelliteArchiverService {
   }
 
   /**
+   * Archives a single frame by timestamp from GeoServer.
+   */
+  public async archiveSingleFrame(
+    timeIso: string,
+    plantKey: string = 'ecuador'
+  ): Promise<'DOWNLOADED' | 'SKIPPED' | 'FAILED'> {
+    const basin = BASIN_GEOMETRIES[plantKey] || BASIN_GEOMETRIES.ecuador;
+
+    const existing = db.prepare(`
+      SELECT timestamp_iso, file_path FROM satellite_archive
+      WHERE timestamp_iso = ?
+    `).get(timeIso) as { timestamp_iso: string; file_path: string } | undefined;
+
+    if (existing && fs.existsSync(existing.file_path)) {
+      return 'SKIPPED';
+    }
+
+    const { dateEcuador, timeEcuador } = this.satelliteService.formatEcuadorTimestamp(timeIso);
+    const yearMonth = dateEcuador.slice(0, 7); // e.g., '2026-10'
+    const targetSubdir = path.join(this.archiveDir, yearMonth);
+    if (!fs.existsSync(targetSubdir)) {
+      fs.mkdirSync(targetSubdir, { recursive: true });
+    }
+
+    const safeTs = timeIso.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(targetSubdir, `goes16_${plantKey}_${safeTs}.png`);
+    const metaPath = path.join(targetSubdir, `goes16_${plantKey}_${safeTs}.json`);
+
+    let buffer: Buffer | null = null;
+    let lastErr: any = null;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const tile = await this.satelliteService.fetchMapTile({
+          layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
+          bbox: basin.bbox,
+          time: timeIso,
+          width: 800,
+          height: 800,
+          format: 'image/png'
+        });
+
+        if (tile && tile.length > 0) {
+          buffer = tile;
+          break;
+        }
+      } catch (err: any) {
+        lastErr = err;
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 1200));
+        }
+      }
+    }
+
+    if (!buffer) {
+      systemLogger.debug(
+        `[SatelliteArchiver] Could not archive frame ${timeIso} from GeoServer after 3 attempts: ${lastErr?.message || lastErr}`
+      );
+      return 'FAILED';
+    }
+
+    try {
+      fs.writeFileSync(filePath, buffer);
+      fs.writeFileSync(
+        metaPath,
+        JSON.stringify(
+          {
+            timestampIso: timeIso,
+            dateEcuador,
+            timeEcuador,
+            plantKey,
+            bbox: basin.bbox,
+            sizeBytes: buffer.length,
+            source: 'geoserver',
+            archivedAt: Date.now()
+          },
+          null,
+          2
+        )
+      );
+
+      db.prepare(`
+        INSERT INTO satellite_archive (
+          timestamp_iso, date_ecuador, time_ecuador, plant_key,
+          file_path, file_size_bytes, recorded_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(timestamp_iso) DO UPDATE SET
+          file_path = excluded.file_path,
+          file_size_bytes = excluded.file_size_bytes
+      `).run(timeIso, dateEcuador, timeEcuador, plantKey, filePath, buffer.length, Date.now());
+
+      systemLogger.info(
+        `[SatelliteArchiver] Archived frame: ${dateEcuador} ${timeEcuador} ECT (${timeIso}) -> ${filePath}`
+      );
+      return 'DOWNLOADED';
+    } catch (writeErr: any) {
+      systemLogger.error(`[SatelliteArchiver] Failed writing frame ${timeIso}: ${writeErr?.message || writeErr}`);
+      return 'FAILED';
+    }
+  }
+
+  /**
    * Fetches latest timestamps from GeoServer and archives any frames not yet saved locally.
    */
   public async archiveLatestFrames(options: ArchiveLatestOptions = {}): Promise<{
@@ -53,90 +155,42 @@ export class SatelliteArchiverService {
   }> {
     const limit = options.limit || 18;
     const plantKey = options.plantKey || 'ecuador';
-    const basin = BASIN_GEOMETRIES[plantKey] || BASIN_GEOMETRIES.ecuador;
 
-    const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit });
+    let downloadedCount = 0;
+    let skippedCount = 0;
+    let scannedCount = 0;
+    let newestTs: string | null = null;
+
+    let timestamps: string[] = [];
+    try {
+      timestamps = await this.satelliteService.fetchGoesTimestamps({ limit, fallbackToSynthetic: false });
+    } catch (err: any) {
+      systemLogger.warn(`[SatelliteArchiver] Failed to fetch GOES timestamps from GeoServer: ${err?.message || err}`);
+      return { scanned: 0, downloaded: 0, skipped: 0, newestTimestamp: null };
+    }
+
     if (!timestamps || timestamps.length === 0) {
       return { scanned: 0, downloaded: 0, skipped: 0, newestTimestamp: null };
     }
 
-    // Process from oldest to newest
+    newestTs = timestamps[0];
     const chronological = [...timestamps].reverse();
-    let downloadedCount = 0;
-    let skippedCount = 0;
 
     for (const timeIso of chronological) {
-      const existing = db.prepare(`
-        SELECT timestamp_iso, file_path FROM satellite_archive
-        WHERE timestamp_iso = ?
-      `).get(timeIso) as { timestamp_iso: string; file_path: string } | undefined;
-
-      if (existing && fs.existsSync(existing.file_path)) {
-        skippedCount++;
-        continue;
-      }
-
-      try {
-        const buffer = await this.satelliteService.fetchMapTile({
-          layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
-          bbox: basin.bbox,
-          time: timeIso,
-          width: 800,
-          height: 800,
-          format: 'image/png'
-        });
-
-        const { dateEcuador, timeEcuador } = this.satelliteService.formatEcuadorTimestamp(timeIso);
-        const yearMonth = dateEcuador.slice(0, 7); // e.g., '2026-10'
-        const targetSubdir = path.join(this.archiveDir, yearMonth);
-        if (!fs.existsSync(targetSubdir)) {
-          fs.mkdirSync(targetSubdir, { recursive: true });
-        }
-
-        const safeTs = timeIso.replace(/[^a-zA-Z0-9_-]/g, '_');
-        const filePath = path.join(targetSubdir, `goes16_${plantKey}_${safeTs}.png`);
-        const metaPath = path.join(targetSubdir, `goes16_${plantKey}_${safeTs}.json`);
-
-        fs.writeFileSync(filePath, buffer);
-        fs.writeFileSync(
-          metaPath,
-          JSON.stringify({
-            timestampIso: timeIso,
-            dateEcuador,
-            timeEcuador,
-            plantKey,
-            bbox: basin.bbox,
-            sizeBytes: buffer.length,
-            archivedAt: Date.now()
-          }, null, 2)
-        );
-
-        db.prepare(`
-          INSERT INTO satellite_archive (
-            timestamp_iso, date_ecuador, time_ecuador, plant_key,
-            file_path, file_size_bytes, recorded_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(timestamp_iso) DO UPDATE SET
-            file_path = excluded.file_path,
-            file_size_bytes = excluded.file_size_bytes
-        `).run(timeIso, dateEcuador, timeEcuador, plantKey, filePath, buffer.length, Date.now());
-
+      scannedCount++;
+      const res = await this.archiveSingleFrame(timeIso, plantKey);
+      if (res === 'DOWNLOADED') {
         downloadedCount++;
-        systemLogger.info(
-          `[SatelliteArchiver] Archived frame: ${dateEcuador} ${timeEcuador} ECT (${timeIso}) -> ${filePath}`
-        );
-      } catch (err: any) {
-        systemLogger.debug(
-          `[SatelliteArchiver] Could not archive frame ${timeIso} (GeoServer might be indexing): ${err?.message || err}`
-        );
+      } else if (res === 'SKIPPED') {
+        skippedCount++;
       }
     }
 
     return {
-      scanned: timestamps.length,
+      scanned: scannedCount,
       downloaded: downloadedCount,
       skipped: skippedCount,
-      newestTimestamp: timestamps[0] || null
+      newestTimestamp: newestTs
     };
   }
 

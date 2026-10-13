@@ -66,41 +66,51 @@ export class SatelliteMapService {
    * Fetches available GOES-16 satellite timestamps from GEOGLOWS GeoServer GetCapabilities.
    * Returns sorted array of ISO timestamp strings (oldest to newest).
    */
-  public async fetchGoesTimestamps(options: { limit?: number; layer?: string } = {}): Promise<string[]> {
+  public async fetchGoesTimestamps(options: { limit?: number; layer?: string; fallbackToSynthetic?: boolean } = {}): Promise<string[]> {
     const limit = options.limit ?? 18;
     const layerName = options.layer || 'goes_abi_l2_cmipf_13';
+    const fallbackToSynthetic = options.fallbackToSynthetic ?? true;
     const capabilitiesUrl = `${this.geoserverGoesUrl}?service=WMS&version=1.1.1&request=GetCapabilities`;
 
-    try {
-      const response = await axios.get(capabilitiesUrl, { timeout: 15000 });
-      if (response.status === 200 && typeof response.data === 'string') {
-        const xml = response.data;
-        const layerBlockRegex = new RegExp(`<Layer[\\s\\S]*?<Name>(?:goes:)?${layerName}<\\/Name>[\\s\\S]*?<Extent name="time"[^>]*>([\\s\\S]*?)<\\/Extent>`, 'i');
-        const timeMatch = xml.match(layerBlockRegex) ||
-                          xml.match(/<Extent name="time"[^>]*>([\s\S]*?)<\/Extent>/i) ||
-                          xml.match(/<Dimension name="time"[^>]*>([\s\S]*?)<\/Dimension>/i);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await axios.get(capabilitiesUrl, { timeout: 15000 });
+        if (response.status === 200 && typeof response.data === 'string') {
+          const xml = response.data;
+          const layerBlockRegex = new RegExp(`<Layer[\\s\\S]*?<Name>(?:goes:)?${layerName}<\\/Name>[\\s\\S]*?<Extent name="time"[^>]*>([\\s\\S]*?)<\\/Extent>`, 'i');
+          const timeMatch = xml.match(layerBlockRegex) ||
+                            xml.match(/<Extent name="time"[^>]*>([\s\S]*?)<\/Extent>/i) ||
+                            xml.match(/<Dimension name="time"[^>]*>([\s\S]*?)<\/Dimension>/i);
 
-        if (timeMatch && timeMatch[1]) {
-          const rawTimes = timeMatch[1]
-            .trim()
-            .split(',')
-            .map(t => t.trim())
-            .filter(t => Boolean(t) && !isNaN(Date.parse(t)));
+          if (timeMatch && timeMatch[1]) {
+            const rawTimes = timeMatch[1]
+              .trim()
+              .split(',')
+              .map(t => t.trim())
+              .filter(t => Boolean(t) && !isNaN(Date.parse(t)));
 
-          rawTimes.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+            rawTimes.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
-          if (rawTimes.length > 0) {
-            return limit > 0 ? rawTimes.slice(-limit) : rawTimes;
+            if (rawTimes.length > 0) {
+              return limit > 0 ? rawTimes.slice(-limit) : rawTimes;
+            }
           }
         }
+      } catch (error: any) {
+        if (attempt === 2) {
+          systemLogger.debug(`[SatelliteMapService] Failed to fetch GOES capabilities from GeoServer: ${error?.message || error}`);
+        } else {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
       }
-    } catch (error: any) {
-      systemLogger.debug(`[SatelliteMapService] Failed to fetch GOES capabilities from GeoServer: ${error?.message || error}`);
     }
 
-    // Fallback: Generate synthetic 10-minute intervals ending at latest 10-min mark
-    systemLogger.debug('[SatelliteMapService] Generating synthetic 10-min interval timestamps as fallback...');
-    return this.generateFallbackTimestamps(limit);
+    if (fallbackToSynthetic) {
+      systemLogger.debug('[SatelliteMapService] Generating synthetic 10-min interval timestamps as fallback...');
+      return this.generateFallbackTimestamps(limit);
+    }
+
+    return [];
   }
 
   /**

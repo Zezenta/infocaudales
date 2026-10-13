@@ -6,6 +6,7 @@ import path from 'path';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 import { BASIN_GEOMETRIES, ALL_HYDRO_PLANTS_PINS, DEFAULT_REFERENCE_CITIES } from '../data/basin-geometries.js';
 import { SatelliteMapService } from '../services/satellite-map.service.js';
+import { SatelliteArchiverService } from '../services/satellite-archiver.service.js';
 import { VideoCompilerService } from '../services/video-compiler.service.js';
 import { RainMonitorService } from '../services/rain-monitor.service.js';
 import { db } from '../utils/db.js';
@@ -18,6 +19,7 @@ const HTML_FILE = path.join(TEMPLATE_DIR, 'hydro-card.html');
 const CSS_FILE = path.join(TEMPLATE_DIR, 'hydro-card.css');
 
 const satelliteMapService = new SatelliteMapService();
+const satelliteArchiverService = new SatelliteArchiverService(satelliteMapService);
 const videoCompilerService = new VideoCompilerService(satelliteMapService);
 const rainMonitorService = new RainMonitorService(satelliteMapService, videoCompilerService);
 
@@ -92,103 +94,28 @@ async function syncRecentVisualizerFrames(): Promise<void> {
   if (isSyncingFrames) return;
   isSyncingFrames = true;
   try {
-    const lastRow = db.prepare(`
-      SELECT timestamp_iso FROM satellite_archive
-      WHERE date_ecuador = date('now', '-5 hours')
-      ORDER BY timestamp_iso DESC LIMIT 1
-    `).get() as { timestamp_iso: string } | undefined;
+    await satelliteArchiverService.archiveLatestFrames({ limit: 18, plantKey: 'ecuador' });
 
-    const nowMs = Date.now();
-    const latest10MinMs = Math.floor(nowMs / (10 * 60 * 1000)) * (10 * 60 * 1000);
-    const startMs = lastRow ? (new Date(lastRow.timestamp_iso).getTime() + 10 * 60 * 1000) : (latest10MinMs - 3 * 3600 * 1000);
+    // Compute metrics for any frames in today's archive that don't yet have metrics
+    const uncomputed = db.prepare(`
+      SELECT a.timestamp_iso, a.file_path
+      FROM satellite_archive a
+      LEFT JOIN satellite_frame_metrics m ON a.timestamp_iso = m.timestamp_iso
+      WHERE a.date_ecuador = date('now', '-5 hours') AND m.timestamp_iso IS NULL
+    `).all() as Array<{ timestamp_iso: string; file_path: string }>;
 
-    if (startMs > latest10MinMs) return;
-
-    // Fetch provincias overlay once
-    const provBuf = await satelliteMapService.fetchMapTile({
-      source: 'geoserver',
-      layers: 'ecuador:provincias',
-      plantKey: 'ecuador',
-      transparent: true,
-      width: 800,
-      height: 800
-    });
-    const provPath = '/tmp/prov_overlay_800.png';
-    fs.writeFileSync(provPath, provBuf);
-
-    const yearMonth = new Date(nowMs - 5 * 3600 * 1000).toISOString().slice(0, 7);
-    const targetDir = path.join(process.cwd(), 'data/satellite_archive', yearMonth);
-    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-
-    for (let ms = startMs; ms <= latest10MinMs; ms += 10 * 60 * 1000) {
-      const timeIso = new Date(ms).toISOString();
-      const existing = db.prepare('SELECT file_path FROM satellite_archive WHERE timestamp_iso = ?').get(timeIso) as any;
-      if (existing && fs.existsSync(existing.file_path)) continue;
-
-      try {
-        const gibsBuf = await satelliteMapService.fetchMapTile({
-          source: 'nasa_gibs',
-          layers: 'GOES-East_ABI_Band13_Clean_Infrared',
-          plantKey: 'ecuador',
-          time: timeIso,
-          width: 800,
-          height: 800
-        });
-
-        // Skip gap if empty/transparent tile
-        if (gibsBuf.length < 20000) continue;
-
-        const tempGibsPath = `/tmp/gibs_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-        fs.writeFileSync(tempGibsPath, gibsBuf);
-
-        const safeTs = timeIso.replace(/[^a-zA-Z0-9_-]/g, '_');
-        const outFilePath = path.join(targetDir, `goes16_ecuador_${safeTs}.png`);
-        const metaPath = path.join(targetDir, `goes16_ecuador_${safeTs}.json`);
-
-        await execFileAsync('ffmpeg', [
-          '-y',
-          '-i', tempGibsPath,
-          '-i', provPath,
-          '-filter_complex', '[0:v][1:v]overlay=0:0[out]',
-          '-map', '[out]',
-          outFilePath
-        ]);
-
-        try { fs.unlinkSync(tempGibsPath); } catch (e) {}
-
-        const { dateEcuador, timeEcuador } = satelliteMapService.formatEcuadorTimestamp(timeIso);
-        const stats = fs.statSync(outFilePath);
-
-        fs.writeFileSync(metaPath, JSON.stringify({
-          timestampIso: timeIso,
-          dateEcuador,
-          timeEcuador,
-          plantKey: 'ecuador',
-          sizeBytes: stats.size,
-          source: 'nasa_gibs+provincias',
-          archivedAt: Date.now()
-        }, null, 2));
-
-        db.prepare(`
-          INSERT INTO satellite_archive (
-            timestamp_iso, date_ecuador, time_ecuador, plant_key,
-            file_path, file_size_bytes, recorded_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(timestamp_iso) DO UPDATE SET
-            file_path = excluded.file_path,
-            file_size_bytes = excluded.file_size_bytes
-        `).run(timeIso, dateEcuador, timeEcuador, 'ecuador', outFilePath, stats.size, Date.now());
-
-        const finalBuf = fs.readFileSync(outFilePath);
-        const metrics = rainMonitorService.computeEcuadorFrameMetrics(finalBuf);
-        db.prepare(`
-          INSERT INTO satellite_frame_metrics (timestamp_iso, ccs, paute, costa, sierra, amazonia, computed_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(timestamp_iso) DO UPDATE SET
-            ccs = excluded.ccs, paute = excluded.paute, costa = excluded.costa, sierra = excluded.sierra, amazonia = excluded.amazonia
-        `).run(timeIso, metrics.ccs, metrics.paute, metrics.costa, metrics.sierra, metrics.amazonia, Date.now());
-      } catch (e) {
-        // Skip gap gracefully
+    for (const row of uncomputed) {
+      if (fs.existsSync(row.file_path)) {
+        try {
+          const buf = fs.readFileSync(row.file_path);
+          const metrics = rainMonitorService.computeEcuadorFrameMetrics(buf);
+          db.prepare(`
+            INSERT INTO satellite_frame_metrics (timestamp_iso, ccs, paute, costa, sierra, amazonia, computed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(timestamp_iso) DO UPDATE SET
+              ccs = excluded.ccs, paute = excluded.paute, costa = excluded.costa, sierra = excluded.sierra, amazonia = excluded.amazonia
+          `).run(row.timestamp_iso, metrics.ccs, metrics.paute, metrics.costa, metrics.sierra, metrics.amazonia, Date.now());
+        } catch (e) {}
       }
     }
   } catch (err: any) {

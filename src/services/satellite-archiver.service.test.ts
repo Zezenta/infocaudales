@@ -87,4 +87,18 @@ describe('SatelliteArchiverService', () => {
     const count = db.prepare('SELECT COUNT(*) as count FROM satellite_archive').get() as { count: number };
     expect(count.count).toBe(0);
   });
+
+  it('handles GeoServer failures gracefully without corrupting archive', async () => {
+    const mockSat = new SatelliteMapService();
+    vi.spyOn(mockSat, 'fetchGoesTimestamps').mockRejectedValue(new Error('GeoServer 503 Service Unavailable'));
+
+    const archiver = new SatelliteArchiverService(mockSat, testArchiveDir);
+    const result = await archiver.archiveLatestFrames({ limit: 5 });
+
+    expect(result.downloaded).toBe(0);
+    expect(result.scanned).toBe(0);
+
+    const stats = archiver.getStats();
+    expect(stats.totalFrames).toBe(0);
+  });
 });
