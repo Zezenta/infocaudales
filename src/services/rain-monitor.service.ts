@@ -87,12 +87,57 @@ export function unfilterPngScanlines(raw: Buffer, width: number, height: number,
 }
 
 /**
+ * Evaluates whether an RGB pixel represents convective precipitation cloud tops.
+ * Supports dual calibration:
+ * - 'nasa_gibs': calibrated for NOAA/NASA GOES-16 ABI Band 13 color table (grayscale rejection, electric green, yellow, red, magenta, white core)
+ * - 'geoserver': original INAMHI GeoServer thermal palette calibration
+ */
+export function isConvectivePixel(
+  r: number,
+  g: number,
+  b: number,
+  source?: 'geoserver' | 'nasa_gibs'
+): { isSevere: boolean; isConvective: boolean } {
+  const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+  if (effectiveSource === 'nasa_gibs') {
+    // In NASA GIBS: background land, ocean and warm low clouds are pure grayscale: |r-g| <= 18 && |g-b| <= 18
+    if (Math.abs(r - g) <= 18 && Math.abs(g - b) <= 18 && Math.abs(r - b) <= 18) {
+      return { isSevere: false, isConvective: false };
+    }
+    // Convective storm tops in NOAA/NASA Band 13 legend (< -40°C):
+    const isYellow = (r > 170 && g > 170 && b < 70);
+    const isRedOrange = (r > 170 && g < 120 && b < 80);
+    const isMagenta = (r > 150 && b > 140 && g < 110);
+    const isWhiteCore = (r > 230 && g > 230 && b > 230);
+    const isSevere = isYellow || isRedOrange || isMagenta || isWhiteCore;
+    const isElectricGreen = (g > 160 && g > r + 45 && g > b + 45);
+
+    return {
+      isSevere,
+      isConvective: isSevere || isElectricGreen
+    };
+  }
+
+  // GeoServer original calibration
+  const isYellow = (r > 160 && g > 160 && b < 120);
+  const isRed = (r > 130 && g < 100 && b < 100);
+  const isWhite = (r > 210 && g > 210 && b > 210);
+  const isSevere = isYellow || isRed || isWhite;
+  const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
+
+  return {
+    isSevere,
+    isConvective: isSevere || isGreen
+  };
+}
+
+/**
  * Analyzes a PNG buffer of a GOES-16 IR Band 13 tile and computes the percentage
  * of pixels belonging to deep convective cold cloud tops (rain-producing clouds).
  * Accurately filters out high-altitude non-raining cirrus clouds (cyan/blue) and isolates
  * true convective precipitation cores (green, yellow, red, overshooting white).
  */
-export function analyzeStormCloudCoverage(pngBuf: Buffer): number {
+export function analyzeStormCloudCoverage(pngBuf: Buffer, source?: 'geoserver' | 'nasa_gibs'): number {
   if (!pngBuf || pngBuf.length < 24) return 0;
 
   let offset = 8;
@@ -147,19 +192,11 @@ export function analyzeStormCloudCoverage(pngBuf: Buffer): number {
       b = pixels[i + 2];
     }
 
-    // Severe Convective Cores: Yellow (-60°C), Red (-70°C to -85°C), White Core (-90°C)
-    const isYellow = (r > 160 && g > 160 && b < 120);
-    const isRed = (r > 130 && g < 100 && b < 100);
-    const isWhite = (r > 210 && g > 210 && b > 210);
-    const isSevere = isYellow || isRed || isWhite;
-
-    // Active Convective Rain: Green (-48°C to -58°C)
-    const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
-
+    const { isSevere, isConvective } = isConvectivePixel(r, g, b, source);
     if (isSevere) {
       severeCount++;
       convectiveCount++;
-    } else if (isGreen) {
+    } else if (isConvective) {
       convectiveCount++;
     }
   }
@@ -176,7 +213,8 @@ export function analyzeStormCloudCoverage(pngBuf: Buffer): number {
  */
 export function analyzeBasinCoverageFromEcuadorFrame(
   ecuadorPngBuf: Buffer,
-  plantKey: string = 'cocaCodoSinclair'
+  plantKey: string = 'cocaCodoSinclair',
+  source?: 'geoserver' | 'nasa_gibs'
 ): number {
   const basin = BASIN_GEOMETRIES[plantKey];
   const ecBasin = BASIN_GEOMETRIES.ecuador;
@@ -250,19 +288,11 @@ export function analyzeBasinCoverageFromEcuadorFrame(
         b = pixels[pIdx + 2];
       }
 
-      // Severe Convective Cores: Yellow (-60°C), Red (-70°C to -85°C), White Core (-90°C)
-      const isYellow = (r > 160 && g > 160 && b < 120);
-      const isRed = (r > 130 && g < 100 && b < 100);
-      const isWhite = (r > 210 && g > 210 && b > 210);
-      const isSevere = isYellow || isRed || isWhite;
-
-      // Active Convective Rain: Green (-48°C to -58°C)
-      const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
-
+      const { isSevere, isConvective } = isConvectivePixel(r, g, b, source);
       if (isSevere) {
         severeCount++;
         convectiveCount++;
-      } else if (isGreen) {
+      } else if (isConvective) {
         convectiveCount++;
       }
     }
@@ -320,21 +350,46 @@ export class RainMonitorService {
    */
   public async getBasinCurrentStormCoverage(
     plantKey: string = 'cocaCodoSinclair',
-    tileResolution: number = 80
+    tileResolution: number = 80,
+    source?: 'geoserver' | 'nasa_gibs'
   ): Promise<{ coveragePct: number; timestampIso: string }> {
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
     const basin = BASIN_GEOMETRIES[plantKey];
     if (!basin) {
       throw new Error(`[RainMonitor] Basin geometry not found for "${plantKey}"`);
     }
 
-    const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 4 });
+    // 1. Try most recent local frame from satellite_archive first
+    try {
+      const localArchived = db.prepare(`
+        SELECT timestamp_iso, file_path, source FROM satellite_archive
+        WHERE file_size_bytes > 50000
+        ORDER BY timestamp_iso DESC
+        LIMIT 1
+      `).get() as { timestamp_iso: string; file_path: string; source?: string } | undefined;
+
+      if (localArchived && fs.existsSync(localArchived.file_path)) {
+        const frameAgeMs = Date.now() - new Date(localArchived.timestamp_iso).getTime();
+        // Only use local archived frame if it is fresh (within 30 minutes)
+        if (frameAgeMs <= 30 * 60 * 1000) {
+          const fileBuf = fs.readFileSync(localArchived.file_path);
+          const frameSource = (localArchived.source as any) || effectiveSource;
+          const coveragePct = analyzeBasinCoverageFromEcuadorFrame(fileBuf, plantKey, frameSource);
+          return { coveragePct, timestampIso: localArchived.timestamp_iso };
+        }
+      }
+    } catch (archErr) {}
+
+    // 2. Fetch live tile from satelliteService
+    const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 4, source: effectiveSource });
     let tileBuffer: Buffer | null = null;
     let selectedTimestamp = timestamps[0] || new Date().toISOString();
 
     for (const ts of timestamps) {
       try {
         tileBuffer = await this.satelliteService.fetchMapTile({
-          layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
+          source: effectiveSource,
+          layers: effectiveSource === 'geoserver' ? 'goes:goes_abi_l2_cmipf_13,ecuador:provincias' : 'GOES-East_ABI_Band13_Clean_Infrared',
           bbox: basin.bbox,
           time: ts,
           width: tileResolution,
@@ -344,97 +399,15 @@ export class RainMonitorService {
         selectedTimestamp = ts;
         break;
       } catch (err: any) {
-        // If newest timestamp is still being ingested or fails on GeoServer, fallback to previous available
         continue;
       }
     }
 
-    // Fallback: Try most recent timestamps verified in local satellite_archive
     if (!tileBuffer) {
-      try {
-        const archivedRows = db.prepare(`
-          SELECT timestamp_iso FROM satellite_archive
-          ORDER BY timestamp_iso DESC
-          LIMIT 6
-        `).all() as Array<{ timestamp_iso: string }>;
-
-        for (const row of archivedRows) {
-          try {
-            tileBuffer = await this.satelliteService.fetchMapTile({
-              layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
-              bbox: basin.bbox,
-              time: row.timestamp_iso,
-              width: tileResolution,
-              height: tileResolution,
-              format: 'image/png'
-            });
-            selectedTimestamp = row.timestamp_iso;
-            break;
-          } catch (err: any) {
-            continue;
-          }
-        }
-      } catch (err: any) {
-        // ignore db error
-      }
-    }
-
-    if (!tileBuffer) {
-      // 1. Fallback: SQLite satellite_archive record (clean INAMHI GeoServer frame with provinces)
-      try {
-        const localArchived = db.prepare(`
-          SELECT timestamp_iso, file_path FROM satellite_archive
-          WHERE file_size_bytes > 50000
-          ORDER BY timestamp_iso DESC
-          LIMIT 1
-        `).get() as { timestamp_iso: string; file_path: string } | undefined;
-
-        if (localArchived && fs.existsSync(localArchived.file_path)) {
-          const fileBuf = fs.readFileSync(localArchived.file_path);
-          const coveragePct = analyzeBasinCoverageFromEcuadorFrame(fileBuf, plantKey);
-          return { coveragePct, timestampIso: localArchived.timestamp_iso };
-        }
-      } catch (archErr) {}
-
-      // 2. Fallback: Check disk archive directory directly
-      try {
-        const archiveBase = path.join(process.cwd(), 'data', 'satellite_archive');
-        if (fs.existsSync(archiveBase)) {
-          const subdirs = fs.readdirSync(archiveBase).filter(d => fs.statSync(path.join(archiveBase, d)).isDirectory()).sort().reverse();
-          for (const sub of subdirs) {
-            const files = fs.readdirSync(path.join(archiveBase, sub))
-              .filter(f => f.endsWith('.png') && fs.statSync(path.join(archiveBase, sub, f)).size > 50000)
-              .sort()
-              .reverse();
-            if (files.length > 0) {
-              const latestPath = path.join(archiveBase, sub, files[0]);
-              const fileBuf = fs.readFileSync(latestPath);
-              const coveragePct = analyzeBasinCoverageFromEcuadorFrame(fileBuf, plantKey);
-              return { coveragePct, timestampIso: new Date().toISOString() };
-            }
-          }
-        }
-      } catch (diskErr) {}
-
-      // 3. Fallback: NASA GIBS tile
-      try {
-        tileBuffer = await this.satelliteService.fetchMapTile({
-          source: 'nasa_gibs',
-          bbox: basin.bbox,
-          width: tileResolution,
-          height: tileResolution,
-          format: 'image/png'
-        });
-        if (tileBuffer && tileBuffer.length > 50000) {
-          const coveragePct = analyzeStormCloudCoverage(tileBuffer);
-          return { coveragePct, timestampIso: new Date().toISOString() };
-        }
-      } catch (gibsErr) {}
-
       throw new Error(`[RainMonitor] Unable to fetch valid satellite tile for basin "${plantKey}"`);
     }
 
-    const coveragePct = analyzeStormCloudCoverage(tileBuffer);
+    const coveragePct = analyzeStormCloudCoverage(tileBuffer, effectiveSource);
     return { coveragePct, timestampIso: selectedTimestamp };
   }
 
@@ -483,6 +456,22 @@ export class RainMonitorService {
 
     // 2. Fetch Live Satellite Cloud Coverage
     const { coveragePct, timestampIso } = await this.getBasinCurrentStormCoverage(plantKey, tileResolution);
+
+    // Guardrail: check if satellite feed is stale / interrupted
+    const frameAgeMinutes = Math.round((now - new Date(timestampIso).getTime()) / 60000);
+    if (frameAgeMinutes > 45 && existingEvent && existingEvent.status === 'ACTIVE') {
+      systemLogger.warn(
+        `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old). Aborting stale storm event to prevent false compilation.`
+      );
+      db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+      existingEvent.status = 'CLOSED';
+      return {
+        plantKey,
+        action: 'NO_STORM',
+        coveragePct: 0,
+        message: `Flujo satelital estancado (${frameAgeMinutes} min sin nuevos fotogramas). Evento cerrado por seguridad.`
+      };
+    }
 
     // 3. No active event currently running
     if (!existingEvent || existingEvent.status === 'CLOSED') {
@@ -601,7 +590,7 @@ export class RainMonitorService {
     const cachedFrames = this.loadCachedStormFrames(framesDir);
 
     let compilationResult: CompiledAnimationResult;
-    if (cachedFrames.length >= 4) {
+    if (cachedFrames.length >= 6) {
       compilationResult = await this.videoCompilerService.compileFramesToVideo(cachedFrames, {
         plantKey: 'ecuador',
         customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
@@ -622,6 +611,7 @@ export class RainMonitorService {
         fs.rmSync(framesDir, { recursive: true, force: true });
       } catch (err) {}
     } else {
+      // Fallback: fetch historical window frames via generateBasinAnimation
       const hoursBack = Math.min(4, Math.max(2, Math.round(elapsedMinutes / 60) + 1));
       compilationResult = await this.videoCompilerService.generateBasinAnimation({
         plantKey: 'ecuador',
@@ -640,6 +630,9 @@ export class RainMonitorService {
           endTime: existingEvent.last_checked_at - 60000
         }
       });
+      try {
+        fs.rmSync(framesDir, { recursive: true, force: true });
+      } catch (err) {}
     }
 
     const cooldownUntil = now + cooldownHours * 3600 * 1000;
@@ -986,20 +979,21 @@ export class RainMonitorService {
    * Computes comprehensive convective rain coverage metrics for an Ecuador frame buffer:
    * cuencas (CCS, Paute) and regiones (Costa, Sierra, Amazonía).
    */
-  public computeEcuadorFrameMetrics(buffer: Buffer): {
+  public computeEcuadorFrameMetrics(buffer: Buffer, source?: 'geoserver' | 'nasa_gibs'): {
     ccs: number;
     paute: number;
     costa: number;
     sierra: number;
     amazonia: number;
   } {
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
     try {
       const img = this.decodePng(buffer);
       const px = this.unfilterScanlines(img.raw, img.width, img.height);
       const ecuadorBbox = BASIN_GEOMETRIES.ecuador.bbox;
-      const ccs = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.cocaCodoSinclair.bbox);
-      const paute = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.paute.bbox);
-      const regions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox);
+      const ccs = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.cocaCodoSinclair.bbox, effectiveSource);
+      const paute = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.paute.bbox, effectiveSource);
+      const regions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox, effectiveSource);
       return { ccs, paute, ...regions };
     } catch (err) {
       return { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
@@ -1015,8 +1009,10 @@ export class RainMonitorService {
     imgWidth: number,
     imgHeight: number,
     ecuadorBbox: [number, number, number, number],
-    basinBbox: [number, number, number, number]
+    basinBbox: [number, number, number, number],
+    source?: 'geoserver' | 'nasa_gibs'
   ): number {
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
     const [minLon, minLat, maxLon, maxLat] = ecuadorBbox;
     const projectX = (lon: number) => Math.max(0, Math.min(imgWidth - 1, Math.round(((lon - minLon) / (maxLon - minLon)) * imgWidth)));
     const projectY = (lat: number) => Math.max(0, Math.min(imgHeight - 1, Math.round(((maxLat - lat) / (maxLat - minLat)) * imgHeight)));
@@ -1038,16 +1034,11 @@ export class RainMonitorService {
         const g = px[i + 1];
         const b = px[i + 2];
 
-        const isYellow = (r > 160 && g > 160 && b < 120);
-        const isRed = (r > 130 && g < 100 && b < 100);
-        const isWhite = (r > 210 && g > 210 && b > 210);
-        const isSevere = isYellow || isRed || isWhite;
-        const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
-
+        const { isSevere, isConvective } = isConvectivePixel(r, g, b, effectiveSource);
         if (isSevere) {
           sevCount++;
           convCount++;
-        } else if (isGreen) {
+        } else if (isConvective) {
           convCount++;
         }
       }
@@ -1065,8 +1056,10 @@ export class RainMonitorService {
     px: Uint8Array,
     imgWidth: number,
     imgHeight: number,
-    nationalBbox: [number, number, number, number]
+    nationalBbox: [number, number, number, number],
+    source?: 'geoserver' | 'nasa_gibs'
   ): { costa: number; sierra: number; amazonia: number } {
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
     const [minLon, minLat, maxLon, maxLat] = nationalBbox;
     let tc = 0, cc = 0, ts = 0, cs = 0, ta = 0, ca = 0;
 
@@ -1096,13 +1089,8 @@ export class RainMonitorService {
         const g = px[i + 1];
         const b = px[i + 2];
 
-        const isYellow = (r > 160 && g > 160 && b < 120);
-        const isRed = (r > 130 && g < 100 && b < 100);
-        const isWhite = (r > 210 && g > 210 && b > 210);
-        const isSevere = isYellow || isRed || isWhite;
-        const isGreen = (g > 140 && g > r + 25 && g > b + 25) || (g > 150 && r < 130 && b < 130);
-
-        if (isSevere || isGreen) {
+        const { isConvective } = isConvectivePixel(r, g, b, effectiveSource);
+        if (isConvective) {
           if (reg === 1) cc++;
           else if (reg === 2) cs++;
           else if (reg === 3) ca++;

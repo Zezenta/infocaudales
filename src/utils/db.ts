@@ -70,17 +70,21 @@ db.exec(`
     ON rain_events (plant_key, status);
 
   CREATE TABLE IF NOT EXISTS satellite_archive (
-    timestamp_iso TEXT PRIMARY KEY,
+    timestamp_iso TEXT NOT NULL,
     date_ecuador TEXT NOT NULL,
     time_ecuador TEXT NOT NULL,
     plant_key TEXT NOT NULL DEFAULT 'ecuador',
     file_path TEXT NOT NULL,
     file_size_bytes INTEGER NOT NULL,
-    recorded_at INTEGER NOT NULL
+    recorded_at INTEGER NOT NULL,
+    source TEXT NOT NULL DEFAULT 'geoserver',
+    PRIMARY KEY (timestamp_iso, source)
   );
 
   CREATE INDEX IF NOT EXISTS idx_satellite_archive_ts 
     ON satellite_archive (timestamp_iso);
+  CREATE INDEX IF NOT EXISTS idx_satellite_archive_src_ts 
+    ON satellite_archive (source, timestamp_iso);
 `);
 
 try {
@@ -89,5 +93,37 @@ try {
 try {
   db.exec(`ALTER TABLE rain_events ADD COLUMN tweet_id TEXT;`);
 } catch {}
+try {
+  // Check if primary key on satellite_archive already includes source
+  const tableInfo = db.prepare("PRAGMA table_info(satellite_archive)").all() as Array<{ name: string; pk: number }>;
+  const sourceCol = tableInfo.find(c => c.name === 'source');
+  if (!sourceCol || sourceCol.pk === 0) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS satellite_archive_v2 (
+        timestamp_iso TEXT NOT NULL,
+        date_ecuador TEXT NOT NULL,
+        time_ecuador TEXT NOT NULL,
+        plant_key TEXT NOT NULL DEFAULT 'ecuador',
+        file_path TEXT NOT NULL,
+        file_size_bytes INTEGER NOT NULL,
+        recorded_at INTEGER NOT NULL,
+        source TEXT NOT NULL DEFAULT 'geoserver',
+        PRIMARY KEY (timestamp_iso, source)
+      );
+      INSERT OR IGNORE INTO satellite_archive_v2 (
+        timestamp_iso, date_ecuador, time_ecuador, plant_key, file_path, file_size_bytes, recorded_at, source
+      )
+      SELECT 
+        timestamp_iso, date_ecuador, time_ecuador, plant_key, file_path, file_size_bytes, recorded_at, COALESCE(source, 'geoserver')
+      FROM satellite_archive;
+      DROP TABLE satellite_archive;
+      ALTER TABLE satellite_archive_v2 RENAME TO satellite_archive;
+      CREATE INDEX IF NOT EXISTS idx_satellite_archive_ts ON satellite_archive (timestamp_iso);
+      CREATE INDEX IF NOT EXISTS idx_satellite_archive_src_ts ON satellite_archive (source, timestamp_iso);
+    `);
+  }
+} catch (migErr) {
+  // Migration already completed or handled
+}
 
 console.log('[SQLite] Database initialized at:', DB_PATH);

@@ -140,7 +140,7 @@ describe('RainMonitorService', () => {
 
     it('stays in STORM_MONITORING while storm is active and growing', async () => {
       const mockSat = new SatelliteMapService();
-      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue(['2026-10-01T20:00:00.000Z']);
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 35)); // 35% peak
 
       const rainMonitor = new RainMonitorService(mockSat);
@@ -160,7 +160,7 @@ describe('RainMonitorService', () => {
 
     it('triggers compilation when storm passes (dissipates) after minimum duration', async () => {
       const mockSat = new SatelliteMapService();
-      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue(['2026-10-01T20:00:00.000Z']);
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       // Clouds dropped to 10% (less than 50% of the 40% peak)
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 10));
 

@@ -11,10 +11,10 @@
 
   <!-- Top Navigation Switcher -->
   <nav class="nav-switcher">
-    <a href="/" class="nav-link">📊 Tarjetas de Telemetría</a>
-    <a href="/daily" class="nav-link">📑 Reporte Diario</a>
-    <a href="/forecast" class="nav-link">🔮 Pronósticos Hidrológicos</a>
-    <a href="/rain" class="nav-link active">🛰️ Satélite & Lluvia</a>
+    <a href="/" class="nav-link">Tarjetas de Telemetría</a>
+    <a href="/daily" class="nav-link">Reporte Diario</a>
+    <a href="/forecast" class="nav-link">Pronósticos Hidrológicos</a>
+    <a href="/rain" class="nav-link active">Satélite y Lluvia</a>
   </nav>
 
   <!-- Page Title & Header Badge -->
@@ -147,10 +147,10 @@
 
         <div class="playback-buttons">
           <div class="btn-group">
-            <button id="firstBtn" class="btn" title="Primer fotograma (Inicio)">⏮⏮</button>
-            <button id="prevBtn" class="btn" title="Fotograma anterior (Flecha Izquierda)">⏮ Anterior</button>
-            <button id="nextBtn" class="btn" title="Siguiente fotograma (Flecha Derecha)">Siguiente ⏭</button>
-            <button id="lastBtn" class="btn" title="Último fotograma (Fin)">⏭⏭</button>
+            <button id="firstBtn" class="btn" title="Primer fotograma (Inicio)">Inicio</button>
+            <button id="prevBtn" class="btn" title="Fotograma anterior (Flecha Izquierda)">◀ Anterior</button>
+            <button id="nextBtn" class="btn" title="Siguiente fotograma (Flecha Derecha)">Siguiente ▶</button>
+            <button id="lastBtn" class="btn" title="Último fotograma (Fin)">Fin</button>
             <select id="speedSelect" class="form-select" style="width: auto; padding: 6px 10px;">
               <option value="1000">Velocidad: 0.25x (1 fps)</option>
               <option value="500">Velocidad: 0.5x (2 fps)</option>
@@ -165,7 +165,7 @@
             </select>
           </div>
           <div class="btn-group">
-            <span id="preloadStatusText" style="font-size: 12px; color: #94a3b8;">📥 Precargando...</span>
+            <span id="preloadStatusText" style="font-size: 12px; color: #94a3b8;">Precargando...</span>
             <span id="currentTimeDisplay" class="time-badge" style="color: #38bdf8; margin-left: 12px;">--:-- ECT</span>
           </div>
         </div>
@@ -178,28 +178,24 @@
 
       <!-- Basin & Geometry Selector -->
       <div class="control-panel">
-        <h3 class="panel-title">📍 Cuenca / Región</h3>
+        <h3 class="panel-title">Cuenca / Región</h3>
         
         <div class="form-group">
           <label class="form-label" for="basinSelect">Seleccionar Región o Hidroeléctrica</label>
           <select id="basinSelect" class="form-select">
-            <option value="ecuador">🇪🇨 Ecuador Continental (Nacional)</option>
-            <option value="cocaCodoSinclair">⚡ Coca Codo Sinclair (Quijos/Salado)</option>
-            <option value="paute">🏔️ Complejo Paute (Mazar / Molino / Sopladora)</option>
-            <option value="agoyan">💧 Cuenca Pastaza / Agoyán</option>
-            <option value="minasSanFrancisco">🏞️ Cuenca Jubones / Minas San Francisco</option>
+            <option value="ecuador">Ecuador Continental (Nacional)</option>
+            <option value="cocaCodoSinclair">Coca Codo Sinclair (Quijos/Salado)</option>
+            <option value="paute">Complejo Paute (Mazar / Molino / Sopladora)</option>
+            <option value="agoyan">Cuenca Pastaza / Agoyán</option>
+            <option value="minasSanFrancisco">Cuenca Jubones / Minas San Francisco</option>
           </select>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="layerSelect">Capa Meteorológica / Satelital</label>
           <select id="layerSelect" class="form-select">
-            <option value="goes16_inamhi" selected>🌀 GOES-16 IR Infrarrojo Térmico (Banda 13 - Nubes/Tormentas)</option>
-            <option value="esri_satellite">🛰️ Foto Satelital Óptica Real HD (ESRI World Imagery)</option>
-            <option value="blue_marble">🌍 NASA Blue Marble (Mosaico Satelital Óptico)</option>
-            <option value="persiann_24h">🌧️ PERSIANN-PDIR Precipitación Acumulada 24h</option>
-            <option value="wrf_daily">🌦️ WRF Pronóstico Numérico de Lluvia</option>
-            <option value="nasa_gibs">🛰️ NASA GIBS GOES-East IR</option>
+            <option value="nasa_gibs" selected>NASA GIBS • GOES-East Banda 13 IR (CDN Alta Disponibilidad)</option>
+            <option value="goes16_inamhi">GEOGLOWS / INAMHI • GOES-16 IR (Banda 13 - Nubes/Tormentas)</option>
           </select>
         </div>
 
@@ -207,13 +203,21 @@
         <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
           <select id="presetSelect" class="form-select">
-            <option value="today" selected>📅 Resumen de Hoy (desde 00:00 ECT hasta ahora)</option>
-            <option value="yesterday_24h">📅 Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
-            <option value="storm_paute_oct7">⚡ Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
-            <option value="storm_ccs_oct7">🌧️ Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
-            <option value="recent_50">📁 Últimos 50 fotogramas archivados</option>
-            <option value="all_frames">📁 Archivo Histórico Completo</option>
-            <option value="live">📡 En Vivo: Últimas 3 horas (INAMHI GeoServer directo)</option>
+            <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
+              <option value="live_nasa_12h" selected>NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
+              <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
+              <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
+              <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
+            </optgroup>
+            <optgroup label="── GEOGLOWS / INAMHI (GeoServer Local) ──">
+              <option value="live_geoserver">GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
+              <option value="today">GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)</option>
+              <option value="yesterday_24h">GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
+              <option value="storm_paute_oct7">GEOGLOWS: Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
+              <option value="storm_ccs_oct7">GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
+              <option value="recent_50">GEOGLOWS: Últimos 50 fotogramas archivados</option>
+              <option value="all_frames">GEOGLOWS: Archivo Histórico Completo</option>
+            </optgroup>
           </select>
         </div>
 
@@ -221,30 +225,30 @@
         <div class="form-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #38bdf8; cursor: pointer;">
             <input type="checkbox" id="showSummaryCardsCheckbox" checked>
-            📊 Mostrar Tarjetas de Cobertura (Cuencas & Regiones)
+            Mostrar Tarjetas de Cobertura (Cuencas & Regiones)
           </label>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
             <input type="checkbox" id="showCityPinsCheckbox" checked>
-            🏙️ Mostrar Ciudades de Referencia (Quito, GYE, etc.)
+            Mostrar Ciudades de Referencia (Quito, GYE, etc.)
           </label>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
             <input type="checkbox" id="showAllPinsCheckbox" checked>
-            📍 Mostrar Pines de Todas las Centrales
+            Mostrar Pines de Todas las Centrales
           </label>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
             <input type="checkbox" id="fitScreenCheckbox" checked>
-            📱 Ajustar video a pantalla (visibilidad sin scroll)
+            Ajustar video a pantalla (visibilidad sin scroll)
           </label>
         </div>
       </div>
 
       <!-- Styling & Overlay Editor -->
       <div class="control-panel">
-        <h3 class="panel-title">🎨 Personalización de Overlays</h3>
+        <h3 class="panel-title">Personalización de Overlays</h3>
 
         <!-- Storm Detection Boxes & Alert Badges Controls -->
         <div class="form-group" style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 10px;">
-          <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">📦 Cuadros de Detección & Alerta</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">Cuadros de Detección & Alerta</div>
           
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
             <input type="checkbox" id="showDetectionBoxesCheckbox" checked>
@@ -253,17 +257,17 @@
 
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
             <input type="checkbox" id="showPubBadgeCheckbox">
-            Mostrar Ticker de Publicación (🚨 / 🟢)
+            Mostrar Ticker de Publicación
           </label>
 
           <div style="display: flex; gap: 12px; margin-top: 2px;">
             <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #f87171; cursor: pointer;">
               <input type="checkbox" id="simCcsStormCheckbox">
-              ⚡ Forzar Tormenta CCS
+              Forzar Tormenta CCS
             </label>
             <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #f87171; cursor: pointer;">
               <input type="checkbox" id="simPauteStormCheckbox">
-              🏔️ Forzar Tormenta Paute
+              Forzar Tormenta Paute
             </label>
           </div>
         </div>
@@ -276,7 +280,7 @@
         <div class="form-group">
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer; margin-bottom: 6px;">
             <input type="checkbox" id="showDateSubtitleCheckbox" checked>
-            📅 Mostrar Subtítulo de Fecha (como en videos)
+            Mostrar Subtítulo de Fecha (como en videos)
           </label>
           <input type="text" id="customDateSubtitleInput" class="form-input" placeholder="Automático (según fotograma)">
         </div>
@@ -312,14 +316,14 @@
 
       <!-- Compilation & Video Export -->
       <div class="control-panel">
-        <h3 class="panel-title">🎬 Compilación y Exportación</h3>
+        <h3 class="panel-title">Compilación y Exportación</h3>
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
           Compila los fotogramas cargados en un video MP4 optimizado para Twitter (H.264) o un GIF animado.
         </p>
 
         <div class="grid-2col">
-          <button id="compileMp4Btn" class="btn btn-success">📹 Compilar MP4</button>
-          <button id="compileGifBtn" class="btn">🖼️ Compilar GIF</button>
+          <button id="compileMp4Btn" class="btn btn-success">Compilar MP4</button>
+          <button id="compileGifBtn" class="btn">Compilar GIF</button>
         </div>
 
         <div id="exportStatus" class="status-box"></div>
@@ -871,7 +875,7 @@
       // Thermal Scale Bar visibility (GOES-16 IR)
       const thermalScaleGroup = document.getElementById('thermalScaleGroup');
       if (thermalScaleGroup) {
-        const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi';
+        const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi' || layerSelect.value === 'nasa_gibs';
         thermalScaleGroup.style.display = isThermalLayer ? 'block' : 'none';
       }
 
@@ -913,27 +917,29 @@
       preloadSequence();
     }
 
-    // Preload Sequence for Current View
+    // Preload Sequence for Current View (strictly isolated to active layer)
     async function preloadSequence() {
       if (!timestamps.length) return;
       const plantKey = basinSelect.value;
       const layer = layerSelect.value;
+      const sequenceTimestamps = [...timestamps];
 
-      preloadStatusText.textContent = `📥 Precargando 0/${timestamps.length}...`;
+      preloadStatusText.textContent = `Precargando 0/${sequenceTimestamps.length}...`;
       preloadBar.style.width = '0%';
 
       let loadedCount = 0;
-      const loadPromises = timestamps.map((t, idx) => {
+      const loadPromises = sequenceTimestamps.map((t, idx) => {
+        if (layerSelect.value !== layer) return Promise.resolve(null);
         const cacheKey = `${plantKey}_${layer}_${t}`;
         let img = frameImageCache.get(cacheKey);
 
         if (img && img.complete && img.naturalWidth > 0) {
           loadedCount++;
-          const pct = Math.round((loadedCount / timestamps.length) * 100);
+          const pct = Math.round((loadedCount / sequenceTimestamps.length) * 100);
           preloadBar.style.width = `${pct}%`;
-          preloadStatusText.textContent = `⚡ Listo (${loadedCount}/${timestamps.length})`;
-          if (idx === currentFrameIdx) {
-            drawCanvasFrame(img);
+          preloadStatusText.textContent = `Listo (${loadedCount}/${sequenceTimestamps.length})`;
+          if (idx === currentFrameIdx && layerSelect.value === layer) {
+            drawCanvasFrame(img, layer, idx);
           }
           return Promise.resolve(img);
         }
@@ -944,12 +950,16 @@
             frameImageCache.set(cacheKey, img);
           }
           img.onload = () => {
+            if (layerSelect.value !== layer) {
+              resolve(null);
+              return;
+            }
             loadedCount++;
-            const pct = Math.round((loadedCount / timestamps.length) * 100);
+            const pct = Math.round((loadedCount / sequenceTimestamps.length) * 100);
             preloadBar.style.width = `${pct}%`;
-            preloadStatusText.textContent = `📥 ${loadedCount}/${timestamps.length} (${pct}%)`;
-            if (idx === currentFrameIdx) {
-              drawCanvasFrame(img);
+            preloadStatusText.textContent = `Cargando ${loadedCount}/${sequenceTimestamps.length} (${pct}%)`;
+            if (idx === currentFrameIdx && layerSelect.value === layer) {
+              drawCanvasFrame(img, layer, idx);
             }
             resolve(img);
           };
@@ -964,19 +974,26 @@
       });
 
       await Promise.all(loadPromises);
-      preloadStatusText.textContent = `✅ Listo (${timestamps.length} frames en RAM)`;
-      preloadBar.style.width = '100%';
+      if (layerSelect.value === layer) {
+        preloadStatusText.textContent = `Listo (${sequenceTimestamps.length} cuadros en RAM)`;
+        preloadBar.style.width = '100%';
+      }
     }
 
-    // Draw Image directly to HTML5 Canvas (60fps smooth)
-    function drawCanvasFrame(img) {
+    // Draw Image directly to HTML5 Canvas with strict layer & index validation
+    function drawCanvasFrame(img, expectedLayer, expectedIndex) {
       if (!img) return;
+      if (expectedLayer && layerSelect.value !== expectedLayer) return;
+      if (expectedIndex !== undefined && currentFrameIdx !== expectedIndex) return;
+
       if (img.complete && img.naturalWidth > 0) {
         ctx.clearRect(0, 0, 800, 800);
         ctx.drawImage(img, 0, 0, 800, 800);
       } else if (!img.complete) {
         img.onload = () => {
           if (img.naturalWidth > 0) {
+            if (expectedLayer && layerSelect.value !== expectedLayer) return;
+            if (expectedIndex !== undefined && currentFrameIdx !== expectedIndex) return;
             ctx.clearRect(0, 0, 800, 800);
             ctx.drawImage(img, 0, 0, 800, 800);
           }
@@ -984,7 +1001,7 @@
       }
     }
 
-    // Render Current Frame Instantly from Memory (skips gaps gracefully)
+    // Render Current Frame Instantly from Memory (guaranteed provider fidelity)
     function renderCurrentFrame() {
       if (!timestamps.length) return;
       currentFrameIdx = parseInt(currentFrameIdx, 10);
@@ -994,24 +1011,31 @@
       const t = timestamps[currentFrameIdx];
       const plantKey = basinSelect.value;
       const layer = layerSelect.value;
+      const targetIdx = currentFrameIdx;
       const cacheKey = `${plantKey}_${layer}_${t}`;
 
       let cachedImg = frameImageCache.get(cacheKey);
-      if (cachedImg) {
-        drawCanvasFrame(cachedImg);
+      if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
+        drawCanvasFrame(cachedImg, layer, targetIdx);
       } else {
-        const directImg = new Image();
+        // Clear canvas immediately if frame is not cached yet so old provider frames never linger
+        ctx.clearRect(0, 0, 800, 800);
+        const directImg = cachedImg || new Image();
         directImg.onload = () => {
-          drawCanvasFrame(directImg);
+          if (timestamps[currentFrameIdx] === t && layerSelect.value === layer && currentFrameIdx === targetIdx) {
+            drawCanvasFrame(directImg, layer, targetIdx);
+          }
         };
         directImg.onerror = () => {
-          console.warn(`[Visualizer] Gap detectado en ${t}, saltando fotograma...`);
-          if (isPlaying) {
+          console.warn(`[Visualizer] Gap detectado en ${t}`);
+          if (isPlaying && layerSelect.value === layer) {
             currentFrameIdx = (currentFrameIdx + 1) % timestamps.length;
             renderCurrentFrame();
           }
         };
-        directImg.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+        if (!directImg.src) {
+          directImg.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+        }
         frameImageCache.set(cacheKey, directImg);
       }
 
@@ -1025,10 +1049,11 @@
     // Fetch Timestamps & Geometries
     async function loadData() {
       try {
-        const preset = (presetSelect && presetSelect.value) ? presetSelect.value : 'today';
+        const preset = (presetSelect && presetSelect.value) ? presetSelect.value : 'live_nasa_12h';
+        const layer = (layerSelect && layerSelect.value) ? layerSelect.value : 'nasa_gibs';
         const [geoRes, timeRes, pinsRes, citiesRes] = await Promise.all([
           fetch('/api/basin-geometries').then(r => r.json()),
-          fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}`).then(r => r.json()),
+          fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}&layer=${encodeURIComponent(layer)}`).then(r => r.json()),
           fetch('/api/all-hydro-pins').then(r => r.json()),
           fetch('/api/reference-cities').then(r => r.json())
         ]);
@@ -1058,20 +1083,23 @@
       const basinName = currentGeometry ? currentGeometry.name : 'Ecuador';
 
       if (layerKey === 'esri_satellite') {
-        customTitleInput.value = isEcuador ? '🛰️ Foto Satelital • Ecuador' : `🛰️ ${basinName} • Foto Satelital`;
+        customTitleInput.value = isEcuador ? 'Foto Satelital • Ecuador' : `${basinName} • Foto Satelital`;
         customBadgeInput.value = 'ESRI / ArcGIS';
       } else if (layerKey === 'blue_marble') {
-        customTitleInput.value = isEcuador ? '🌍 Vista Satelital • Ecuador' : `🌍 ${basinName} • Vista Satelital`;
+        customTitleInput.value = isEcuador ? 'Vista Satelital • Ecuador' : `${basinName} • Vista Satelital`;
         customBadgeInput.value = 'NASA EarthData';
       } else if (layerKey === 'persiann_24h') {
-        customTitleInput.value = isEcuador ? '🌧️ Lluvia de las Últimas 24 Horas' : `🌧️ ${basinName} • Lluvia 24h`;
+        customTitleInput.value = isEcuador ? 'Lluvia de las Últimas 24 Horas' : `${basinName} • Lluvia 24h`;
         customBadgeInput.value = 'Lluvia 24h';
       } else if (layerKey === 'wrf_daily') {
-        customTitleInput.value = isEcuador ? '🌦️ Pronóstico de Lluvias de Hoy' : `🌦️ ${basinName} • Pronóstico de Lluvias`;
+        customTitleInput.value = isEcuador ? 'Pronóstico de Lluvias de Hoy' : `${basinName} • Pronóstico de Lluvias`;
         customBadgeInput.value = 'Pronóstico INAMHI';
+      } else if (layerKey === 'nasa_gibs') {
+        customTitleInput.value = isEcuador ? 'Vista Satelital GOES-16 • Ecuador Continental' : `${basinName} • Vista Satelital`;
+        customBadgeInput.value = isEcuador ? 'NASA GIBS • Banda 13 IR' : (currentGeometry?.subtitle || 'NASA GIBS • Banda 13 IR');
       } else {
-        customTitleInput.value = isEcuador ? 'Vista Satelital GOES-16 • Ecuador Continental' : `⚡ ${basinName} • Vista Satelital`;
-        customBadgeInput.value = isEcuador ? 'GOES-16 • Banda 13 IR (10.3 µm)' : (currentGeometry?.subtitle || 'GOES-16 • Banda 13 IR');
+        customTitleInput.value = isEcuador ? 'Vista Satelital GOES-16 • Ecuador Continental' : `${basinName} • Vista Satelital`;
+        customBadgeInput.value = isEcuador ? 'GEOGLOWS • Banda 13 IR' : (currentGeometry?.subtitle || 'GEOGLOWS • Banda 13 IR');
       }
 
       if (basinKey === 'ecuador' || basinKey === 'paute') {
@@ -1096,18 +1124,47 @@
       renderCurrentFrame();
     }
 
-    function onLayerChange() {
+    async function onLayerChange() {
+      stopPlayback();
+      const layer = layerSelect.value;
+      const currentPreset = presetSelect ? presetSelect.value : '';
+
+      // Immediately purge cache and canvas so frames from the other provider never linger
+      frameImageCache.clear();
+      ctx.clearRect(0, 0, 800, 800);
+      preloadStatusText.textContent = `Cambiando a ${layer === 'nasa_gibs' ? 'NASA GIBS' : 'GEOGLOWS'}...`;
+      preloadBar.style.width = '0%';
+
+      // Auto-switch preset if it's currently tied to the opposing source
+      if (layer === 'nasa_gibs') {
+        const isNasaPreset = currentPreset.startsWith('live_nasa_') || currentPreset === 'today_nasa';
+        if (!isNasaPreset && presetSelect) {
+          presetSelect.value = 'live_nasa_12h';
+        }
+      } else if (layer === 'goes16_inamhi') {
+        const isNasaPreset = currentPreset.startsWith('live_nasa_') || currentPreset === 'today_nasa';
+        if (isNasaPreset && presetSelect) {
+          presetSelect.value = 'live_geoserver';
+        }
+      }
+
       updateTitlesForSelection();
       updateOverlay();
-      preloadSequence();
-      renderCurrentFrame();
+
+      // Reload timestamps and frames strictly for the newly selected layer & preset
+      if (presetSelect) {
+        await onPresetChange();
+      } else {
+        await preloadSequence();
+        renderCurrentFrame();
+      }
     }
 
     // Playback Engine (Smooth 60fps Loop)
     function startPlayback() {
       if (isPlaying) return;
       isPlaying = true;
-      playBtn.textContent = '⏸ Pausar';
+      playBtn.textContent = 'Pausar';
       playBtn.classList.remove('btn-primary');
       playBtn.classList.add('btn');
 
@@ -1120,7 +1177,7 @@
     function stopPlayback() {
       if (!isPlaying) return;
       isPlaying = false;
-      playBtn.textContent = '▶ Reproducir';
+      playBtn.textContent = 'Reproducir';
       playBtn.classList.add('btn-primary');
       clearInterval(playInterval);
       playInterval = null;
@@ -1236,10 +1293,32 @@
 
     async function onPresetChange() {
       if (!presetSelect) return;
+      stopPlayback();
       const preset = presetSelect.value;
-      preloadStatusText.textContent = '⏳ Cargando fotogramas...';
+
+      // Automatically sync layer with preset source
+      if (preset.startsWith('live_nasa_') || preset === 'today_nasa') {
+        if (layerSelect.value !== 'nasa_gibs') {
+          layerSelect.value = 'nasa_gibs';
+        }
+      } else if (preset === 'live_geoserver' || preset === 'today' || preset === 'yesterday_24h' || preset.startsWith('storm_') || preset === 'recent_50' || preset === 'all_frames') {
+        if (layerSelect.value !== 'goes16_inamhi') {
+          layerSelect.value = 'goes16_inamhi';
+        }
+      }
+
+      updateTitlesForSelection();
+      updateOverlay();
+
+      // Clear memory cache so frames from previous preset or provider never display
+      frameImageCache.clear();
+      ctx.clearRect(0, 0, 800, 800);
+      preloadStatusText.textContent = 'Cargando fotogramas...';
+      preloadBar.style.width = '0%';
+
       try {
-        const res = await fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}`);
+        const activeLayer = layerSelect.value;
+        const res = await fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}&layer=${encodeURIComponent(activeLayer)}`);
         const data = await res.json();
         timestamps = data.timestamps || [];
         currentMetricsMap = data.metrics || {};
@@ -1257,7 +1336,7 @@
     // Compilation Action
     async function triggerCompile(format = 'mp4') {
       exportStatus.className = 'status-box active loading';
-      exportStatus.innerHTML = `⏳ Compilando animación en formato <strong>${format.toUpperCase()}</strong> con los estilos visuales activos...`;
+      exportStatus.innerHTML = `Compilando animación en formato <strong>${format.toUpperCase()}</strong> con los estilos visuales activos...`;
 
       try {
         const speedVal = parseInt(speedSelect.value, 10) || 125;
@@ -1302,7 +1381,7 @@
         if (data.success) {
           const filePath = format === 'mp4' ? data.result.mp4Path : data.result.gifPath;
           exportStatus.className = 'status-box active success';
-          exportStatus.innerHTML = `✅ ¡Compilación completada! Archivo guardado en: <code>${filePath}</code>`;
+          exportStatus.innerHTML = `¡Compilación completada! Archivo guardado en: <code>${filePath}</code>`;
         } else {
           throw new Error(data.error || 'Error en la compilación');
         }
@@ -1311,7 +1390,7 @@
         exportStatus.style.background = 'rgba(239, 68, 68, 0.15)';
         exportStatus.style.border = '1px solid #ef4444';
         exportStatus.style.color = '#f87171';
-        exportStatus.textContent = `❌ Falló la compilación: ${err.message}`;
+        exportStatus.textContent = `Falló la compilación: ${err.message}`;
       }
     }
 

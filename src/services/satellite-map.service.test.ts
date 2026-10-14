@@ -151,14 +151,20 @@ describe('SatelliteMapService', () => {
 
       mockedAxios.get.mockResolvedValueOnce({ status: 200, data: mockXml });
 
-      const timestamps = await service.fetchGoesTimestamps({ limit: 2 });
+      const timestamps = await service.fetchGoesTimestamps({ limit: 2, source: 'geoserver' });
       expect(timestamps).toEqual(['2026-09-10T21:00:00.000Z', '2026-09-10T22:00:00.000Z']);
+    });
+
+    it('generates 10-minute aligned intervals for nasa_gibs', async () => {
+      const timestamps = await service.fetchGoesTimestamps({ limit: 3, source: 'nasa_gibs' });
+      expect(timestamps).toHaveLength(3);
+      expect(new Date(timestamps[0]).getTime()).toBeLessThan(new Date(timestamps[1]).getTime());
     });
 
     it('falls back gracefully to synthetic timestamps on network error', async () => {
       mockedAxios.get.mockRejectedValueOnce(new Error('Network error'));
 
-      const timestamps = await service.fetchGoesTimestamps({ limit: 5 });
+      const timestamps = await service.fetchGoesTimestamps({ limit: 5, source: 'geoserver' });
       expect(timestamps).toHaveLength(5);
     });
   });

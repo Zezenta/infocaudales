@@ -1,6 +1,12 @@
+import fs from 'fs';
+import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import axios from 'axios';
 import { BASIN_GEOMETRIES, BasinGeometry } from '../data/basin-geometries.js';
 import { systemLogger } from '../utils/logger.js';
+
+const execFileAsync = promisify(execFile);
 
 export type SatelliteSource = 'geoserver' | 'nasa_gibs' | 'esri_satellite';
 
@@ -63,11 +69,32 @@ export class SatelliteMapService {
   }
 
   /**
-   * Fetches available GOES-16 satellite timestamps from GEOGLOWS GeoServer GetCapabilities.
+   * Fetches available GOES-16 satellite timestamps.
+   * If source is 'nasa_gibs' (or default), generates aligned 10-minute intervals ending at latest ingested mark.
+   * If source is 'geoserver', queries GEOGLOWS GeoServer GetCapabilities.
    * Returns sorted array of ISO timestamp strings (oldest to newest).
    */
-  public async fetchGoesTimestamps(options: { limit?: number; layer?: string; fallbackToSynthetic?: boolean } = {}): Promise<string[]> {
+  public async fetchGoesTimestamps(options: {
+    limit?: number;
+    layer?: string;
+    fallbackToSynthetic?: boolean;
+    source?: 'geoserver' | 'nasa_gibs';
+  } = {}): Promise<string[]> {
     const limit = options.limit ?? 18;
+    const effectiveSource = options.source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+
+    if (effectiveSource === 'nasa_gibs') {
+      const nowMs = Date.now();
+      // NASA GIBS tiles are typically available ~10 minutes behind real-time
+      const latestAvailableMs = Math.floor((nowMs - 10 * 60 * 1000) / (10 * 60 * 1000)) * (10 * 60 * 1000);
+      const timestamps: string[] = [];
+      for (let i = limit - 1; i >= 0; i--) {
+        const tMs = latestAvailableMs - i * 10 * 60 * 1000;
+        timestamps.push(new Date(tMs).toISOString());
+      }
+      return timestamps;
+    }
+
     const layerName = options.layer || 'goes_abi_l2_cmipf_13';
     const fallbackToSynthetic = options.fallbackToSynthetic ?? true;
     const capabilitiesUrl = `${this.geoserverGoesUrl}?service=WMS&version=1.1.1&request=GetCapabilities`;
@@ -355,7 +382,10 @@ export class SatelliteMapService {
 
     systemLogger.info(`[SatelliteMapService] Fetching ${frameCount} recent frames for ${plantKey} (source: ${source})...`);
 
-    const timestamps = await this.fetchGoesTimestamps({ limit: frameCount });
+    const timestamps = await this.fetchGoesTimestamps({
+      limit: frameCount,
+      source: source === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver'
+    });
     const frames: SatelliteFrame[] = new Array(timestamps.length);
 
     // Concurrently download with chunked execution
@@ -365,7 +395,7 @@ export class SatelliteMapService {
         chunk.map(async (timeIso, chunkIdx) => {
           const frameIdx = i + chunkIdx;
           try {
-            const buffer = await this.fetchMapTile({
+            let buffer = await this.fetchMapTile({
               source,
               layers,
               bbox,
@@ -373,6 +403,33 @@ export class SatelliteMapService {
               width,
               height
             });
+
+            if (source === 'nasa_gibs' && plantKey === 'ecuador' && buffer && buffer.length > 0) {
+              const overlayPath = path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png');
+              if (fs.existsSync(overlayPath)) {
+                const tempRaw = `/tmp/raw_rec_nasa_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
+                const tempOut = `/tmp/comp_rec_nasa_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
+                try {
+                  fs.writeFileSync(tempRaw, buffer);
+                  await execFileAsync('ffmpeg', [
+                    '-y',
+                    '-i', tempRaw,
+                    '-i', overlayPath,
+                    '-filter_complex', '[0:v][1:v]overlay=0:0[out]',
+                    '-map', '[out]',
+                    tempOut
+                  ]);
+                  if (fs.existsSync(tempOut)) {
+                    buffer = fs.readFileSync(tempOut);
+                  }
+                } catch (ffErr) {
+                  // Fall back to raw buffer
+                } finally {
+                  try { fs.unlinkSync(tempRaw); } catch {}
+                  try { fs.unlinkSync(tempOut); } catch {}
+                }
+              }
+            }
 
             const { dateEcuador, timeEcuador } = this.formatEcuadorTimestamp(timeIso);
 
