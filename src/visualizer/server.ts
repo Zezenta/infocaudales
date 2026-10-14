@@ -528,6 +528,41 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Provincial Boundaries Overlay Image API
+  if (req.method === 'GET' && (req.url === '/api/provincias-overlay' || req.url === '/assets/overlays/ecuador_provincias_800.png')) {
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias_800.png'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png')
+    ];
+    let overlayPath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        overlayPath = c;
+        break;
+      }
+    }
+
+    if (!overlayPath) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Overlay not found');
+      return;
+    }
+
+    fs.readFile(overlayPath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error reading overlay');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
   // Satellite Single Frame Proxy API (handles CORS, local archive & layers)
   if (req.method === 'GET' && req.url && req.url.startsWith('/api/satellite-frame')) {
     const urlObj = new URL(req.url, `http://localhost:${PORT}`);
@@ -763,6 +798,9 @@ const server = http.createServer(async (req, res) => {
           showAllPins,
           showCityPins: payload.showCityPins !== false && plantKey === 'ecuador',
           showDetectionBoxes: payload.showDetectionBoxes !== undefined ? payload.showDetectionBoxes : true,
+          showProvinces: payload.showProvinces !== undefined ? payload.showProvinces : true,
+          provincesColor: payload.provincesColor || '#38bdf8',
+          provincesOpacity: typeof payload.provincesOpacity === 'number' ? payload.provincesOpacity : 0.85,
           activeBasinKeys: payload.activeBasinKeys,
           highlightBasinKey: payload.activeBasinKeys?.[0],
           showThermalScale,

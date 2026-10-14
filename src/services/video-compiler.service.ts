@@ -53,6 +53,9 @@ export interface OverlayCustomizationOptions {
   customDateSubtitle?: string;
   showCityPins?: boolean;
   cityPins?: CityPin[];
+  showProvinces?: boolean;
+  provincesColor?: string;
+  provincesOpacity?: number;
   summaryCardItems?: BasinSummaryCardItem[];
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
@@ -111,7 +114,34 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
 }
 
 export class VideoCompilerService {
+  private provincesBase64Cache: string | null = null;
+
   constructor(private readonly satelliteMapService: SatelliteMapService = new SatelliteMapService()) {}
+
+  /**
+   * Helper to retrieve base64-encoded PNG of Ecuador provincial borders.
+   */
+  public getProvincesOverlayBase64(): string | null {
+    if (this.provincesBase64Cache) {
+      return this.provincesBase64Cache;
+    }
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias_800.png'),
+      path.join(__dirname, '..', '..', 'src', 'assets', 'overlays', 'ecuador_provincias_800.png'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png')
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        try {
+          this.provincesBase64Cache = fs.readFileSync(c).toString('base64');
+          return this.provincesBase64Cache;
+        } catch (e) {
+          console.warn('[VideoCompilerService] Failed to read provinces overlay:', e);
+        }
+      }
+    }
+    return null;
+  }
 
   /**
    * Translates geographic (lat, lon) coordinates inside a bounding box to pixel coordinates (x, y).
@@ -165,6 +195,31 @@ export class VideoCompilerService {
     const subtitleBadge = escapeXml(options.customBadge || (geometry.key === 'ecuador'
       ? 'GOES-16 • Banda 13 IR (10.3 µm)'
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
+
+    // Provincial Delineation Overlay (Ecuador Continental)
+    const showProvinces = options.showProvinces !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    const provincesColor = options.provincesColor || '#38bdf8';
+    const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;
+
+    let provincesFilterSvg = '';
+    let provincesOverlaySvg = '';
+    if (showProvinces) {
+      const base64 = this.getProvincesOverlayBase64();
+      if (base64) {
+        provincesFilterSvg = `
+        <filter id="provincesColorFilter" color-interpolation-filters="sRGB" x="0%" y="0%" width="100%" height="100%">
+          <feFlood id="provincesFeFlood" flood-color="${escapeXml(provincesColor)}" flood-opacity="1" result="flood" />
+          <feComposite in="flood" in2="SourceAlpha" operator="in" result="mask" />
+        </filter>
+        `;
+        provincesOverlaySvg = `
+        <!-- Provincial Delineation Layer -->
+        <g id="provincesLayer">
+          <image href="data:image/png;base64,${base64}" width="${width}" height="${height}" filter="url(#provincesColorFilter)" opacity="${provincesOpacity}" />
+        </g>
+        `;
+      }
+    }
 
     // Render Basin Storm Detection Boundary Boxes when displaying Ecuador Continental
     let detectionBoxesSvg = '';
@@ -578,6 +633,7 @@ export class VideoCompilerService {
           <stop offset="85%" stop-color="#921313"/>
           <stop offset="100%" stop-color="#FFFFFF"/>
         </linearGradient>
+        ${provincesFilterSvg}
       </defs>
 
       <!-- Header Top Bar -->
@@ -598,6 +654,9 @@ export class VideoCompilerService {
         <!-- Handle Text in high contrast Space Grotesk -->
         <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
       </g>
+
+      <!-- Provincial Delineation Layer -->
+      ${provincesOverlaySvg}
 
       <!-- Basin Storm Detection Boundary Boxes -->
       ${detectionBoxesSvg}

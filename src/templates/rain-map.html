@@ -59,6 +59,12 @@
               <stop offset="85%" stop-color="#921313"/>
               <stop offset="100%" stop-color="#FFFFFF"/>
             </linearGradient>
+
+            <!-- Provincial Boundary Recolor Filter -->
+            <filter id="provincesColorFilter" color-interpolation-filters="sRGB" x="0%" y="0%" width="100%" height="100%">
+              <feFlood id="provincesFeFlood" flood-color="#38bdf8" flood-opacity="1" result="flood" />
+              <feComposite in="flood" in2="SourceAlpha" operator="in" result="mask" />
+            </filter>
           </defs>
 
           <!-- Top Header Bar -->
@@ -85,6 +91,11 @@
             </g>
             <!-- Handle Text -->
             <text id="overlayWatermark" x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
+          </g>
+
+          <!-- Provincial Delineation Layer (Ecuador Continental) -->
+          <g id="provincesLayer">
+            <image id="provincesImage" href="/api/provincias-overlay" width="800" height="800" filter="url(#provincesColorFilter)" opacity="0.85" />
           </g>
 
           <!-- Layer for Basin Storm Detection Boundary Boxes -->
@@ -272,6 +283,51 @@
           </div>
         </div>
 
+        <!-- Provincial Delineation Layer Controls -->
+        <div class="form-group province-controls-card" id="provinceControlsCard" style="margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">Límites Provinciales (Ecuador)</div>
+            <span id="provinceBasinNotice" style="font-size: 10.5px; color: var(--text-muted); display: none;">(Solo vista Ecuador)</span>
+          </div>
+
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+            <input type="checkbox" id="showProvincesCheckbox" checked>
+            Mostrar Delineación de Provincias
+          </label>
+
+          <div id="provinceCustomizationSubgroup" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Color Picker & Swatches -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">Color de Delineación</label>
+                <span id="provinceColorBadge" class="hex-badge">#38bdf8</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="provincesColorPicker" value="#38bdf8" class="color-picker-input" title="Selector de color hexadecimal">
+                <!-- Preset Swatches -->
+                <div class="swatch-container" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="swatch-btn active" data-color="#38bdf8" title="Cian Satelital (#38bdf8)" style="background: #38bdf8;"></button>
+                  <button type="button" class="swatch-btn" data-color="#ffffff" title="Blanco Brillante (#ffffff)" style="background: #ffffff;"></button>
+                  <button type="button" class="swatch-btn" data-color="#94a3b8" title="Gris Neutro (#94a3b8)" style="background: #94a3b8;"></button>
+                  <button type="button" class="swatch-btn" data-color="#facc15" title="Amarillo Alerta (#facc15)" style="background: #facc15;"></button>
+                  <button type="button" class="swatch-btn" data-color="#4ade80" title="Verde Neón (#4ade80)" style="background: #4ade80;"></button>
+                  <button type="button" class="swatch-btn" data-color="#f43f5e" title="Rosa / Magenta (#f43f5e)" style="background: #f43f5e;"></button>
+                  <button type="button" class="swatch-btn" data-color="#fb923c" title="Naranja (#fb923c)" style="background: #fb923c;"></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Opacity Slider -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">Opacidad de Líneas</label>
+                <span id="provinceOpacityVal" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">85%</span>
+              </div>
+              <input type="range" id="provincesOpacitySlider" min="0.1" max="1.0" step="0.05" value="0.85" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
+            </div>
+          </div>
+        </div>
+
         <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="customTitleInput">Título Superior</label>
           <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital GOES-16 • Ecuador Continental">
@@ -389,6 +445,20 @@
     // Date Subtitle Controls
     const showDateSubtitleCheckbox = document.getElementById('showDateSubtitleCheckbox');
     const customDateSubtitleInput = document.getElementById('customDateSubtitleInput');
+
+    // Provincial Layer Controls
+    const showProvincesCheckbox = document.getElementById('showProvincesCheckbox');
+    const provincesColorPicker = document.getElementById('provincesColorPicker');
+    const provinceColorBadge = document.getElementById('provinceColorBadge');
+    const provincesOpacitySlider = document.getElementById('provincesOpacitySlider');
+    const provinceOpacityVal = document.getElementById('provinceOpacityVal');
+    const provinceControlsCard = document.getElementById('provinceControlsCard');
+    const provinceCustomizationSubgroup = document.getElementById('provinceCustomizationSubgroup');
+    const provinceBasinNotice = document.getElementById('provinceBasinNotice');
+    const provincesLayer = document.getElementById('provincesLayer');
+    const provincesFeFlood = document.getElementById('provincesFeFlood');
+    const provincesImage = document.getElementById('provincesImage');
+    const swatchBtns = document.querySelectorAll('.swatch-btn');
 
     // New Detection & Preset DOM Elements
     const showDetectionBoxesCheckbox = document.getElementById('showDetectionBoxesCheckbox');
@@ -905,6 +975,7 @@
       renderReferenceCities();
       renderDetectionBoxes();
       renderSummaryCards();
+      updateProvinceVisibility();
     }
 
     const ALL_BASIN_KEYS = ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
@@ -1276,6 +1347,90 @@
     if (showSummaryCardsCheckbox) showSummaryCardsCheckbox.addEventListener('change', updateOverlay);
     if (showCityPinsCheckbox) showCityPinsCheckbox.addEventListener('change', updateOverlay);
 
+    // Provincial Boundary Layer State Handlers
+    function updateProvinceColor(color) {
+      if (!color) return;
+      if (provincesFeFlood) {
+        provincesFeFlood.setAttribute('flood-color', color);
+      }
+      if (provinceColorBadge) {
+        provinceColorBadge.textContent = color.toLowerCase();
+        provinceColorBadge.style.color = color;
+        provinceColorBadge.style.borderColor = color;
+        provinceColorBadge.style.background = `${color}20`;
+      }
+      if (provincesColorPicker && provincesColorPicker.value.toLowerCase() !== color.toLowerCase()) {
+        provincesColorPicker.value = color;
+      }
+      if (swatchBtns) {
+        swatchBtns.forEach(btn => {
+          if (btn.getAttribute('data-color').toLowerCase() === color.toLowerCase()) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      }
+    }
+
+    function updateProvinceOpacity(opacity) {
+      const num = parseFloat(opacity);
+      if (isNaN(num)) return;
+      if (provincesImage) {
+        provincesImage.setAttribute('opacity', num.toString());
+      }
+      if (provinceOpacityVal) {
+        provinceOpacityVal.textContent = `${Math.round(num * 100)}%`;
+      }
+    }
+
+    function updateProvinceVisibility() {
+      const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
+      const isChecked = showProvincesCheckbox ? showProvincesCheckbox.checked : true;
+
+      if (provinceBasinNotice) {
+        provinceBasinNotice.style.display = isEcuador ? 'none' : 'inline';
+      }
+      if (provinceControlsCard) {
+        if (!isEcuador) {
+          provinceControlsCard.classList.add('dimmed');
+        } else {
+          provinceControlsCard.classList.remove('dimmed');
+        }
+      }
+
+      if (provinceCustomizationSubgroup) {
+        provinceCustomizationSubgroup.style.opacity = (isChecked && isEcuador) ? '1' : '0.4';
+        provinceCustomizationSubgroup.style.pointerEvents = (isChecked && isEcuador) ? 'auto' : 'none';
+      }
+
+      if (provincesLayer) {
+        provincesLayer.style.display = (isChecked && isEcuador) ? 'block' : 'none';
+      }
+    }
+
+    if (provincesColorPicker) {
+      provincesColorPicker.addEventListener('input', (e) => updateProvinceColor(e.target.value));
+      provincesColorPicker.addEventListener('change', (e) => updateProvinceColor(e.target.value));
+    }
+
+    if (swatchBtns) {
+      swatchBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const c = btn.getAttribute('data-color');
+          if (c) updateProvinceColor(c);
+        });
+      });
+    }
+
+    if (provincesOpacitySlider) {
+      provincesOpacitySlider.addEventListener('input', (e) => updateProvinceOpacity(e.target.value));
+    }
+
+    if (showProvincesCheckbox) {
+      showProvincesCheckbox.addEventListener('change', updateProvinceVisibility);
+    }
+
     function applyFitScreen() {
       if (!fitScreenCheckbox) return;
       if (fitScreenCheckbox.checked) {
@@ -1365,6 +1520,9 @@
           showCityPins: showCityPinsCheckbox ? showCityPinsCheckbox.checked : true,
           showSummaryCards: showSummaryCardsCheckbox ? showSummaryCardsCheckbox.checked : true,
           showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
+          showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : true,
+          provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
+          provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
           activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
           createMp4: format === 'mp4',
           createGif: format === 'gif',
