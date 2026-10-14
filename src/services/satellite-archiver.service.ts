@@ -122,35 +122,9 @@ export class SatelliteArchiverService {
             throw new Error(`NASA GIBS tile placeholder or unavailable (${tile.length} bytes)`);
           }
 
-          if (source === 'nasa_gibs' && plantKey === 'ecuador') {
-            const overlayPath = path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png');
-            if (fs.existsSync(overlayPath)) {
-              const tempRaw = `/tmp/raw_nasa_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-              try {
-                fs.writeFileSync(tempRaw, tile);
-                await execFileAsync('ffmpeg', [
-                  '-y',
-                  '-i', tempRaw,
-                  '-i', overlayPath,
-                  '-filter_complex', '[0:v][1:v]overlay=0:0[out]',
-                  '-map', '[out]',
-                  filePath
-                ]);
-                buffer = fs.readFileSync(filePath);
-              } catch (ffErr) {
-                fs.writeFileSync(filePath, tile);
-                buffer = tile;
-              } finally {
-                try { fs.unlinkSync(tempRaw); } catch {}
-              }
-            } else {
-              fs.writeFileSync(filePath, tile);
-              buffer = tile;
-            }
-          } else {
-            fs.writeFileSync(filePath, tile);
-            buffer = tile;
-          }
+          // Save clean raw satellite tile directly (boundaries are rendered as vector SVG overlay)
+          fs.writeFileSync(filePath, tile);
+          buffer = tile;
           break;
         }
       } catch (err: any) {

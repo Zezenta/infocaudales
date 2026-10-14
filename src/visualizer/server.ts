@@ -563,6 +563,41 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Provincial Boundaries Vector Overlay API (Clean SVG vector paths)
+  if (req.method === 'GET' && (req.url === '/api/provincias-vector' || req.url === '/assets/overlays/ecuador_provincias.svg')) {
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias.svg')
+    ];
+    let svgPath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        svgPath = c;
+        break;
+      }
+    }
+
+    if (!svgPath) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Vector overlay not found');
+      return;
+    }
+
+    fs.readFile(svgPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error reading vector overlay');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
   // Satellite Single Frame Proxy API (handles CORS, local archive & layers)
   if (req.method === 'GET' && req.url && req.url.startsWith('/api/satellite-frame')) {
     const urlObj = new URL(req.url, `http://localhost:${PORT}`);
@@ -628,35 +663,7 @@ const server = http.createServer(async (req, res) => {
       height
     })
       .then(async buffer => {
-        // If NASA GIBS frame on Ecuador view, composite with provincial borders
-        if (layer === 'nasa_gibs' && plantKey === 'ecuador' && buffer && buffer.length > 0) {
-          const overlayPath = path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png');
-          if (fs.existsSync(overlayPath)) {
-            const tempRaw = `/tmp/vis_nasa_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-            const tempOut = `/tmp/vis_comp_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-            try {
-              fs.writeFileSync(tempRaw, buffer);
-              await execFileAsync('ffmpeg', [
-                '-y',
-                '-i', tempRaw,
-                '-i', overlayPath,
-                '-filter_complex', '[0:v][1:v]overlay=0:0[out]',
-                '-map', '[out]',
-                tempOut
-              ]);
-              if (fs.existsSync(tempOut)) {
-                buffer = fs.readFileSync(tempOut);
-              }
-            } catch (ffErr) {
-              // fallback to raw tile
-            } finally {
-              try { fs.unlinkSync(tempRaw); } catch {}
-              try { fs.unlinkSync(tempOut); } catch {}
-            }
-          }
-        }
-
-        // Cache composited NASA frame to disk archive for instant future scrubs & compilation
+        // Cache clean raw NASA frame to disk archive for instant future scrubs & compilation
         if (time && layer === 'nasa_gibs' && plantKey === 'ecuador' && buffer && buffer.length > 0) {
           try {
             const { dateEcuador, timeEcuador } = satelliteMapService.formatEcuadorTimestamp(time);
@@ -801,6 +808,7 @@ const server = http.createServer(async (req, res) => {
           showProvinces: payload.showProvinces !== undefined ? payload.showProvinces : true,
           provincesColor: payload.provincesColor || '#38bdf8',
           provincesOpacity: typeof payload.provincesOpacity === 'number' ? payload.provincesOpacity : 0.85,
+          provincesWidth: typeof payload.provincesWidth === 'number' ? payload.provincesWidth : 1.2,
           activeBasinKeys: payload.activeBasinKeys,
           highlightBasinKey: payload.activeBasinKeys?.[0],
           showThermalScale,

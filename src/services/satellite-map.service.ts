@@ -410,33 +410,6 @@ export class SatelliteMapService {
               height
             });
 
-            if (source === 'nasa_gibs' && plantKey === 'ecuador' && buffer && buffer.length > 0) {
-              const overlayPath = path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png');
-              if (fs.existsSync(overlayPath)) {
-                const tempRaw = `/tmp/raw_rec_nasa_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-                const tempOut = `/tmp/comp_rec_nasa_${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-                try {
-                  fs.writeFileSync(tempRaw, buffer);
-                  await execFileAsync('ffmpeg', [
-                    '-y',
-                    '-i', tempRaw,
-                    '-i', overlayPath,
-                    '-filter_complex', '[0:v][1:v]overlay=0:0[out]',
-                    '-map', '[out]',
-                    tempOut
-                  ]);
-                  if (fs.existsSync(tempOut)) {
-                    buffer = fs.readFileSync(tempOut);
-                  }
-                } catch (ffErr) {
-                  // Fall back to raw buffer
-                } finally {
-                  try { fs.unlinkSync(tempRaw); } catch {}
-                  try { fs.unlinkSync(tempOut); } catch {}
-                }
-              }
-            }
-
             const { dateEcuador, timeEcuador } = this.formatEcuadorTimestamp(timeIso);
 
             frames[frameIdx] = {

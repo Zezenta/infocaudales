@@ -60,11 +60,6 @@
               <stop offset="100%" stop-color="#FFFFFF"/>
             </linearGradient>
 
-            <!-- Provincial Boundary Recolor Filter -->
-            <filter id="provincesColorFilter" color-interpolation-filters="sRGB" x="0%" y="0%" width="100%" height="100%">
-              <feFlood id="provincesFeFlood" flood-color="#38bdf8" flood-opacity="1" result="flood" />
-              <feComposite in="flood" in2="SourceAlpha" operator="in" result="mask" />
-            </filter>
           </defs>
 
           <!-- Top Header Bar -->
@@ -93,10 +88,8 @@
             <text id="overlayWatermark" x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
           </g>
 
-          <!-- Provincial Delineation Layer (Ecuador Continental) -->
-          <g id="provincesLayer">
-            <image id="provincesImage" href="/api/provincias-overlay" width="800" height="800" filter="url(#provincesColorFilter)" opacity="0.85" />
-          </g>
+          <!-- Provincial Delineation Layer (Ecuador Continental - Pure Vector SVG) -->
+          <g id="provincesLayer" fill="none" stroke="#38bdf8" stroke-width="1.2" opacity="0.85" stroke-linecap="round" stroke-linejoin="round"></g>
 
           <!-- Layer for Basin Storm Detection Boundary Boxes -->
           <g id="detectionBoxesLayer"></g>
@@ -325,6 +318,15 @@
               </div>
               <input type="range" id="provincesOpacitySlider" min="0.1" max="1.0" step="0.05" value="0.85" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
             </div>
+
+            <!-- Line Thickness / Grosor Slider -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">Grosor de Líneas</label>
+                <span id="provinceWidthVal" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">1.2 px</span>
+              </div>
+              <input type="range" id="provincesWidthSlider" min="0.5" max="3.0" step="0.1" value="1.2" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
+            </div>
           </div>
         </div>
 
@@ -452,12 +454,12 @@
     const provinceColorBadge = document.getElementById('provinceColorBadge');
     const provincesOpacitySlider = document.getElementById('provincesOpacitySlider');
     const provinceOpacityVal = document.getElementById('provinceOpacityVal');
+    const provincesWidthSlider = document.getElementById('provincesWidthSlider');
+    const provinceWidthVal = document.getElementById('provinceWidthVal');
     const provinceControlsCard = document.getElementById('provinceControlsCard');
     const provinceCustomizationSubgroup = document.getElementById('provinceCustomizationSubgroup');
     const provinceBasinNotice = document.getElementById('provinceBasinNotice');
     const provincesLayer = document.getElementById('provincesLayer');
-    const provincesFeFlood = document.getElementById('provincesFeFlood');
-    const provincesImage = document.getElementById('provincesImage');
     const swatchBtns = document.querySelectorAll('.swatch-btn');
 
     // New Detection & Preset DOM Elements
@@ -1140,6 +1142,7 @@
         currentFrameIdx = maxIdx;
 
         onBasinChange();
+        loadProvincesVector();
         setTimeout(preloadAllViewsInBackground, 600);
       } catch (err) {
         console.error('Error loading initial data:', err);
@@ -1347,11 +1350,41 @@
     if (showSummaryCardsCheckbox) showSummaryCardsCheckbox.addEventListener('change', updateOverlay);
     if (showCityPinsCheckbox) showCityPinsCheckbox.addEventListener('change', updateOverlay);
 
-    // Provincial Boundary Layer State Handlers
+    // Provincial Boundary Layer State Handlers (Vector SVG)
+    let provincesVectorLoaded = false;
+    async function loadProvincesVector() {
+      if (provincesVectorLoaded) return;
+      try {
+        const res = await fetch('/api/provincias-vector');
+        const svgText = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, 'image/svg+xml');
+        const gElem = doc.getElementById('provinciasPaths') || doc.querySelector('svg > g') || doc.querySelector('svg');
+        if (gElem && provincesLayer) {
+          provincesLayer.innerHTML = gElem.innerHTML;
+          provincesVectorLoaded = true;
+          updateProvinceStyle();
+        }
+      } catch (err) {
+        console.error('Error loading provinces vector overlay:', err);
+      }
+    }
+
+    function updateProvinceStyle() {
+      if (!provincesLayer) return;
+      const color = provincesColorPicker ? provincesColorPicker.value : '#38bdf8';
+      const opacity = provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85;
+      const width = provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2;
+
+      provincesLayer.setAttribute('stroke', color);
+      provincesLayer.setAttribute('stroke-width', width.toString());
+      provincesLayer.setAttribute('opacity', opacity.toString());
+    }
+
     function updateProvinceColor(color) {
       if (!color) return;
-      if (provincesFeFlood) {
-        provincesFeFlood.setAttribute('flood-color', color);
+      if (provincesLayer) {
+        provincesLayer.setAttribute('stroke', color);
       }
       if (provinceColorBadge) {
         provinceColorBadge.textContent = color.toLowerCase();
@@ -1376,11 +1409,22 @@
     function updateProvinceOpacity(opacity) {
       const num = parseFloat(opacity);
       if (isNaN(num)) return;
-      if (provincesImage) {
-        provincesImage.setAttribute('opacity', num.toString());
+      if (provincesLayer) {
+        provincesLayer.setAttribute('opacity', num.toString());
       }
       if (provinceOpacityVal) {
         provinceOpacityVal.textContent = `${Math.round(num * 100)}%`;
+      }
+    }
+
+    function updateProvinceWidth(width) {
+      const num = parseFloat(width);
+      if (isNaN(num)) return;
+      if (provincesLayer) {
+        provincesLayer.setAttribute('stroke-width', num.toString());
+      }
+      if (provinceWidthVal) {
+        provinceWidthVal.textContent = `${num.toFixed(1)} px`;
       }
     }
 
@@ -1425,6 +1469,10 @@
 
     if (provincesOpacitySlider) {
       provincesOpacitySlider.addEventListener('input', (e) => updateProvinceOpacity(e.target.value));
+    }
+
+    if (provincesWidthSlider) {
+      provincesWidthSlider.addEventListener('input', (e) => updateProvinceWidth(e.target.value));
     }
 
     if (showProvincesCheckbox) {
@@ -1523,6 +1571,7 @@
           showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : true,
           provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
           provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
+          provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,
           activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
           createMp4: format === 'mp4',
           createGif: format === 'gif',

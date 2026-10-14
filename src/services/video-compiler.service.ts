@@ -55,6 +55,7 @@ export interface OverlayCustomizationOptions {
   cityPins?: CityPin[];
   showProvinces?: boolean;
   provincesColor?: string;
+  provincesWidth?: number;
   provincesOpacity?: number;
   summaryCardItems?: BasinSummaryCardItem[];
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
@@ -114,29 +115,36 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
 }
 
 export class VideoCompilerService {
-  private provincesBase64Cache: string | null = null;
+  private provincesVectorCache: string | null = null;
 
   constructor(private readonly satelliteMapService: SatelliteMapService = new SatelliteMapService()) {}
 
   /**
-   * Helper to retrieve base64-encoded PNG of Ecuador provincial borders.
+   * Helper to retrieve clean vector SVG paths of Ecuador provincial borders.
    */
-  public getProvincesOverlayBase64(): string | null {
-    if (this.provincesBase64Cache) {
-      return this.provincesBase64Cache;
+  public getProvincesVectorSvg(): string | null {
+    if (this.provincesVectorCache) {
+      return this.provincesVectorCache;
     }
     const candidates = [
-      path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias_800.png'),
-      path.join(__dirname, '..', '..', 'src', 'assets', 'overlays', 'ecuador_provincias_800.png'),
-      path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias_800.png')
+      path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(__dirname, '..', '..', 'src', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias.svg')
     ];
     for (const c of candidates) {
       if (fs.existsSync(c)) {
         try {
-          this.provincesBase64Cache = fs.readFileSync(c).toString('base64');
-          return this.provincesBase64Cache;
+          const raw = fs.readFileSync(c, 'utf8');
+          const start = raw.indexOf('<g id="provinciasPaths"');
+          const end = raw.indexOf('</svg>');
+          if (start !== -1 && end !== -1) {
+            const innerStart = raw.indexOf('>', start) + 1;
+            const innerEnd = raw.lastIndexOf('</g>', end);
+            this.provincesVectorCache = raw.substring(innerStart, innerEnd).trim();
+            return this.provincesVectorCache;
+          }
         } catch (e) {
-          console.warn('[VideoCompilerService] Failed to read provinces overlay:', e);
+          console.warn('[VideoCompilerService] Failed to read provinces vector overlay:', e);
         }
       }
     }
@@ -196,26 +204,20 @@ export class VideoCompilerService {
       ? 'GOES-16 • Banda 13 IR (10.3 µm)'
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
 
-    // Provincial Delineation Overlay (Ecuador Continental)
+    // Provincial Delineation Vector Overlay (Ecuador Continental)
     const showProvinces = options.showProvinces !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     const provincesColor = options.provincesColor || '#38bdf8';
+    const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
     const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;
 
-    let provincesFilterSvg = '';
     let provincesOverlaySvg = '';
     if (showProvinces) {
-      const base64 = this.getProvincesOverlayBase64();
-      if (base64) {
-        provincesFilterSvg = `
-        <filter id="provincesColorFilter" color-interpolation-filters="sRGB" x="0%" y="0%" width="100%" height="100%">
-          <feFlood id="provincesFeFlood" flood-color="${escapeXml(provincesColor)}" flood-opacity="1" result="flood" />
-          <feComposite in="flood" in2="SourceAlpha" operator="in" result="mask" />
-        </filter>
-        `;
+      const paths = this.getProvincesVectorSvg();
+      if (paths) {
         provincesOverlaySvg = `
-        <!-- Provincial Delineation Layer -->
-        <g id="provincesLayer">
-          <image href="data:image/png;base64,${base64}" width="${width}" height="${height}" filter="url(#provincesColorFilter)" opacity="${provincesOpacity}" />
+        <!-- Provincial Delineation Vector Layer -->
+        <g id="provincesLayer" fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
+          ${paths}
         </g>
         `;
       }
@@ -633,7 +635,6 @@ export class VideoCompilerService {
           <stop offset="85%" stop-color="#921313"/>
           <stop offset="100%" stop-color="#FFFFFF"/>
         </linearGradient>
-        ${provincesFilterSvg}
       </defs>
 
       <!-- Header Top Bar -->
