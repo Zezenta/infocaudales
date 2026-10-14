@@ -802,6 +802,9 @@ export class VideoCompilerService {
           '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
+          '-g', Math.max(framerate, 8).toString(),
+          '-keyint_min', Math.max(framerate, 8).toString(),
+          '-movflags', '+faststart',
           mp4Path
         );
         await execFileAsync('ffmpeg', mp4Args);
