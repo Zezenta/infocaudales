@@ -382,7 +382,7 @@ export class SatelliteMapService {
     const frameCount = options.frameCount || 18;
     const width = options.width || 800;
     const height = options.height || 800;
-    const layers = options.layers || (source === 'nasa_gibs' ? 'GOES-East_ABI_Band13_Clean_Infrared' : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias');
+    const layers = options.layers || (source === 'nasa_gibs' ? 'GOES-East_ABI_Band13_Clean_Infrared' : 'goes:goes_abi_l2_cmipf_13');
     const bbox = this.resolveBbox({ bbox: options.bbox, plantKey });
     const concurrency = Math.max(1, options.concurrency || 4);
 

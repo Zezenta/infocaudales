@@ -102,7 +102,7 @@ export class SatelliteArchiverService {
 
     const layers = source === 'nasa_gibs'
       ? 'GOES-East_ABI_Band13_Clean_Infrared'
-      : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+      : 'goes:goes_abi_l2_cmipf_13';
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {

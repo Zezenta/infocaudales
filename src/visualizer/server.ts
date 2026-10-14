@@ -620,7 +620,7 @@ const server = http.createServer(async (req, res) => {
             if (!err && buffer) {
               res.writeHead(200, {
                 'Content-Type': 'image/png',
-                'Cache-Control': 'public, max-age=86400'
+                'Cache-Control': 'no-cache, must-revalidate'
               });
               res.end(buffer);
             } else {
@@ -647,11 +647,11 @@ const server = http.createServer(async (req, res) => {
       source = 'nasa_gibs';
       layers = 'GOES-East_ABI_Band13_Clean_Infrared';
     } else if (layer === 'persiann_24h') {
-      layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+      layers = 'satellite_based_precipitation:persiann_pdir_24h';
     } else if (layer === 'wrf_daily') {
-      layers = 'wrf:wrf_precipitation_daily,ecuador:provincias';
+      layers = 'wrf:wrf_precipitation_daily';
     } else {
-      layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+      layers = 'goes:goes_abi_l2_cmipf_13';
     }
 
     satelliteMapService.fetchMapTile({
@@ -690,7 +690,7 @@ const server = http.createServer(async (req, res) => {
 
         res.writeHead(200, {
           'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=300'
+          'Cache-Control': 'no-cache, must-revalidate'
         });
         res.end(buffer);
       })
@@ -949,7 +949,10 @@ const server = http.createServer(async (req, res) => {
         res.end('Error loading rain map HTML');
         return;
       }
-      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
       res.end(data);
     });
     return;
