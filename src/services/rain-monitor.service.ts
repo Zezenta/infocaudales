@@ -380,14 +380,14 @@ export class RainMonitorService {
     }
 
     if (!tileBuffer) {
-      // 1. Fallback: SQLite satellite_archive record (clean INAMHI GeoServer frame with provinces)
+      // 1. Fallback: SQLite satellite_archive record (clean INAMHI GeoServer frame with provinces, within last 45 min)
       try {
         const localArchived = db.prepare(`
           SELECT timestamp_iso, file_path FROM satellite_archive
-          WHERE file_size_bytes > 50000
+          WHERE file_size_bytes > 50000 AND recorded_at >= ?
           ORDER BY timestamp_iso DESC
           LIMIT 1
-        `).get() as { timestamp_iso: string; file_path: string } | undefined;
+        `).get(Date.now() - 45 * 60 * 1000) as { timestamp_iso: string; file_path: string } | undefined;
 
         if (localArchived && fs.existsSync(localArchived.file_path)) {
           const fileBuf = fs.readFileSync(localArchived.file_path);
@@ -1159,12 +1159,22 @@ export class RainMonitorService {
 
     systemLogger.info(`[RainMonitor] Generating 24h satellite daily summary video for ${targetDate}...`);
 
-    const rows = db.prepare(`
+    let rows = db.prepare(`
       SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
       FROM satellite_archive
-      WHERE date_ecuador = ?
+      WHERE date_ecuador = ? AND source = 'geoserver'
       ORDER BY timestamp_iso ASC
     `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+
+    if (!rows || rows.length < 6) {
+      // Fallback to any available source if geoserver had fewer than 6 frames
+      rows = db.prepare(`
+        SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
+        FROM satellite_archive
+        WHERE date_ecuador = ?
+        ORDER BY timestamp_iso ASC
+      `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+    }
 
     if (!rows || rows.length < 6) {
       throw new Error(`[RainMonitor] Not enough archived satellite frames for date ${targetDate} (found: ${rows?.length || 0})`);

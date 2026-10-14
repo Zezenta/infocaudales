@@ -81,21 +81,40 @@ async function syncArchive() {
   const nowEcuador = new Date().toLocaleTimeString('es-EC', { timeZone: 'America/Guayaquil' });
 
   try {
-    const result = await archiver.archiveLatestFrames({
+    const geoResult = await archiver.archiveLatestFrames({
       limit: FRAME_SCAN_LIMIT,
-      plantKey: 'ecuador'
+      plantKey: 'ecuador',
+      source: 'geoserver'
     });
 
-    const stats = archiver.getStats();
-
-    if (result.downloaded > 0) {
+    if (geoResult.downloaded > 0) {
       console.log(
-        `[Archiver ${nowEcuador}] +${result.downloaded} fotograma(s) nuevo(s) descargado(s) y guardado(s) a disco. Total: ${stats.totalFrames} frames.`
+        `[Archiver ${nowEcuador}] GEOGLOWS: +${geoResult.downloaded} fotograma(s) nuevo(s) descargado(s).`
       );
     }
   } catch (err: any) {
     // GeoServer might be indexing
   }
+
+  try {
+    const nasaResult = await archiver.archiveLatestFrames({
+      plantKey: 'ecuador',
+      source: 'nasa_gibs'
+    });
+
+    if (nasaResult.downloaded > 0) {
+      console.log(
+        `[Archiver ${nowEcuador}] NASA GIBS: +${nasaResult.downloaded} fotograma(s) nuevo(s) descargado(s).`
+      );
+    }
+  } catch (err: any) {
+    // NASA GIBS connection warning
+  }
+
+  const stats = archiver.getStats();
+  const geoStats = archiver.getStats('geoserver');
+  const nasaStats = archiver.getStats('nasa_gibs');
+  console.log(`[Archiver ${nowEcuador}] Total en disco: ${stats.totalFrames} frames (${geoStats.totalFrames} GEOGLOWS, ${nasaStats.totalFrames} NASA).`);
 
   // Check storm activity in monitored basins
   await checkStorms();

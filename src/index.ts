@@ -891,11 +891,17 @@ async function runRainMonitoringCycle() {
 
   const autoPublish = process.env.AUTO_PUBLISH_RAIN_ALERTS !== 'false';
 
-  // 1. Sync latest satellite frame to SQLite archive (up to rolling window of 18 frames / ~3h to self-heal any gaps)
+  // 1. Sync latest satellite frames to SQLite archive (GeoServer and NASA GIBS)
   try {
-    await satelliteArchiverService.archiveLatestFrames({ limit: 18, plantKey: 'ecuador' });
+    await satelliteArchiverService.archiveLatestFrames({ limit: 18, plantKey: 'ecuador', source: 'geoserver' });
   } catch (archErr: any) {
-    systemLogger.warn(`[RainMonitor Cron] Satellite archival warning: ${archErr?.message || archErr}`);
+    systemLogger.warn(`[RainMonitor Cron] GeoServer satellite archival warning: ${archErr?.message || archErr}`);
+  }
+
+  try {
+    await satelliteArchiverService.archiveLatestFrames({ plantKey: 'ecuador', source: 'nasa_gibs' });
+  } catch (archErr: any) {
+    systemLogger.warn(`[RainMonitor Cron] NASA GIBS satellite archival warning: ${archErr?.message || archErr}`);
   }
 
   // 2. Evaluate target basins
@@ -982,15 +988,25 @@ dailyVideoCleanupCronJob.start();
 dailySatelliteTimelapseCronJob.start();
 
 // Self-healing backfill on boot: retrieve all available frames in GeoServer's rolling window (~3h)
+// and NASA GIBS (up to 24-hour backfill if no frames exist locally)
 if (process.env.ENABLE_RAIN_MONITOR !== 'false') {
-  console.log('[Startup] Executing initial satellite backfill sync (up to 18 frames)...');
+  console.log('[Startup] Executing initial satellite backfill sync (GeoServer & NASA GIBS)...');
   satelliteArchiverService
-    .archiveLatestFrames({ limit: 18, plantKey: 'ecuador' })
+    .archiveLatestFrames({ limit: 18, plantKey: 'ecuador', source: 'geoserver' })
     .then((synced) => {
-      console.log(`[Startup] Initial satellite archival sync completed: ${synced.downloaded} new frame(s) downloaded (${synced.scanned} scanned, ${synced.skipped} skipped).`);
+      console.log(`[Startup] GeoServer archival sync completed: ${synced.downloaded} new frame(s) downloaded (${synced.scanned} scanned, ${synced.skipped} skipped).`);
     })
     .catch((err) => {
-      console.warn('[Startup] Initial satellite archival sync warning:', err?.message || err);
+      console.warn('[Startup] GeoServer archival sync warning:', err?.message || err);
+    });
+
+  satelliteArchiverService
+    .archiveLatestFrames({ plantKey: 'ecuador', source: 'nasa_gibs' })
+    .then((synced) => {
+      console.log(`[Startup] NASA GIBS archival sync completed: ${synced.downloaded} new frame(s) downloaded (${synced.scanned} scanned, ${synced.skipped} skipped).`);
+    })
+    .catch((err) => {
+      console.warn('[Startup] NASA GIBS archival sync warning:', err?.message || err);
     });
 }
 
