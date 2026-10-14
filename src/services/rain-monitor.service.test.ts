@@ -233,6 +233,7 @@ describe('RainMonitorService', () => {
 
     it('automatically publishes video to X when autoPublishToX is enabled', async () => {
       const mockSat = new SatelliteMapService();
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(20, 20, 4)); // 10% coverage
 
       const mockVideo = new VideoCompilerService();

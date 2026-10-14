@@ -69,27 +69,26 @@ export class SatelliteMapService {
   }
 
   /**
-   * Fetches available GOES-16 satellite timestamps.
-   * If source is 'nasa_gibs' (or default), generates aligned 10-minute intervals ending at latest ingested mark.
-   * If source is 'geoserver', queries GEOGLOWS GeoServer GetCapabilities.
+   * Fetches available GOES-16 satellite timestamps from GEOGLOWS GeoServer GetCapabilities or NASA GIBS.
    * Returns sorted array of ISO timestamp strings (oldest to newest).
    */
   public async fetchGoesTimestamps(options: {
     limit?: number;
     layer?: string;
     fallbackToSynthetic?: boolean;
-    source?: 'geoserver' | 'nasa_gibs';
+    source?: SatelliteSource;
   } = {}): Promise<string[]> {
     const limit = options.limit ?? 18;
-    const effectiveSource = options.source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const effectiveSource = options.source || 'geoserver';
 
     if (effectiveSource === 'nasa_gibs') {
       const nowMs = Date.now();
-      // NASA GIBS tiles are typically available ~10 minutes behind real-time
-      const latestAvailableMs = Math.floor((nowMs - 10 * 60 * 1000) / (10 * 60 * 1000)) * (10 * 60 * 1000);
+      // NASA GIBS Band 13 tiles are available up to ~40 minutes behind UTC
+      const lagMs = 40 * 60 * 1000;
+      const latestMs = Math.floor((nowMs - lagMs) / (10 * 60 * 1000)) * (10 * 60 * 1000);
       const timestamps: string[] = [];
       for (let i = limit - 1; i >= 0; i--) {
-        const tMs = latestAvailableMs - i * 10 * 60 * 1000;
+        const tMs = latestMs - i * 10 * 60 * 1000;
         timestamps.push(new Date(tMs).toISOString());
       }
       return timestamps;
@@ -276,12 +275,19 @@ export class SatelliteMapService {
         if (buf.length < 8) {
           throw new Error(`Invalid map tile buffer length: ${buf.length}`);
         }
-        // Check for PNG signature (0x89 0x50 0x4E 0x47) or JPEG (0xFF 0xD8)
         const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
         const isJpg = buf[0] === 0xff && buf[1] === 0xd8;
         if (!isPng && !isJpg) {
           const sample = buf.toString('utf8', 0, Math.min(buf.length, 250));
           throw new Error(`WMS returned non-image payload: ${sample}`);
+        }
+        const effectiveSource = options.source ?? 'geoserver';
+        if (effectiveSource === 'nasa_gibs') {
+          const isFullResolution = (options.width ?? 800) >= 400;
+          const minBytes = isFullResolution ? 20000 : 300;
+          if (buf.length < minBytes) {
+            throw new Error(`NASA GIBS tile unavailable or transparent placeholder (${buf.length} bytes)`);
+          }
         }
         if (this.tileCache.size >= this.maxCacheEntries) {
           const oldestKey = this.tileCache.keys().next().value;

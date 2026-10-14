@@ -34,6 +34,7 @@ export interface RainCheckOptions {
   autoCompileVideo?: boolean;      // Whether to compile MP4 video automatically when triggered (default: true)
   autoPublishToX?: boolean;        // Whether to automatically post video to X if XService is available (default: true)
   tileResolution?: number;         // Tile width & height in pixels for analysis (default: 80)
+  source?: 'geoserver' | 'nasa_gibs'; // Satellite imagery source
 }
 
 export interface RainCheckResult {
@@ -455,13 +456,15 @@ export class RainMonitorService {
     }
 
     // 2. Fetch Live Satellite Cloud Coverage
-    const { coveragePct, timestampIso } = await this.getBasinCurrentStormCoverage(plantKey, tileResolution);
+    const { coveragePct, timestampIso } = await this.getBasinCurrentStormCoverage(plantKey, tileResolution, options.source);
 
     // Guardrail: check if satellite feed is stale / interrupted
+    const effectiveSource = options.source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const maxStaleMinutes = effectiveSource === 'nasa_gibs' ? 90 : 45;
     const frameAgeMinutes = Math.round((now - new Date(timestampIso).getTime()) / 60000);
-    if (frameAgeMinutes > 45 && existingEvent && existingEvent.status === 'ACTIVE') {
+    if (frameAgeMinutes > maxStaleMinutes && existingEvent && existingEvent.status === 'ACTIVE') {
       systemLogger.warn(
-        `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old). Aborting stale storm event to prevent false compilation.`
+        `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old, max allowed is ${maxStaleMinutes} min). Aborting stale storm event to prevent false compilation.`
       );
       db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
       existingEvent.status = 'CLOSED';
@@ -1147,12 +1150,22 @@ export class RainMonitorService {
 
     systemLogger.info(`[RainMonitor] Generating 24h satellite daily summary video for ${targetDate}...`);
 
-    const rows = db.prepare(`
+    let rows = db.prepare(`
       SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
       FROM satellite_archive
-      WHERE date_ecuador = ?
+      WHERE date_ecuador = ? AND source = 'geoserver'
       ORDER BY timestamp_iso ASC
     `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+
+    if (!rows || rows.length < 6) {
+      // Fallback to any available source if geoserver had fewer than 6 frames
+      rows = db.prepare(`
+        SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
+        FROM satellite_archive
+        WHERE date_ecuador = ?
+        ORDER BY timestamp_iso ASC
+      `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+    }
 
     if (!rows || rows.length < 6) {
       throw new Error(`[RainMonitor] Not enough archived satellite frames for date ${targetDate} (found: ${rows?.length || 0})`);
