@@ -83,9 +83,6 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_satellite_archive_ts 
     ON satellite_archive (timestamp_iso);
-
-  CREATE INDEX IF NOT EXISTS idx_satellite_archive_src_ts 
-    ON satellite_archive (source, timestamp_iso);
 `);
 
 // Safe idempotent migration for satellite_archive: ensure composite PRIMARY KEY (timestamp_iso, source)
@@ -145,6 +142,10 @@ try {
 } catch (migErr: any) {
   console.error('[SQLite] Error during satellite_archive schema migration:', migErr?.message || migErr);
 }
+
+try {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_satellite_archive_src_ts ON satellite_archive (source, timestamp_iso);`);
+} catch {}
 
 try {
   db.exec(`ALTER TABLE rain_events ADD COLUMN published_at INTEGER;`);
