@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as https from 'https';
-import { HydroelectricPlant } from '../types/hydroelectric.js';
-import { cenaceLogger } from '../utils/logger.js';
+import { HydroelectricPlant } from '../../types/hydroelectric.js';
+import { cenaceLogger } from '../../utils/logger.js';
 
 // Type definitions for output values
 export interface SystemCurvePoint {

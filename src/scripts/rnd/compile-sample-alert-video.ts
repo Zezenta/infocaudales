@@ -5,9 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { SatelliteArchiverService } from '../../services/satellite-archiver.service.js';
-import { SatelliteMapService } from '../../services/satellite-map.service.js';
-import { VideoCompilerService } from '../../services/video-compiler.service.js';
+import { SatelliteArchiverService } from '../../services/satellite/satellite-archiver.service.js';
+import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from '../../services/satellite/video-compiler.service.js';
 import { buildStormAlertPostText } from '../../utils/post-formatter.js';
 
 const execFileAsync = promisify(execFile);

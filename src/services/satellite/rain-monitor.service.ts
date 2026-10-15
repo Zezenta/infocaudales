@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
-import { db } from '../utils/db.js';
-import { BASIN_GEOMETRIES, COSTA_SIERRA_DIVIDE, SIERRA_AMAZONIA_DIVIDE, interpolateDivideLon } from '../data/basin-geometries.js';
-import { SatelliteMapService, SatelliteFrame, SatelliteSource } from './satellite-map.service.js';
+import { db } from '../../utils/db.js';
+import { BASIN_GEOMETRIES, COSTA_SIERRA_DIVIDE, SIERRA_AMAZONIA_DIVIDE, interpolateDivideLon } from '../../data/basin-geometries.js';
+import { SatelliteTelemetryService, SatelliteMapService, SatelliteFrame, SatelliteSource } from '../telemetry/satellite-telemetry.service.js';
 import { SatelliteArchiverService } from './satellite-archiver.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
-import { XService } from './x.service.js';
-import { buildStormAlertPostText, buildDailySatelliteSummaryPostText } from '../utils/post-formatter.js';
-import { systemLogger } from '../utils/logger.js';
+import { XService } from '../x.service.js';
+import { buildStormAlertPostText, buildDailySatelliteSummaryPostText } from '../../utils/post-formatter.js';
+import { systemLogger } from '../../utils/logger.js';
 
 export interface RainEventRecord {
   id: number;
@@ -288,7 +288,7 @@ export const DEFAULT_STORM_THRESHOLDS: Record<string, number> = {
 
 export class RainMonitorService {
   constructor(
-    private readonly satelliteService: SatelliteMapService = new SatelliteMapService(),
+    private readonly satelliteService: SatelliteTelemetryService = new SatelliteTelemetryService(),
     private readonly videoCompilerService: VideoCompilerService = new VideoCompilerService(satelliteService),
     private readonly xService?: XService,
     private readonly archiverService: SatelliteArchiverService = new SatelliteArchiverService(satelliteService)
@@ -599,10 +599,12 @@ export class RainMonitorService {
     const basin = BASIN_GEOMETRIES[plantKey];
     const basinName = basin?.name || plantKey;
 
-    // 1. Primary source: Load archived frames from SQLite satellite_archive
+    // 1. Primary source: Load archived frames from SQLite satellite_archive (45 min prior, 35 min / 3 frames post)
     let framesToCompile = this.loadArchivedStormFrames(
       existingEvent.detected_at,
-      existingEvent.last_checked_at
+      existingEvent.last_checked_at,
+      45,
+      35
     );
 
     // 2. Legacy fallback: check if frames were cached in legacy temp folder
@@ -614,8 +616,11 @@ export class RainMonitorService {
       }
     }
 
+    const postStormFramesCount = 3;
     let compilationResult: CompiledAnimationResult;
     if (framesToCompile.length >= 4) {
+      // Keep the final 3 frames without alert to show calm/dissipation before loop repeats
+      const stormEndFrameIndex = Math.max(0, framesToCompile.length - 1 - postStormFramesCount);
       compilationResult = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
         plantKey: 'ecuador',
         customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
@@ -629,6 +634,7 @@ export class RainMonitorService {
         activeBasinKeys: [plantKey],
         stormWindow: {
           startTime: existingEvent.detected_at,
+          endFrameIndex: stormEndFrameIndex,
           endTime: existingEvent.last_checked_at - 60000 // Last checked was dissipation; storm ended before it
         }
       });
@@ -884,17 +890,19 @@ export class RainMonitorService {
 
   /**
    * Loads archived storm frames from SQLite satellite_archive for a given storm event window.
-   * Includes ~45 minutes of pre-storm context before detection.
+   * Includes ~45 minutes of pre-storm context before detection and ~35 minutes (3 frames) of post-storm context.
    * Filters out any corrupted or miniature frames (< 20 KB).
    */
   public loadArchivedStormFrames(
     detectedAt: number,
     endedAt: number,
-    preStormMinutes: number = 45
+    preStormMinutes: number = 45,
+    postStormMinutes: number = 35
   ): SatelliteFrame[] {
     const preStormMs = preStormMinutes * 60 * 1000;
+    const postStormMs = postStormMinutes * 60 * 1000;
     const startIso = new Date(detectedAt - preStormMs).toISOString();
-    const endIso = new Date(endedAt).toISOString();
+    const endIso = new Date(endedAt + postStormMs).toISOString();
 
     let rows = db.prepare(`
       SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, file_size_bytes, source

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { VideoCompilerService } from './video-compiler.service.js';
-import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
-import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
+import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
+import { BASIN_GEOMETRIES } from '../../data/basin-geometries.js';
 
 describe('VideoCompilerService', () => {
   let compiler: VideoCompilerService;

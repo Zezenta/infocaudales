@@ -1,6 +1,6 @@
-import { SatelliteArchiverService } from '../../services/satellite-archiver.service.js';
-import { SatelliteMapService } from '../../services/satellite-map.service.js';
-import { VideoCompilerService } from '../../services/video-compiler.service.js';
+import { SatelliteArchiverService } from '../../services/satellite/satellite-archiver.service.js';
+import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from '../../services/satellite/video-compiler.service.js';
 
 async function main() {
   const satelliteService = new SatelliteMapService();

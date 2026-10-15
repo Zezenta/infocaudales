@@ -1,8 +1,8 @@
 import fs from 'fs';
 import { db } from '../../utils/db.js';
-import { RainMonitorService } from '../../services/rain-monitor.service.js';
-import { SatelliteMapService } from '../../services/satellite-map.service.js';
-import { VideoCompilerService } from '../../services/video-compiler.service.js';
+import { RainMonitorService } from '../../services/satellite/rain-monitor.service.js';
+import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from '../../services/satellite/video-compiler.service.js';
 import { BASIN_GEOMETRIES } from '../../data/basin-geometries.js';
 
 async function test() {

@@ -1,6 +1,6 @@
-import { InamhiService } from './inamhi.service.js';
+import { InamhiService } from './telemetry/inamhi.service.js';
 import { GeoglowsService } from './geoglows.service.js';
-import { CelecService } from './celec.service.js';
+import { CelecService } from './telemetry/celec.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 import {
   PredictionResult,

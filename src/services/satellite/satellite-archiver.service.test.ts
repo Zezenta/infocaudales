@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { db } from '../utils/db.js';
+import { db } from '../../utils/db.js';
 import { SatelliteArchiverService } from './satellite-archiver.service.js';
-import { SatelliteMapService } from './satellite-map.service.js';
+import { SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 
 describe('SatelliteArchiverService', () => {
   const testArchiveDir = path.join(process.cwd(), 'temp', 'test_satellite_archive');

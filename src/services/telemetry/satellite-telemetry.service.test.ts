@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { SatelliteMapService } from './satellite-map.service.js';
-import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
+import { SatelliteTelemetryService, SatelliteMapService } from './satellite-telemetry.service.js';
+import { BASIN_GEOMETRIES } from '../../data/basin-geometries.js';
 
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);

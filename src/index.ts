@@ -19,15 +19,15 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
-import { CelecService, CelecPointValue } from './services/celec.service.js';
-import { CenaceService } from './services/cenace.service.js';
+import { CelecService, CelecPointValue } from './services/telemetry/celec.service.js';
+import { CenaceService } from './services/telemetry/cenace.service.js';
 import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
 import { PredictionService } from './services/prediction.service.js';
 import { XService } from './services/x.service.js';
-import { SatelliteMapService } from './services/satellite-map.service.js';
-import { VideoCompilerService } from './services/video-compiler.service.js';
-import { RainMonitorService } from './services/rain-monitor.service.js';
-import { SatelliteArchiverService } from './services/satellite-archiver.service.js';
+import { SatelliteTelemetryService, SatelliteMapService } from './services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from './services/satellite/video-compiler.service.js';
+import { RainMonitorService } from './services/satellite/rain-monitor.service.js';
+import { SatelliteArchiverService } from './services/satellite/satellite-archiver.service.js';
 import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from './utils/post-formatter.js';
 import {
   recordForecastBatch,

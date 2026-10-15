@@ -1,7 +1,7 @@
-import { SatelliteArchiverService } from '../services/satellite-archiver.service.js';
-import { SatelliteMapService } from '../services/satellite-map.service.js';
-import { VideoCompilerService } from '../services/video-compiler.service.js';
-import { RainMonitorService } from '../services/rain-monitor.service.js';
+import { SatelliteArchiverService } from '../services/satellite/satellite-archiver.service.js';
+import { SatelliteTelemetryService, SatelliteMapService } from '../services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from '../services/satellite/video-compiler.service.js';
+import { RainMonitorService } from '../services/satellite/rain-monitor.service.js';
 
 const POLL_INTERVAL_SECONDS = parseInt(process.env.ARCHIVE_INTERVAL_SECONDS || '600', 10); // default: 10 min
 const FRAME_SCAN_LIMIT = parseInt(process.env.FRAME_SCAN_LIMIT || '18', 10); // scan last 18 frames (~3 hours)

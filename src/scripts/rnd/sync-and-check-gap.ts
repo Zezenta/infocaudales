@@ -1,5 +1,5 @@
-import { SatelliteMapService } from '../../services/satellite-map.service.js';
-import { SatelliteArchiverService } from '../../services/satellite-archiver.service.js';
+import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
+import { SatelliteArchiverService } from '../../services/satellite/satellite-archiver.service.js';
 import { db } from '../../utils/db.js';
 
 async function main() {

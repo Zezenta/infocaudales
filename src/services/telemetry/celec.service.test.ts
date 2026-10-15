@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
 import { CelecService } from './celec.service.js';
-import { HydroelectricPlant } from '../types/hydroelectric.js';
+import { HydroelectricPlant } from '../../types/hydroelectric.js';
 
 vi.mock('axios');
 

@@ -3,10 +3,10 @@ import path from 'path';
 import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../data/basin-geometries.js';
-import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
-import { systemLogger } from '../utils/logger.js';
-import { db } from '../utils/db.js';
+import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../../data/basin-geometries.js';
+import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
+import { systemLogger } from '../../utils/logger.js';
+import { db } from '../../utils/db.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -111,7 +111,7 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
 }
 
 export class VideoCompilerService {
-  constructor(private readonly satelliteMapService: SatelliteMapService = new SatelliteMapService()) {}
+  constructor(private readonly satelliteMapService: SatelliteTelemetryService = new SatelliteTelemetryService()) {}
 
   /**
    * Translates geographic (lat, lon) coordinates inside a bounding box to pixel coordinates (x, y).

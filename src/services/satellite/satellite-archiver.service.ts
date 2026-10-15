@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { db } from '../utils/db.js';
-import { BASIN_GEOMETRIES } from '../data/basin-geometries.js';
-import { SatelliteMapService, SatelliteFrame, SatelliteSource } from './satellite-map.service.js';
-import { systemLogger } from '../utils/logger.js';
+import { db } from '../../utils/db.js';
+import { BASIN_GEOMETRIES } from '../../data/basin-geometries.js';
+import { SatelliteTelemetryService, SatelliteMapService, SatelliteFrame, SatelliteSource } from '../telemetry/satellite-telemetry.service.js';
+import { systemLogger } from '../../utils/logger.js';
 
 export interface ArchivedFrameRecord {
   timestamp_iso: string;
@@ -35,7 +35,7 @@ export class SatelliteArchiverService {
   private readonly archiveDir: string;
 
   constructor(
-    private readonly satelliteService: SatelliteMapService = new SatelliteMapService(),
+    private readonly satelliteService: SatelliteTelemetryService = new SatelliteTelemetryService(),
     customArchiveDir?: string
   ) {
     this.archiveDir = customArchiveDir || path.join(process.cwd(), 'data', 'satellite_archive');

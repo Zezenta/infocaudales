@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { BASIN_GEOMETRIES, BasinGeometry } from '../data/basin-geometries.js';
-import { systemLogger } from '../utils/logger.js';
+import { BASIN_GEOMETRIES, BasinGeometry } from '../../data/basin-geometries.js';
+import { systemLogger } from '../../utils/logger.js';
 
 export type SatelliteSource = 'geoserver' | 'nasa_gibs' | 'esri_satellite';
 
@@ -40,7 +40,7 @@ export interface BasinFramesOptions {
   concurrency?: number;
 }
 
-export class SatelliteMapService {
+export class SatelliteTelemetryService {
   private readonly geoserverGlobalUrl = 'https://services.geoglows.org/geoserver/wms';
   private readonly geoserverGoesUrl = 'https://services.geoglows.org/geoserver/goes/wms';
   private readonly nasaGibsUrl = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
@@ -425,3 +425,5 @@ export class SatelliteMapService {
     return validFrames;
   }
 }
+
+export { SatelliteTelemetryService as SatelliteMapService };

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PredictionService } from './prediction.service.js';
-import { InamhiService } from './inamhi.service.js';
+import { InamhiService } from './telemetry/inamhi.service.js';
 import { GeoglowsService } from './geoglows.service.js';
-import { CelecService } from './celec.service.js';
+import { CelecService } from './telemetry/celec.service.js';
 
 describe('PredictionService Mathematical Models & Pipielines', () => {
   let inamhiMock: InamhiService;

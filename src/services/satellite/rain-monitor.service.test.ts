@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
-import { db } from '../utils/db.js';
+import { db } from '../../utils/db.js';
 import {
   RainMonitorService,
   analyzeStormCloudCoverage,
   unfilterPngScanlines
 } from './rain-monitor.service.js';
-import { SatelliteMapService } from './satellite-map.service.js';
+import { SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './video-compiler.service.js';
 
 function createMockPng(
