@@ -50,7 +50,8 @@ export class SatelliteArchiverService {
   public async archiveSingleFrame(
     timeIso: string,
     plantKey: string = 'ecuador',
-    source: SatelliteSource = 'geoserver'
+    source: SatelliteSource = 'geoserver',
+    options?: { minSizeBytes?: number }
   ): Promise<'DOWNLOADED' | 'SKIPPED' | 'FAILED'> {
     const basin = BASIN_GEOMETRIES[plantKey] || BASIN_GEOMETRIES.ecuador;
 
@@ -99,6 +100,8 @@ export class SatelliteArchiverService {
       ? 'GOES-East_ABI_Band13_Clean_Infrared'
       : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
 
+    const minSize = options?.minSizeBytes ?? (source === 'nasa_gibs' ? 20000 : 0);
+
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const tile = await this.satelliteService.fetchMapTile({
@@ -112,9 +115,9 @@ export class SatelliteArchiverService {
         });
 
         if (tile && tile.length > 0) {
-          // Validation: NASA GIBS returns ~2.5KB transparent PNG if tile is unavailable or in the future
-          if (source === 'nasa_gibs' && tile.length < 20000) {
-            throw new Error(`NASA GIBS tile placeholder or unavailable (${tile.length} bytes)`);
+          // Validation: tiles must be real satellite images, not placeholders or truncated mocks
+          if (minSize > 0 && tile.length < minSize) {
+            throw new Error(`${source} tile data too small or placeholder (${tile.length} bytes < ${minSize})`);
           }
           buffer = tile;
           break;

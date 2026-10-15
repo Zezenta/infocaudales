@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import zlib from 'zlib';
 import { db } from '../utils/db.js';
 import {
@@ -285,6 +287,73 @@ describe('RainMonitorService', () => {
       expect(savedEvent?.tweet_id).toBe('tweet_storm_999');
       expect(savedEvent?.published_at).toBeDefined();
     });
+
+    it('loads archived frames from SQLite satellite_archive and filters out corrupt/small frames (< 20 KB)', () => {
+      const rainMonitor = new RainMonitorService();
+      const testDir = path.join(process.cwd(), 'temp', 'test_storm_archive');
+      fs.mkdirSync(testDir, { recursive: true });
+
+      const validFramePath = path.join(testDir, 'valid_frame.png');
+      const corruptFramePath = path.join(testDir, 'tiny_corrupt_frame.png');
+
+      // Create a valid ~25KB buffer and a tiny 100-byte mock buffer
+      fs.writeFileSync(validFramePath, Buffer.alloc(25000, 1));
+      fs.writeFileSync(corruptFramePath, Buffer.alloc(100, 1));
+
+      const now = Date.now();
+      const t1 = new Date(now - 30 * 60 * 1000).toISOString();
+      const t2 = new Date(now - 10 * 60 * 1000).toISOString();
+
+      db.prepare(`
+        INSERT OR REPLACE INTO satellite_archive (
+          timestamp_iso, source, date_ecuador, time_ecuador, plant_key,
+          file_path, file_size_bytes, recorded_at
+        ) VALUES (?, 'geoserver', '2026-10-15', '04:00', 'ecuador', ?, ?, ?)
+      `).run(t1, validFramePath, 25000, now);
+
+      db.prepare(`
+        INSERT OR REPLACE INTO satellite_archive (
+          timestamp_iso, source, date_ecuador, time_ecuador, plant_key,
+          file_path, file_size_bytes, recorded_at
+        ) VALUES (?, 'geoserver', '2026-10-15', '04:20', 'ecuador', ?, ?, ?)
+      `).run(t2, corruptFramePath, 100, now);
+
+      const frames = rainMonitor.loadArchivedStormFrames(now - 20 * 60 * 1000, now);
+
+      // Only the valid frame >= 20KB should be loaded
+      expect(frames.length).toBe(1);
+      expect(frames[0].timestampIso).toBe(t1);
+      expect(frames[0].buffer.length).toBe(25000);
+
+      // Clean up test files
+      fs.rmSync(testDir, { recursive: true, force: true });
+    });
+
+    it('rejects cached frames smaller than 20 KB in legacy loadCachedStormFrames', () => {
+      const rainMonitor = new RainMonitorService();
+      const legacyTestDir = path.join(process.cwd(), 'temp', 'test_legacy_storm_frames');
+      fs.mkdirSync(legacyTestDir, { recursive: true });
+
+      // Create a valid frame and a 10x10 mock frame
+      const validPng = path.join(legacyTestDir, 'frame_1.png');
+      const validMeta = path.join(legacyTestDir, 'frame_1.json');
+      fs.writeFileSync(validPng, Buffer.alloc(25000, 1));
+      fs.writeFileSync(validMeta, JSON.stringify({ timestampIso: '2026-10-15T04:00:00Z', dateEcuador: '2026-10-15', timeEcuador: '04:00' }));
+
+      const tinyPng = path.join(legacyTestDir, 'frame_2.png');
+      const tinyMeta = path.join(legacyTestDir, 'frame_2.json');
+      fs.writeFileSync(tinyPng, Buffer.alloc(83, 1)); // 83 bytes mock
+      fs.writeFileSync(tinyMeta, JSON.stringify({ timestampIso: '2026-10-15T04:10:00Z', dateEcuador: '2026-10-15', timeEcuador: '04:10' }));
+
+      const frames = rainMonitor.loadCachedStormFrames(legacyTestDir);
+
+      expect(frames.length).toBe(1);
+      expect(frames[0].timestampIso).toBe('2026-10-15T04:00:00Z');
+
+      // Clean up
+      fs.rmSync(legacyTestDir, { recursive: true, force: true });
+    });
   });
 });
+
 

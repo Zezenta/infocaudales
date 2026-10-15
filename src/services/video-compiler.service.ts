@@ -763,7 +763,7 @@ export class VideoCompilerService {
               '-y',
               '-i', rawPath,
               '-i', svgPath,
-              '-filter_complex', '[0:v][1:v]overlay=0:0',
+              '-filter_complex', `[0:v]scale=${width}:${height}[base];[base][1:v]overlay=0:0`,
               '-frames:v', '1',
               '-update', '1',
               outPath
@@ -799,9 +799,12 @@ export class VideoCompilerService {
         }
         mp4Args.push(
           '-i', inputPattern,
-          '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+          '-vf', `scale=${width}:${height}`,
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
+          '-g', Math.max(framerate, 8).toString(),
+          '-keyint_min', Math.max(framerate, 8).toString(),
+          '-movflags', '+faststart',
           mp4Path
         );
         await execFileAsync('ffmpeg', mp4Args);

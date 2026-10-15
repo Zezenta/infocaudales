@@ -3,7 +3,8 @@ import path from 'path';
 import zlib from 'zlib';
 import { db } from '../utils/db.js';
 import { BASIN_GEOMETRIES, COSTA_SIERRA_DIVIDE, SIERRA_AMAZONIA_DIVIDE, interpolateDivideLon } from '../data/basin-geometries.js';
-import { SatelliteMapService, SatelliteFrame } from './satellite-map.service.js';
+import { SatelliteMapService, SatelliteFrame, SatelliteSource } from './satellite-map.service.js';
+import { SatelliteArchiverService } from './satellite-archiver.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
 import { XService } from './x.service.js';
 import { buildStormAlertPostText, buildDailySatelliteSummaryPostText } from '../utils/post-formatter.js';
@@ -289,7 +290,8 @@ export class RainMonitorService {
   constructor(
     private readonly satelliteService: SatelliteMapService = new SatelliteMapService(),
     private readonly videoCompilerService: VideoCompilerService = new VideoCompilerService(satelliteService),
-    private readonly xService?: XService
+    private readonly xService?: XService,
+    private readonly archiverService: SatelliteArchiverService = new SatelliteArchiverService(satelliteService)
   ) {}
 
   /**
@@ -597,12 +599,24 @@ export class RainMonitorService {
     const basin = BASIN_GEOMETRIES[plantKey];
     const basinName = basin?.name || plantKey;
 
-    const framesDir = path.join(process.cwd(), 'temp', 'storm_frames', `event_${existingEvent.id}`);
-    const cachedFrames = this.loadCachedStormFrames(framesDir);
+    // 1. Primary source: Load archived frames from SQLite satellite_archive
+    let framesToCompile = this.loadArchivedStormFrames(
+      existingEvent.detected_at,
+      existingEvent.last_checked_at
+    );
+
+    // 2. Legacy fallback: check if frames were cached in legacy temp folder
+    const legacyFramesDir = path.join(process.cwd(), 'temp', 'storm_frames', `event_${existingEvent.id}`);
+    if (framesToCompile.length < 4 && fs.existsSync(legacyFramesDir)) {
+      const legacyFrames = this.loadCachedStormFrames(legacyFramesDir);
+      if (legacyFrames.length >= 4) {
+        framesToCompile = legacyFrames;
+      }
+    }
 
     let compilationResult: CompiledAnimationResult;
-    if (cachedFrames.length >= 4) {
-      compilationResult = await this.videoCompilerService.compileFramesToVideo(cachedFrames, {
+    if (framesToCompile.length >= 4) {
+      compilationResult = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
         plantKey: 'ecuador',
         customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
         minDurationSeconds: 10,
@@ -618,9 +632,6 @@ export class RainMonitorService {
           endTime: existingEvent.last_checked_at - 60000 // Last checked was dissipation; storm ended before it
         }
       });
-      try {
-        fs.rmSync(framesDir, { recursive: true, force: true });
-      } catch (err) {}
     } else {
       const hoursBack = Math.min(4, Math.max(2, Math.round(elapsedMinutes / 60) + 1));
       compilationResult = await this.videoCompilerService.generateBasinAnimation({
@@ -641,6 +652,13 @@ export class RainMonitorService {
         }
       });
     }
+
+    // Clean up any legacy temp directory for this event
+    try {
+      if (fs.existsSync(legacyFramesDir)) {
+        fs.rmSync(legacyFramesDir, { recursive: true, force: true });
+      }
+    } catch (err) {}
 
     const cooldownUntil = now + cooldownHours * 3600 * 1000;
 
@@ -838,64 +856,131 @@ export class RainMonitorService {
   }
 
   /**
-   * Caches an Ecuador Continental frame on disk for an active storm event.
+   * Archives an Ecuador Continental frame in satellite_archive for an active storm event.
    */
   public async cacheEcuadorFrame(eventId: number, timestampIso: string): Promise<void> {
-    const framesDir = path.join(process.cwd(), 'temp', 'storm_frames', `event_${eventId}`);
-    if (!fs.existsSync(framesDir)) {
-      fs.mkdirSync(framesDir, { recursive: true });
-    }
-
-    const safeTs = timestampIso.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filePath = path.join(framesDir, `frame_${safeTs}.png`);
-    const metaPath = path.join(framesDir, `frame_${safeTs}.json`);
-
-    if (fs.existsSync(filePath) && fs.existsSync(metaPath)) {
-      return;
-    }
-
     try {
-      const buffer = await this.satelliteService.fetchMapTile({
-        layers: 'goes:goes_abi_l2_cmipf_13,ecuador:provincias',
-        bbox: BASIN_GEOMETRIES.ecuador.bbox,
-        time: timestampIso,
-        width: 800,
-        height: 800,
-        format: 'image/png'
-      });
-
-      fs.writeFileSync(filePath, buffer);
-      const { dateEcuador, timeEcuador } = this.satelliteService.formatEcuadorTimestamp(timestampIso);
-      fs.writeFileSync(
-        metaPath,
-        JSON.stringify({
-          timestampIso,
-          dateEcuador,
-          timeEcuador
-        })
-      );
+      await this.archiverService.archiveSingleFrame(timestampIso, 'ecuador', 'geoserver', { minSizeBytes: 20000 });
     } catch (err: any) {
-      systemLogger.warn(`[RainMonitor] Failed to cache frame for ${timestampIso}: ${err?.message || err}`);
+      systemLogger.warn(`[RainMonitor] Failed to archive frame for ${timestampIso}: ${err?.message || err}`);
     }
   }
 
   /**
-   * Initializes cache for a new storm event by saving pre-storm frames and the current frame.
+   * Initializes cache for a new storm event by ensuring pre-storm frames and the current frame
+   * are archived in satellite_archive.
    */
   public async initStormFrameCache(eventId: number, currentTimestamp: string): Promise<void> {
     try {
-      const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 4 });
+      const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 6 });
       const chrono = [...timestamps].reverse();
       for (const ts of chrono) {
         await this.cacheEcuadorFrame(eventId, ts);
       }
     } catch (err: any) {
-      systemLogger.warn(`[RainMonitor] Failed to pre-seed storm frame cache: ${err?.message || err}`);
+      systemLogger.warn(`[RainMonitor] Failed to pre-seed storm frame archive: ${err?.message || err}`);
     }
   }
 
   /**
-   * Loads cached storm frames from disk in chronological order.
+   * Loads archived storm frames from SQLite satellite_archive for a given storm event window.
+   * Includes ~45 minutes of pre-storm context before detection.
+   * Filters out any corrupted or miniature frames (< 20 KB).
+   */
+  public loadArchivedStormFrames(
+    detectedAt: number,
+    endedAt: number,
+    preStormMinutes: number = 45
+  ): SatelliteFrame[] {
+    const preStormMs = preStormMinutes * 60 * 1000;
+    const startIso = new Date(detectedAt - preStormMs).toISOString();
+    const endIso = new Date(endedAt).toISOString();
+
+    let rows = db.prepare(`
+      SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, file_size_bytes, source
+      FROM satellite_archive
+      WHERE plant_key = 'ecuador'
+        AND source = 'geoserver'
+        AND timestamp_iso >= ? AND timestamp_iso <= ?
+      ORDER BY timestamp_iso ASC
+    `).all(startIso, endIso) as Array<{
+      file_path: string;
+      date_ecuador: string;
+      time_ecuador: string;
+      timestamp_iso: string;
+      file_size_bytes: number;
+      source: string;
+    }>;
+
+    if (!rows || rows.length < 4) {
+      rows = db.prepare(`
+        SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, file_size_bytes, source
+        FROM satellite_archive
+        WHERE plant_key = 'ecuador'
+          AND timestamp_iso >= ? AND timestamp_iso <= ?
+        ORDER BY timestamp_iso ASC
+      `).all(startIso, endIso) as Array<{
+        file_path: string;
+        date_ecuador: string;
+        time_ecuador: string;
+        timestamp_iso: string;
+        file_size_bytes: number;
+        source: string;
+      }>;
+    }
+
+    if (!rows || rows.length === 0) return [];
+
+    const ecuadorBbox = BASIN_GEOMETRIES.ecuador.bbox;
+    const frames: SatelliteFrame[] = [];
+    const seenTs = new Set<string>();
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (seenTs.has(r.timestamp_iso)) continue;
+      seenTs.add(r.timestamp_iso);
+
+      if (r.file_size_bytes < 20000) {
+        systemLogger.warn(
+          `[RainMonitor] Skipping archived frame ${r.timestamp_iso}: file_size_bytes too small (${r.file_size_bytes} B < 20 KB)`
+        );
+        continue;
+      }
+
+      if (!fs.existsSync(r.file_path)) {
+        continue;
+      }
+
+      try {
+        const buffer = fs.readFileSync(r.file_path);
+        if (buffer.length < 20000) {
+          systemLogger.warn(
+            `[RainMonitor] Skipping frame ${r.timestamp_iso}: buffer size on disk too small (${buffer.length} B < 20 KB)`
+          );
+          continue;
+        }
+
+        frames.push({
+          index: frames.length,
+          timestampIso: r.timestamp_iso,
+          dateEcuador: r.date_ecuador,
+          timeEcuador: r.time_ecuador,
+          buffer,
+          bbox: ecuadorBbox,
+          plantKey: 'ecuador',
+          source: (r.source as SatelliteSource) || 'geoserver'
+        });
+      } catch (err: any) {
+        systemLogger.warn(`[RainMonitor] Failed reading archived frame ${r.file_path}: ${err?.message || err}`);
+      }
+    }
+
+    return frames;
+  }
+
+  /**
+   * Loads cached storm frames from disk in chronological order (legacy fallback).
+   * Validates frame buffers to ensure integrity (> 20 KB).
    */
   public loadCachedStormFrames(framesDir: string): SatelliteFrame[] {
     if (!fs.existsSync(framesDir)) return [];
@@ -911,10 +996,20 @@ export class RainMonitorService {
 
       if (fs.existsSync(fullPngPath)) {
         try {
+          const stat = fs.statSync(fullPngPath);
+          if (stat.size < 20000) {
+            systemLogger.warn(
+              `[RainMonitor] Skipping legacy cached frame ${fullPngPath}: file size too small (${stat.size} B < 20 KB)`
+            );
+            continue;
+          }
           const meta = JSON.parse(fs.readFileSync(fullMetaPath, 'utf8'));
           const buffer = fs.readFileSync(fullPngPath);
+          if (buffer.length < 20000) {
+            continue;
+          }
           frames.push({
-            index: i,
+            index: frames.length,
             timestampIso: meta.timestampIso,
             dateEcuador: meta.dateEcuador,
             timeEcuador: meta.timeEcuador,
