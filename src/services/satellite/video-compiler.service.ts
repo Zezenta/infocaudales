@@ -3,10 +3,10 @@ import path from 'path';
 import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../data/basin-geometries.js';
-import { SatelliteFrame, SatelliteMapService } from './satellite-map.service.js';
-import { systemLogger } from '../utils/logger.js';
-import { db } from '../utils/db.js';
+import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../../data/basin-geometries.js';
+import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
+import { systemLogger } from '../../utils/logger.js';
+import { db } from '../../utils/db.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -117,7 +117,7 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
 export class VideoCompilerService {
   private provincesVectorCache: string | null = null;
 
-  constructor(private readonly satelliteMapService: SatelliteMapService = new SatelliteMapService()) {}
+  constructor(private readonly satelliteMapService: SatelliteTelemetryService = new SatelliteTelemetryService()) {}
 
   /**
    * Helper to retrieve clean vector SVG paths of Ecuador provincial borders.
@@ -127,8 +127,8 @@ export class VideoCompilerService {
       return this.provincesVectorCache;
     }
     const candidates = [
-      path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias.svg'),
-      path.join(__dirname, '..', '..', 'src', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(__dirname, '..', '..', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(__dirname, '..', '..', '..', 'src', 'assets', 'overlays', 'ecuador_provincias.svg'),
       path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias.svg')
     ];
     for (const c of candidates) {
@@ -823,7 +823,7 @@ export class VideoCompilerService {
               '-y',
               '-i', rawPath,
               '-i', svgPath,
-              '-filter_complex', '[0:v][1:v]overlay=0:0',
+              '-filter_complex', `[0:v]scale=${width}:${height}[base];[base][1:v]overlay=0:0`,
               '-frames:v', '1',
               '-update', '1',
               outPath
@@ -859,7 +859,7 @@ export class VideoCompilerService {
         }
         mp4Args.push(
           '-i', inputPattern,
-          '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+          '-vf', `scale=${width}:${height}`,
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
           '-g', Math.max(framerate, 8).toString(),

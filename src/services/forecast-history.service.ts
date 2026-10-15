@@ -1,5 +1,5 @@
 import { db } from '../utils/db.js';
-import { CelecService, CelecPointValue } from './celec.service.js';
+import { CelecService, CelecPointValue } from './telemetry/celec.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 import { predictionLogger } from '../utils/logger.js';
 

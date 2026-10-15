@@ -5,9 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { RainMonitorService } from '../../services/rain-monitor.service.js';
-import { SatelliteMapService } from '../../services/satellite-map.service.js';
-import { VideoCompilerService } from '../../services/video-compiler.service.js';
+import { RainMonitorService } from '../../services/satellite/rain-monitor.service.js';
+import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from '../../services/satellite/video-compiler.service.js';
 
 const execFileAsync = promisify(execFile);
 

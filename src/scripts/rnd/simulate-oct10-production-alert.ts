@@ -7,8 +7,8 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { BASIN_GEOMETRIES } from '../../data/basin-geometries.js';
 import { db } from '../../utils/db.js';
-import { SatelliteMapService } from '../../services/satellite-map.service.js';
-import { VideoCompilerService } from '../../services/video-compiler.service.js';
+import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
+import { VideoCompilerService } from '../../services/satellite/video-compiler.service.js';
 import { buildStormAlertPostText } from '../../utils/post-formatter.js';
 
 const execFileAsync = promisify(execFile);

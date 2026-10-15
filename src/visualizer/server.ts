@@ -5,10 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 import { BASIN_GEOMETRIES, ALL_HYDRO_PLANTS_PINS, DEFAULT_REFERENCE_CITIES } from '../data/basin-geometries.js';
-import { SatelliteMapService } from '../services/satellite-map.service.js';
-import { SatelliteArchiverService } from '../services/satellite-archiver.service.js';
-import { VideoCompilerService } from '../services/video-compiler.service.js';
-import { RainMonitorService } from '../services/rain-monitor.service.js';
+import { SatelliteTelemetryService, SatelliteMapService } from '../services/telemetry/satellite-telemetry.service.js';
+import { SatelliteArchiverService } from '../services/satellite/satellite-archiver.service.js';
+import { VideoCompilerService } from '../services/satellite/video-compiler.service.js';
+import { RainMonitorService } from '../services/satellite/rain-monitor.service.js';
 import { db } from '../utils/db.js';
 
 const execFileAsync = promisify(execFile);

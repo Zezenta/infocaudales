@@ -1,4 +1,4 @@
-import { CenaceService } from '../services/cenace.service.js';
+import { CenaceService } from '../services/telemetry/cenace.service.js';
 import { db } from './db.js';
 import { dbLogger } from './logger.js';
 

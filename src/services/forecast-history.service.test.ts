@@ -8,7 +8,7 @@ import {
   reconcileForecastsWithCelec,
   ForecastLogRecord
 } from './forecast-history.service.js';
-import { CelecService } from './celec.service.js';
+import { CelecService } from './telemetry/celec.service.js';
 import { buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from '../utils/post-formatter.js';
 
 describe('ForecastHistoryService (SQLite Persistence & Metrics)', () => {

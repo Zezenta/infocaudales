@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { describe, it, expect, afterAll } from 'vitest';
 import { generateReportCard, generateDailyReport, generateForecastCard, closeBrowser, TelemetryData } from './report-generator.service.js';
-import { CelecService } from './celec.service.js';
-import { CenaceService } from './cenace.service.js';
+import { CelecService } from './telemetry/celec.service.js';
+import { CenaceService } from './telemetry/cenace.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 
 describe('ReportGeneratorService (Headless Chrome Generation)', () => {

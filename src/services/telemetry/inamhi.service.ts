@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as https from 'https';
-import { inamhiLogger } from '../utils/logger.js';
+import { inamhiLogger } from '../../utils/logger.js';
 
 export interface StationLevelResult {
   value: number;

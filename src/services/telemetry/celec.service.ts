@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as https from 'https';
-import { HydroelectricPlant } from '../types/hydroelectric.js';
-import { celecLogger } from '../utils/logger.js';
+import { HydroelectricPlant } from '../../types/hydroelectric.js';
+import { celecLogger } from '../../utils/logger.js';
 
 export interface CelecPointValue {
   timestamp: string; // ISO string or loctimestamp
