@@ -1239,9 +1239,9 @@
 
       if (plant.id === 'mazar') {
         baseCota = 2115;
-        if (plant.currentCota < 2115.0) {
+        if (plant.currentCota <= 2120.0) {
           colorClass = 'val-danger';
-        } else if (plant.currentCota < 2125.0) {
+        } else if (plant.currentCota < 2130.0) {
           colorClass = 'val-warning';
         } else {
           colorClass = 'val-good';
@@ -1717,7 +1717,7 @@
         PLANTS_CONFIG.mazar.currentStatus = 'online';
         PLANTS_CONFIG.mazar.activeTurbines = 1;
         PLANTS_CONFIG.mazar.currentMW = 75;
-        PLANTS_CONFIG.mazar.currentCota = 2118.0; // Alerta 2118m (3m sobre crítico)
+        PLANTS_CONFIG.mazar.currentCota = 2124.0; // Alerta 2124m (previo al límite rojo de 2120m)
         PLANTS_CONFIG.mazar.currentFlow = 40;
         PLANTS_CONFIG.mazar.cotaTrend = 'down';
         PLANTS_CONFIG.mazar.flowTrend = 'down';
