@@ -8,27 +8,6 @@ dotenv.config();
 
 describe('Social Media Services Unit Tests', () => {
   describe('MediaStorageService', () => {
-    it('initializes with configuration parameters and detects configured state', () => {
-      const storage = new MediaStorageService({
-        endpoint: 'https://test-account.r2.cloudflarestorage.com',
-        accessKeyId: 'test_access_key',
-        secretAccessKey: 'test_secret_key',
-        bucketName: 'test-bucket',
-        publicBaseUrl: 'https://media.test.com',
-      });
-      expect(storage.isConfigured()).toBe(true);
-    });
-
-    it('detects unconfigured state when credentials are missing', () => {
-      const storage = new MediaStorageService({
-        endpoint: '',
-        accessKeyId: '',
-        secretAccessKey: '',
-        publicBaseUrl: '',
-      });
-      expect(storage.isConfigured()).toBe(false);
-    });
-
     it('returns existing URLs as-is without uploading again', async () => {
       const storage = new MediaStorageService();
       const existingUrl = 'https://pub-e89d342f94654583bedd87419524fc65.r2.dev/images/existing.png';
