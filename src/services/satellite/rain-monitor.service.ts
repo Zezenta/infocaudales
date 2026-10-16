@@ -1294,32 +1294,69 @@ export class RainMonitorService {
       `).all(targetDate, requestedSource) as any[];
       selectedSource = requestedSource;
     } else {
-      // Auto: count frames from both sources and pick the one with more available frames
-      const geoCount = (db.prepare(`
-        SELECT COUNT(*) as c FROM satellite_archive WHERE date_ecuador = ? AND source = 'geoserver'
-      `).get(targetDate) as any)?.c || 0;
-
-      const nasaCount = (db.prepare(`
-        SELECT COUNT(*) as c FROM satellite_archive WHERE date_ecuador = ? AND source = 'nasa_gibs'
-      `).get(targetDate) as any)?.c || 0;
-
-      selectedSource = (nasaCount > geoCount && nasaCount >= 6) ? 'nasa_gibs' : 'geoserver';
-
-      rows = db.prepare(`
+      // 1. Primary preference: GeoServer (Standard for production server)
+      const geoRows = db.prepare(`
         SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
         FROM satellite_archive
-        WHERE date_ecuador = ? AND source = ?
+        WHERE date_ecuador = ? AND source = 'geoserver'
         ORDER BY timestamp_iso ASC
-      `).all(targetDate, selectedSource) as any[];
+      `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string; source: string }>;
 
-      if ((!rows || rows.length < 6) && (nasaCount >= 6 || geoCount >= 6)) {
-        selectedSource = nasaCount >= 6 ? 'nasa_gibs' : 'geoserver';
-        rows = db.prepare(`
+      // 2. Evaluate GeoServer continuity for the 24h day (detect gaps > 5 hours or insufficient coverage)
+      let has5HourGap = false;
+      if (geoRows.length < 90) { // 90 frames = ~15h out of 24h. If < 90, there is guaranteed a gap of > 5h
+        has5HourGap = true;
+      } else {
+        for (let k = 1; k < geoRows.length; k++) {
+          const prevTs = new Date(geoRows[k - 1].timestamp_iso).getTime();
+          const currTs = new Date(geoRows[k].timestamp_iso).getTime();
+          if ((currTs - prevTs) > (5 * 3600 * 1000)) { // Gap larger than 5 hours
+            has5HourGap = true;
+            break;
+          }
+        }
+      }
+
+      // If GeoServer is healthy, continuous, and has no >5h gaps, use it by default!
+      if (!has5HourGap && geoRows.length >= 72) {
+        selectedSource = 'geoserver';
+        rows = geoRows;
+      } else {
+        // 3. Fallback to NASA GIBS (available in archive or online backfill)
+        systemLogger.info(`[RainMonitor] GeoServer has incomplete coverage for ${targetDate} (found ${geoRows.length} frames, gap > 5h). Checking NASA GIBS...`);
+
+        let nasaRows = db.prepare(`
           SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
           FROM satellite_archive
-          WHERE date_ecuador = ? AND source = ?
+          WHERE date_ecuador = ? AND source = 'nasa_gibs'
           ORDER BY timestamp_iso ASC
-        `).all(targetDate, selectedSource) as any[];
+        `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string; source: string }>;
+
+        // If not enough NASA frames exist in SQLite, attempt online backfill from NASA GIBS
+        if (!nasaRows || nasaRows.length < 24) {
+          try {
+            systemLogger.info(`[RainMonitor] Attempting online 24h backfill from NASA GIBS for ${targetDate}...`);
+            await this.archiverService.backfillNasaFrames(24, 'ecuador');
+            nasaRows = db.prepare(`
+              SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
+              FROM satellite_archive
+              WHERE date_ecuador = ? AND source = 'nasa_gibs'
+              ORDER BY timestamp_iso ASC
+            `).all(targetDate) as any[];
+          } catch (syncErr: any) {
+            systemLogger.warn(`[RainMonitor] Could not backfill from NASA GIBS online: ${syncErr?.message || syncErr}`);
+          }
+        }
+
+        // Use NASA GIBS if it has more frames than GeoServer
+        if (nasaRows && nasaRows.length > geoRows.length && nasaRows.length >= 6) {
+          selectedSource = 'nasa_gibs';
+          rows = nasaRows;
+          systemLogger.info(`[RainMonitor] Falling back to NASA GIBS for ${targetDate} daily summary (${nasaRows.length} frames vs ${geoRows.length} GeoServer frames).`);
+        } else {
+          selectedSource = geoRows.length >= (nasaRows?.length || 0) ? 'geoserver' : 'nasa_gibs';
+          rows = selectedSource === 'geoserver' ? geoRows : (nasaRows || []);
+        }
       }
     }
 
