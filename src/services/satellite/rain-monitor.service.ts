@@ -1262,6 +1262,7 @@ export class RainMonitorService {
   public async generateDailySummaryVideo(options: {
     dateEcuador?: string;
     autoPublishToX?: boolean;
+    autoPublishToSocial?: boolean;
     framerate?: number;
   } = {}): Promise<{
     compilation: CompiledAnimationResult;
@@ -1451,20 +1452,31 @@ export class RainMonitorService {
       regionPeaks
     });
 
+    const autoPublishX = options.autoPublishToX !== false;
+    const autoPublishSocial = options.autoPublishToSocial !== false;
+
     let publishedTweetId: string | undefined;
-    if (options.autoPublishToX && this.xService && compilation.mp4Path) {
-      try {
-        const postRes = await this.xService.postVideo(postText, compilation.mp4Path);
-        publishedTweetId = postRes?.data?.id || postRes?.id;
-        systemLogger.info(`[RainMonitor] 🐦 Successfully published 24h daily summary to X (Tweet ID: ${publishedTweetId})`);
+    if (compilation.mp4Path) {
+      let finalVideoPath = compilation.mp4Path;
 
-        const archivedPath = this.archivePublishedVideo(compilation.mp4Path);
-        compilation.mp4Path = archivedPath;
+      if (autoPublishX && this.xService) {
+        try {
+          const postRes = await this.xService.postVideo(postText, compilation.mp4Path);
+          publishedTweetId = postRes?.data?.id || postRes?.id;
+          systemLogger.info(`[RainMonitor] 🐦 Successfully published 24h daily summary to X (Tweet ID: ${publishedTweetId})`);
 
-        // Also publish to Facebook Video and Instagram Reel
+          finalVideoPath = this.archivePublishedVideo(compilation.mp4Path);
+          compilation.mp4Path = finalVideoPath;
+        } catch (pubErr: any) {
+          systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary video to X: ${pubErr?.message || pubErr}`);
+        }
+      }
+
+      // Publish to Facebook Video and Instagram Reel
+      if (autoPublishSocial) {
         if (this.facebookService) {
           try {
-            await this.facebookService.postVideo(archivedPath, {
+            await this.facebookService.postVideo(finalVideoPath, {
               title: `Resumen Satelital 24h • ${dateFormatted}`,
               description: postText
             });
@@ -1476,7 +1488,7 @@ export class RainMonitorService {
 
         if (this.instagramService) {
           try {
-            await this.instagramService.postReel(archivedPath, {
+            await this.instagramService.postReel(finalVideoPath, {
               caption: postText
             });
             systemLogger.info(`[RainMonitor] 📸 Successfully published 24h daily summary Reel to Instagram`);
@@ -1484,8 +1496,6 @@ export class RainMonitorService {
             systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary Reel to Instagram: ${igErr?.message || igErr}`);
           }
         }
-      } catch (pubErr: any) {
-        systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary video to X: ${pubErr?.message || pubErr}`);
       }
     }
 

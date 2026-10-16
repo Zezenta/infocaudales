@@ -942,3 +942,82 @@ if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
     }
   }, 5000);
 }
+
+// ============================================================================
+// TEMPORARY: Forzar publicación de prueba en Facebook e Instagram
+// (Eliminar este bloque cuando se hayan verificado las publicaciones)
+// ============================================================================
+const FORCE_TEST_FB_IG = true;
+
+if (FORCE_TEST_FB_IG) {
+  console.log('\n[FORCE FB/IG TEST] 🚀 Activada condicional de prueba para Facebook e Instagram...');
+  setTimeout(async () => {
+    try {
+      // 1. Reporte de Telemetría (Portada + Tarjetas de las 6 centrales)
+      console.log('\n[FORCE FB/IG TEST] [1/2] 📊 Generando reporte de telemetría para Instagram (Carrusel) y Facebook (Álbum)...');
+      const plantCards: Buffer[] = [];
+      for (const plantKey of TARGET_PLANT_KEYS) {
+        try {
+          const telemetry = await fetchTelemetry(plantKey, false);
+          if (telemetry) {
+            const cardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
+            plantCards.push(cardBuffer);
+            console.log(`[FORCE FB/IG TEST] ↳ Tarjeta generada para ${hydroelectricPlants[plantKey]?.name}`);
+          }
+        } catch (plantErr: any) {
+          console.warn(`[FORCE FB/IG TEST] No se pudo generar tarjeta para ${plantKey}:`, plantErr?.message || plantErr);
+        }
+      }
+
+      if (plantCards.length > 0) {
+        console.log('[FORCE FB/IG TEST] ↳ Generando portada social en alta resolución (1200x1200px)...');
+        const coverBuffer = await generateSocialCover();
+        const carouselItems = [coverBuffer, ...plantCards];
+
+        const now = new Date();
+        const dateFormatted = getFormattedEcuadorDate(now);
+        const ecParts = new Date(now.getTime() - 5 * 3600 * 1000);
+        const hourStr = `${String(ecParts.getUTCHours()).padStart(2, '0')}:${String(ecParts.getUTCMinutes()).padStart(2, '0')} ECT`;
+
+        const caption = buildSocialRoundupCaption({
+          dateStr: dateFormatted,
+          hourStr,
+          plantCount: plantCards.length
+        });
+
+        // Instagram Carousel
+        console.log(`[FORCE FB/IG TEST] 📸 Publicando Carrusel en Instagram (${carouselItems.length} diapositivas)...`);
+        try {
+          const igRes = await instagramService.postCarousel(carouselItems, caption);
+          console.log(`[FORCE FB/IG TEST] ✅ Instagram Carousel publicado exitosamente! (ID: ${igRes.mediaId}, URL: ${igRes.permalink || 'N/A'})`);
+        } catch (igErr: any) {
+          console.error('[FORCE FB/IG TEST] ❌ Error publicando carrusel en Instagram:', igErr?.message || igErr);
+        }
+
+        // Facebook Multi-Photo Album
+        console.log(`[FORCE FB/IG TEST] 📘 Publicando Álbum en Facebook (${carouselItems.length} fotos)...`);
+        try {
+          const fbRes = await facebookService.postPhotos(carouselItems, caption);
+          console.log(`[FORCE FB/IG TEST] ✅ Facebook Álbum publicado exitosamente! (Post ID: ${fbRes.postId}, URL: ${fbRes.permalink || 'N/A'})`);
+        } catch (fbErr: any) {
+          console.error('[FORCE FB/IG TEST] ❌ Error publicando álbum en Facebook:', fbErr?.message || fbErr);
+        }
+      }
+
+      // 2. Video Satelital 24h (Reel en Instagram y Video en Facebook)
+      console.log('\n[FORCE FB/IG TEST] [2/2] 🛰️ Generando video resumen satelital de 24 horas...');
+      try {
+        await rainMonitorService.generateDailySummaryVideo({
+          autoPublishToX: false,
+          autoPublishToSocial: true
+        });
+        console.log('[FORCE FB/IG TEST] ✅ Video satelital 24h procesado para Facebook e Instagram.');
+      } catch (satErr: any) {
+        console.error('[FORCE FB/IG TEST] ❌ Error en generación/publicación satelital:', satErr?.message || satErr);
+      }
+    } catch (err: any) {
+      console.error('[FORCE FB/IG TEST] ❌ Error general en prueba de Facebook/Instagram:', err?.message || err);
+    }
+  }, 3000);
+}
+
