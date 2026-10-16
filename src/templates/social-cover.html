@@ -202,12 +202,39 @@
     }
 
     .cover-timestamp {
-      font-size: 14px;
-      font-weight: bold;
-      color: #00b0ff;
-      margin: 5px 0 0 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0 0 0;
       line-height: 1.0;
+    }
+
+    .cover-date-text {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #94a3b8;
       font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .cover-time-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13.5px;
+      font-weight: 800;
+      font-family: 'DejaVu Sans Mono', monospace;
+      background: rgba(0, 176, 255, 0.12);
+      border: 1.5px solid rgba(0, 176, 255, 0.4);
+      color: #00b0ff;
+      padding: 3px 9px;
+      border-radius: 5px;
+      letter-spacing: 0.03em;
+    }
+
+    .live-dot-pulse {
+      color: #00e676;
+      font-size: 9px;
+      line-height: 1;
     }
 
     /* Watermark matching hydro-card exactly, with Instagram Icon */
@@ -283,7 +310,7 @@
 
     .matrix-table-header {
       display: grid;
-      grid-template-columns: 138px 50px 86px 146px 116px;
+      grid-template-columns: 144px 48px 86px 146px 112px;
       padding: 0 12px 3px 12px;
       font-size: 10px;
       font-weight: bold;
@@ -307,12 +334,12 @@
     /* PLANT ROW CARD */
     .plant-matrix-row {
       display: grid;
-      grid-template-columns: 138px 50px 86px 146px 116px;
+      grid-template-columns: 144px 48px 86px 146px 112px;
       align-items: center;
       background-color: #0c111c;
       border: 1.5px solid #1e293b;
       border-radius: 6px;
-      padding: 4.5px 12px;
+      padding: 6.5px 12px;
     }
 
     /* Col 1: Drawing Thumbnail + Name */
@@ -336,6 +363,7 @@
     .plant-names {
       display: flex;
       flex-direction: column;
+      gap: 3px;
       line-height: 1.1;
     }
 
@@ -349,7 +377,8 @@
     }
 
     .plant-cap-text {
-      font-size: 10px;
+      font-size: 9.5px;
+      font-weight: 600;
       color: #64748b;
       font-family: 'DejaVu Sans Mono', monospace;
     }
@@ -425,6 +454,14 @@
       font-weight: bold;
       font-family: 'DejaVu Sans Mono', monospace;
       text-align: right;
+    }
+
+    .cota-base-ref {
+      color: #64748b !important;
+      font-weight: 500;
+      font-size: 12.5px;
+      font-family: 'DejaVu Sans Mono', monospace;
+      margin-left: 4px;
     }
 
     /* Col 5: Caudal (m³/s) */
@@ -811,7 +848,10 @@
           <div class="cover-header-left">
             <span class="cover-pre-title">REPORTE DEL SISTEMA HIDROELÉCTRICO</span>
             <h1 class="cover-main-title" id="card-main-title">HIDROELÉCTRICAS EN VIVO</h1>
-            <p class="cover-timestamp" id="card-datetime-str">15/10/2026 19:25 ECT</p>
+            <div class="cover-timestamp" id="card-datetime-container">
+              <span class="cover-date-text" id="card-date-str">15/10/2026</span>
+              <span class="cover-time-badge" id="card-time-badge"><span class="live-dot-pulse">●</span> <span id="card-time-str">19:25 ECT</span></span>
+            </div>
           </div>
           <div class="cover-watermark">
             <!-- Official Instagram SVG Icon - single vector with authentic linearGradient, no border halo -->
@@ -1149,7 +1189,7 @@
     }
 
     // Date formatting helper for Ecuador (UTC-5)
-    function getEcuadorDateString(date = new Date()) {
+    function getEcuadorDateParts(date = new Date()) {
       const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
       
@@ -1161,23 +1201,33 @@
       const hours = String(ecDate.getHours()).padStart(2, '0');
       const mins = String(ecDate.getMinutes()).padStart(2, '0');
 
-      return `${dayName}, ${dayNum} de ${monthName} ${year} • ${hours}:${mins} ECT`;
+      return {
+        dateStr: `${dayName}, ${dayNum} de ${monthName} ${year}`,
+        timeStr: `${hours}:${mins} ECT`
+      };
     }
 
-    // Dynamic Cota styling (XX/XX)
+    function updateCardDateTime(dateStr, timeStr) {
+      const dateEl = document.getElementById('card-date-str');
+      const timeEl = document.getElementById('card-time-str');
+      if (dateEl) dateEl.innerText = dateStr;
+      if (timeEl) timeEl.innerText = timeStr;
+    }
+
+    // Dynamic Cota styling (current/base with attached trend arrow)
     function getCotaDisplay(plant) {
       if (!plant.hasReservoir) {
         if (plant.id === 'cocaCodoSinclair') {
-          return { text: 'De paso', colorClass: 'val-dimmed', trendHtml: '' };
+          return { html: '<span class="cota-val-text val-dimmed">De paso</span>' };
         }
-        return { text: 'En cascada', colorClass: 'val-dimmed', trendHtml: '' };
+        return { html: '<span class="cota-val-text val-dimmed">En cascada</span>' };
       }
 
-      let text = '';
+      let baseCota = 2115;
       let colorClass = 'val-good';
 
       if (plant.id === 'mazar') {
-        text = `${plant.currentCota.toFixed(1)} / 2115`;
+        baseCota = 2115;
         if (plant.currentCota < 2115.0) {
           colorClass = 'val-danger';
         } else if (plant.currentCota < 2125.0) {
@@ -1186,7 +1236,7 @@
           colorClass = 'val-good';
         }
       } else if (plant.id === 'molino') {
-        text = `${plant.currentCota.toFixed(1)} / 1975`;
+        baseCota = 1975;
         if (plant.currentCota < 1978.0) {
           colorClass = 'val-danger';
         } else if (plant.currentCota < 1982.0) {
@@ -1195,7 +1245,7 @@
           colorClass = 'val-good';
         }
       } else if (plant.id === 'minasSanFrancisco') {
-        text = `${plant.currentCota.toFixed(1)} / 783`;
+        baseCota = 783;
         if (plant.currentCota < 784.0) {
           colorClass = 'val-danger';
         } else if (plant.currentCota < 786.0) {
@@ -1204,7 +1254,7 @@
           colorClass = 'val-good';
         }
       } else if (plant.id === 'agoyan') {
-        text = `${plant.currentCota.toFixed(1)} / 1645`;
+        baseCota = 1645;
         if (plant.currentCota < 1646.0) {
           colorClass = 'val-danger';
         } else if (plant.currentCota < 1648.0) {
@@ -1215,7 +1265,10 @@
       }
 
       const trendHtml = getTrendArrowHtml(plant.cotaTrend || 'up');
-      return { text, colorClass, trendHtml };
+      const valStr = plant.currentCota.toFixed(1);
+      return {
+        html: `<span class="cota-val-text ${colorClass}">${valStr}${trendHtml}</span><span class="cota-base-ref">/ ${baseCota}</span>`
+      };
     }
 
     // Dynamic Flow styling
@@ -1284,7 +1337,7 @@
             <img src="${p.drawing}" class="plant-thumb-img" alt="${p.shortName}">
             <div class="plant-names">
               <span class="plant-name-text">${p.shortName}</span>
-              <span class="plant-cap-text">${p.maxMW} MW</span>
+              <span class="plant-cap-text">MAX: ${p.maxMW} MW</span>
             </div>
           </div>
 
@@ -1306,7 +1359,7 @@
 
           <!-- Col 4: Cota (XX/XX) -->
           <div class="cota-cell">
-            <span class="cota-val-text ${cotaInfo.colorClass}">${cotaInfo.text}${cotaInfo.trendHtml}</span>
+            ${cotaInfo.html}
           </div>
 
           <!-- Col 5: Caudal -->
@@ -1492,7 +1545,8 @@
 
       // Time Sync button
       document.getElementById('btn-sync-time').addEventListener('click', () => {
-        document.getElementById('card-datetime-str').innerText = getEcuadorDateString();
+        const parts = getEcuadorDateParts();
+        updateCardDateTime(parts.dateStr, parts.timeStr);
       });
 
       // Aspect Ratio Toggle
@@ -1563,7 +1617,12 @@
 
             // Update date subtitle with official ECT time
             if (data.formattedDateEcuador) {
-              document.getElementById('card-datetime-str').innerText = data.formattedDateEcuador;
+              const parts = data.formattedDateEcuador.split(' • ');
+              if (parts.length === 2) {
+                updateCardDateTime(parts[0], parts[1]);
+              } else {
+                updateCardDateTime(data.formattedDateEcuador, `${data.hourEcuador}:00 ECT`);
+              }
             }
 
             // Update badge & status message
@@ -1760,7 +1819,8 @@
 
     // Initialize
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('card-datetime-str').innerText = getEcuadorDateString();
+      const initialParts = getEcuadorDateParts();
+      updateCardDateTime(initialParts.dateStr, initialParts.timeStr);
       updateEditorControls();
       renderCard();
       setupEventListeners();
