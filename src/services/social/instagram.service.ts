@@ -176,7 +176,13 @@ export class InstagramService {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       } catch (err: any) {
         if (err.message && err.message.includes('Media container')) throw err;
-        this.handleError(`polling container ${containerId}`, err);
+        if (attempt === maxAttempts) {
+          this.handleError(`polling container ${containerId}`, err);
+        }
+        instagramLogger.warn(
+          `[InstagramService] Transient error polling container ${containerId} (attempt ${attempt}/${maxAttempts}): ${err?.message || err}. Retrying in ${delayMs / 1000}s...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
 
@@ -291,7 +297,8 @@ export class InstagramService {
       // 1. Upload all items to storage and get public URLs
       const imageUrls: string[] = [];
       for (let i = 0; i < items.length; i++) {
-        const url = await this.mediaStorage.uploadImage(items[i], `ig_carousel_${i + 1}`);
+        const adjustedItem = await this.ensureInstagramAspectRatio(items[i]);
+        const url = await this.mediaStorage.uploadImage(adjustedItem, `ig_carousel_${i + 1}`);
         imageUrls.push(url);
       }
 

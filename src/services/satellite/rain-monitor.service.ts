@@ -1647,16 +1647,14 @@ export class RainMonitorService {
 
     let publishedTweetId: string | undefined;
     if (compilation.mp4Path) {
-      let finalVideoPath = compilation.mp4Path;
+      const finalVideoPath = this.archivePublishedVideo(compilation.mp4Path);
+      compilation.mp4Path = finalVideoPath;
 
       if (autoPublishX && this.xService) {
         try {
-          const postRes = await this.xService.postVideo(postText, compilation.mp4Path);
+          const postRes = await this.xService.postVideo(postText, finalVideoPath);
           publishedTweetId = postRes?.data?.id || postRes?.id;
           systemLogger.info(`[RainMonitor] 🐦 Successfully published 24h daily summary to X (Tweet ID: ${publishedTweetId})`);
-
-          finalVideoPath = this.archivePublishedVideo(compilation.mp4Path);
-          compilation.mp4Path = finalVideoPath;
         } catch (pubErr: any) {
           systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary video to X: ${pubErr?.message || pubErr}`);
         }

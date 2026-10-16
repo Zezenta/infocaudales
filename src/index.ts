@@ -519,8 +519,12 @@ async function publishDailyConsolidatedReport() {
       `#Ecuador #Energía #EnergíaEc`;
 
     console.log(`[CronJob] [Daily Report] Posting daily report to X...`);
-    await xService.postTweet(postMessage, imageBuffer);
-    console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully to X!');
+    try {
+      await xService.postTweet(postMessage, imageBuffer);
+      console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully to X!');
+    } catch (xErr: any) {
+      console.error(`[CronJob] [Daily Report] Error posting to X:`, xErr?.message || xErr);
+    }
 
     // 7. Post to Facebook Page
     console.log(`[CronJob] [Daily Report] Posting daily report to Facebook...`);

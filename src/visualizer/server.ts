@@ -350,12 +350,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // All Hydroelectric Plants Pins API
-  if (req.method === 'GET' && req.url === '/api/all-hydro-pins') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(ALL_HYDRO_PLANTS_PINS));
-    return;
-  }
 
   // Reference Cities Pins API (Quito, Guayaquil, Cuenca, etc.)
   if (req.method === 'GET' && req.url === '/api/reference-cities') {

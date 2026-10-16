@@ -191,7 +191,8 @@ export class FacebookService {
           },
         });
         if (detailsRes.data?.permalink_url) {
-          permalink = `https://www.facebook.com${detailsRes.data.permalink_url}`;
+          const rawUrl = String(detailsRes.data.permalink_url);
+          permalink = rawUrl.startsWith('http') ? rawUrl : `https://www.facebook.com${rawUrl}`;
         }
       } catch (e) {
         // Fallback to standard URL
