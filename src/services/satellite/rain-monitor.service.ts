@@ -38,6 +38,7 @@ export interface RainCheckOptions {
   autoPublishToX?: boolean;        // Whether to automatically post video to X if XService is available (default: true)
   tileResolution?: number;         // Tile width & height in pixels for analysis (default: 80)
   source?: 'geoserver' | 'nasa_gibs'; // Satellite imagery source
+  watermarkBrand?: 'x' | 'instagram'; // Social brand watermark (default: instagram)
 }
 
 export interface RainCheckResult {
@@ -482,6 +483,18 @@ export class RainMonitorService {
       };
     }
 
+    // Guardrail: Inactivity heartbeat check - if bot was paused/offline and no check occurred in > 35 minutes, close stale event
+    if (existingEvent && existingEvent.status === 'ACTIVE') {
+      const timeSinceLastCheckMinutes = (now - existingEvent.last_checked_at) / 60000;
+      if (timeSinceLastCheckMinutes > 35) {
+        systemLogger.warn(
+          `[RainMonitor] Monitor inactivity gap detected for ${plantKey} (${Math.round(timeSinceLastCheckMinutes)} min since last check). Discarding stale event #${existingEvent.id} without publishing.`
+        );
+        db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+        existingEvent.status = 'CLOSED';
+      }
+    }
+
     // 3. No active event currently running
     if (!existingEvent || existingEvent.status === 'CLOSED') {
       if (coveragePct >= stormThreshold) {
@@ -534,6 +547,22 @@ export class RainMonitorService {
 
     // 4. An ACTIVE storm event is in progress
     const elapsedMinutes = Math.round((now - existingEvent.detected_at) / 60000);
+
+    // Guardrail: verify event duration is realistic for a convective rain storm (max 360 min / 6 hours)
+    if (elapsedMinutes > 360) {
+      systemLogger.warn(
+        `[RainMonitor] Rain event #${existingEvent.id} for ${plantKey} duration (${elapsedMinutes} min) exceeds maximum plausible window (360 min). Discarding corrupted event without publishing.`
+      );
+      db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+      existingEvent.status = 'CLOSED';
+      return {
+        plantKey,
+        action: 'NO_STORM',
+        coveragePct: 0,
+        message: `Evento descartado por duración anómala (${elapsedMinutes} min > 360 min).`
+      };
+    }
+
     const newPeak = Math.max(existingEvent.peak_coverage_pct, coveragePct);
 
     db.prepare(`
@@ -620,6 +649,7 @@ export class RainMonitorService {
       compilationResult = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
         plantKey: 'ecuador',
         customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
+        watermarkBrand: options.watermarkBrand || 'instagram',
         minDurationSeconds: 10,
         framerate: 8,
         createMp4: true,
@@ -641,6 +671,7 @@ export class RainMonitorService {
         plantKey: 'ecuador',
         hoursBack,
         customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
+        watermarkBrand: options.watermarkBrand || 'instagram',
         minDurationSeconds: 10,
         framerate: 8,
         createMp4: true,
@@ -654,6 +685,20 @@ export class RainMonitorService {
           endTime: existingEvent.last_checked_at - 60000
         }
       });
+    }
+
+    if (!compilationResult || compilationResult.frameCount < 4) {
+      systemLogger.warn(
+        `[RainMonitor] Insufficient continuous frames for rain event in ${plantKey} (${compilationResult?.frameCount || 0} frames found). Discarding event #${existingEvent.id} to avoid broken/corrupt video.`
+      );
+      db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+      existingEvent.status = 'CLOSED';
+      return {
+        plantKey,
+        action: 'NO_STORM',
+        coveragePct: 0,
+        message: `Evento descartado por fotogramas insuficientes (${compilationResult?.frameCount || 0} fotogramas).`
+      };
     }
 
     // Clean up any legacy temp directory for this event
@@ -690,18 +735,22 @@ export class RainMonitorService {
     let publishedTweetId: string | undefined = undefined;
     if (options.autoPublishToX && this.xService && compilationResult.mp4Path) {
       try {
-        const endDate = compilationResult.timestamps.endDateEcuador || compilationResult.timestamps.endEcuador.split(' ')[0];
-        const endTime = compilationResult.timestamps.endTimeEcuador || compilationResult.timestamps.endEcuador.split(' ')[1];
+        const startDate = compilationResult.timestamps.startDateEcuador || compilationResult.timestamps.startEcuador?.split(' ')[0];
+        const startTime = compilationResult.timestamps.startTimeEcuador || compilationResult.timestamps.startEcuador?.split(' ')[1];
+        const endDate = compilationResult.timestamps.endDateEcuador || compilationResult.timestamps.endEcuador?.split(' ')[0];
+        const endTime = compilationResult.timestamps.endTimeEcuador || compilationResult.timestamps.endEcuador?.split(' ')[1];
         const postText = buildStormAlertPostText({
           plantKey,
           peakCoveragePct: newPeak,
           durationMinutes: elapsedMinutes,
-          dateEcuador: endDate,
+          dateEcuador: endDate || startDate,
+          startTimeEcuador: startTime,
+          endTimeEcuador: endTime,
           timeEcuador: endTime
         });
         const postRes = await this.xService.postVideo(postText, compilationResult.mp4Path);
         publishedTweetId = postRes?.data?.id || postRes?.id;
-        systemLogger.info(`[RainMonitor] 🐦 Successfully published storm alert video to X (Tweet ID: ${publishedTweetId})`);
+        systemLogger.info(`[RainMonitor] 🐦 Successfully published rain alert video to X (Tweet ID: ${publishedTweetId})`);
 
         // Move published video to persistent archive directory (data/published_videos/)
         const archivedPath = this.archivePublishedVideo(compilationResult.mp4Path);
@@ -721,12 +770,12 @@ export class RainMonitorService {
         if (this.facebookService) {
           try {
             await this.facebookService.postVideo(archivedPath, {
-              title: `Alerta de Lluvias - Cuenca ${plantKey}`,
+              title: `Evento de Lluvia - Cuenca ${basinName}`,
               description: postText
             });
-            systemLogger.info(`[RainMonitor] 📘 Successfully published storm alert video to Facebook`);
+            systemLogger.info(`[RainMonitor] 📘 Successfully published rain alert video to Facebook`);
           } catch (fbErr: any) {
-            systemLogger.error(`[RainMonitor] Failed to auto-publish storm video to Facebook: ${fbErr?.message || fbErr}`);
+            systemLogger.error(`[RainMonitor] Failed to auto-publish rain video to Facebook: ${fbErr?.message || fbErr}`);
           }
         }
 
@@ -1004,6 +1053,21 @@ export class RainMonitorService {
       }
     }
 
+    // Continuity validation: verify no temporal gap larger than 35 minutes exists
+    if (frames.length >= 2) {
+      for (let k = 1; k < frames.length; k++) {
+        const prevMs = new Date(frames[k - 1].timestampIso).getTime();
+        const currMs = new Date(frames[k].timestampIso).getTime();
+        const diffMin = (currMs - prevMs) / 60000;
+        if (diffMin > 35) {
+          systemLogger.warn(
+            `[RainMonitor] Temporal continuity gap of ${Math.round(diffMin)} min between ${frames[k - 1].timestampIso} and ${frames[k].timestampIso}. Aborting storm frame sequence.`
+          );
+          return [];
+        }
+      }
+    }
+
     return frames;
   }
 
@@ -1265,6 +1329,7 @@ export class RainMonitorService {
     autoPublishToSocial?: boolean;
     source?: 'geoserver' | 'nasa_gibs';
     framerate?: number;
+    watermarkBrand?: 'x' | 'instagram';
   } = {}): Promise<{
     compilation: CompiledAnimationResult;
     postText: string;
@@ -1470,6 +1535,7 @@ export class RainMonitorService {
       plantKey: 'ecuador',
       outputName,
       framerate,
+      watermarkBrand: options.watermarkBrand || 'instagram',
       minDurationSeconds: 12,
       customTitle: 'Resumen Satelital 24h • Ecuador Continental',
       customDateSubtitle: dateFormatted,

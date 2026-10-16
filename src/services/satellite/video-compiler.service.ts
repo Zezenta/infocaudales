@@ -102,6 +102,8 @@ export interface CompiledAnimationResult {
     end: string;
     startEcuador: string;
     endEcuador: string;
+    startDateEcuador?: string;
+    startTimeEcuador?: string;
     endDateEcuador?: string;
     endTimeEcuador?: string;
   };
@@ -604,7 +606,9 @@ export class VideoCompilerService {
 
     summaryCardSvg = `${card1Svg}\n${card2Svg}`;
 
-    const isInstagram = options.watermarkBrand === 'instagram';
+    const defaultBrand = (process.env.DEFAULT_VIDEO_BRAND as any) || 'instagram';
+    const chosenBrand = options.watermarkBrand || defaultBrand;
+    const isInstagram = chosenBrand === 'instagram';
     const watermarkIconSvg = isInstagram
       ? `<rect width="24" height="24" rx="6.5" fill="url(#ig-grad-satellite)"/>
         <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
@@ -919,6 +923,8 @@ export class VideoCompilerService {
           end: lastFrame.timestampIso,
           startEcuador: `${firstFrame.dateEcuador} ${firstFrame.timeEcuador}`,
           endEcuador: `${lastFrame.dateEcuador} ${lastFrame.timeEcuador}`,
+          startDateEcuador: firstFrame.dateEcuador,
+          startTimeEcuador: firstFrame.timeEcuador,
           endDateEcuador: lastFrame.dateEcuador,
           endTimeEcuador: lastFrame.timeEcuador
         }

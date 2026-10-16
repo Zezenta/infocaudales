@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMessageText, formatVal, buildStormAlertPostText } from './post-formatter.js';
+import { buildMessageText, formatVal, buildStormAlertPostText, sortPlantsForSocial } from './post-formatter.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 
 describe('post-formatter', () => {
@@ -163,5 +163,42 @@ describe('post-formatter', () => {
       expect(text).toContain('• Registro: 2026-10-10 18:40 ECT');
       expect(text).not.toContain('2026-10-10 18:40 2026-10-10 18:40');
     });
+
+    it('formats rain event alert with time range and without using the word tormenta', () => {
+      const text = buildStormAlertPostText({
+        plantKey: 'paute',
+        peakCoveragePct: 35.5,
+        durationMinutes: 45,
+        dateEcuador: '2026-10-16',
+        startTimeEcuador: '01:10',
+        endTimeEcuador: '01:55'
+      });
+
+      expect(text).toContain('• Registro: 2026-10-16 de 01:10 a 01:55 ECT');
+      expect(text).toContain('Evento de Lluvia');
+      expect(text.toLowerCase()).not.toContain('tormenta');
+    });
+  });
+
+  describe('sortPlantsForSocial', () => {
+    it('sorts Mazar first, Coca Codo Sinclair second, and remaining by generation descending', () => {
+      const items = [
+        { plantKey: 'molino', telemetry: { gen: 500 } as any },
+        { plantKey: 'agoyan', telemetry: { gen: 80 } as any },
+        { plantKey: 'cocaCodoSinclair', telemetry: { gen: 300 } as any },
+        { plantKey: 'mazar', telemetry: { gen: 120 } as any },
+        { plantKey: 'sopladora', telemetry: { gen: 450 } as any }
+      ];
+
+      const sorted = sortPlantsForSocial(items);
+      expect(sorted.map(s => s.plantKey)).toEqual([
+        'mazar',
+        'cocaCodoSinclair',
+        'molino',
+        'sopladora',
+        'agoyan'
+      ]);
+    });
   });
 });
+

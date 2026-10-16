@@ -30,7 +30,7 @@ import { SatelliteTelemetryService, SatelliteMapService } from './services/telem
 import { VideoCompilerService } from './services/satellite/video-compiler.service.js';
 import { RainMonitorService } from './services/satellite/rain-monitor.service.js';
 import { SatelliteArchiverService } from './services/satellite/satellite-archiver.service.js';
-import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText, buildSocialRoundupCaption } from './utils/post-formatter.js';
+import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText, buildSocialRoundupCaption, sortPlantsForSocial } from './utils/post-formatter.js';
 import {
   recordForecastBatch,
   reconcileForecastsWithCelec,
@@ -129,7 +129,12 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     console.warn('[Index] Could not fetch national demand from CENACE, using fallback.');
   }
 
-  const igPlantCards: Buffer[] = [];
+  const collectedSocialPlants: Array<{
+    plantKey: string;
+    plant: any;
+    telemetry: TelemetryData;
+    cardBuffer: Buffer;
+  }> = [];
 
   for (let i = 0; i < targetPlantKeys.length; i++) {
     const plantKey = targetPlantKeys[i];
@@ -171,7 +176,12 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
         // Also generate card with Instagram brand for carousel/album
         try {
           const igCardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
-          igPlantCards.push(igCardBuffer);
+          collectedSocialPlants.push({
+            plantKey,
+            plant,
+            telemetry,
+            cardBuffer: igCardBuffer
+          });
         } catch (igGenErr) {
           console.warn(`[Bot] Could not generate Instagram card for ${plant.name}:`, igGenErr);
         }
@@ -189,26 +199,36 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
   }
 
   // Publish consolidated Carousel to Instagram and Multi-Photo Album to Facebook
-  if (igPlantCards.length > 0) {
+  if (collectedSocialPlants.length > 0) {
     try {
       console.log(`\n[Bot] [Social Roundup] Preparing Carousel for Instagram & Album for Facebook...`);
+      // Sort plants: 1: Mazar, 2: Coca Codo Sinclair, 3+: Remaining by generation descending
+      const sortedPlants = sortPlantsForSocial(collectedSocialPlants);
+
       const coverBuffer = await generateSocialCover();
-      const allSocialItems = [coverBuffer, ...igPlantCards];
+      const allSocialItems = [coverBuffer, ...sortedPlants.map(p => p.cardBuffer)];
 
       const now = new Date();
       const dateFormatted = getFormattedEcuadorDate(now);
       const ecParts = new Date(now.getTime() - 5 * 3600 * 1000);
       const hourStr = `${String(ecParts.getUTCHours()).padStart(2, '0')}:${String(ecParts.getUTCMinutes()).padStart(2, '0')} ECT`;
 
+      const totalMW = sortedPlants.reduce((acc, p) => acc + (p.telemetry.gen || 0), 0);
+      const maxMWTotal = sortedPlants.reduce((acc, p) => acc + (p.plant.physicalData?.maxEnergyMW || 0), 0);
+      const capacityPct = maxMWTotal > 0 ? Math.round((totalMW / maxMWTotal) * 100) : undefined;
+
       const caption = buildSocialRoundupCaption({
         dateStr: dateFormatted,
         hourStr,
-        plantCount: igPlantCards.length
+        totalMW,
+        capacityPct,
+        plantCount: sortedPlants.length,
+        plants: sortedPlants
       });
 
       // 1. Post to Instagram Carousel
       try {
-        console.log(`[Bot] [Instagram] Publishing ${allSocialItems.length}-slide carousel...`);
+        console.log(`[Bot] [Instagram] Publishing ${allSocialItems.length}-slide carousel (Cover, Mazar, CCS, and highest generators)...`);
         const igRes = await instagramService.postCarousel(allSocialItems, caption);
         console.log(`[Bot] [Instagram] Carousel published successfully! (Media ID: ${igRes.mediaId}, URL: ${igRes.permalink || 'N/A'})`);
       } catch (igErr: any) {
@@ -217,7 +237,7 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
 
       // 2. Post to Facebook Multi-Photo Album
       try {
-        console.log(`[Bot] [Facebook] Publishing ${allSocialItems.length}-photo album...`);
+        console.log(`[Bot] [Facebook] Publishing ${allSocialItems.length}-photo album (Cover, Mazar, CCS, and highest generators)...`);
         const fbRes = await facebookService.postPhotos(allSocialItems, caption);
         console.log(`[Bot] [Facebook] Album published successfully! (Post ID: ${fbRes.postId}, URL: ${fbRes.permalink || 'N/A'})`);
       } catch (fbErr: any) {
@@ -667,14 +687,7 @@ export async function publishWeeklyAccuracyReport(): Promise<void> {
     }
   }
 
-  // 5. Post text report to Facebook Page
-  try {
-    console.log('[CronJob] [Weekly Accuracy Report] Posting report to Facebook...');
-    const fbRes = await facebookService.postMessage(reportText);
-    console.log(`[CronJob] [Weekly Accuracy Report] Published successfully to Facebook (Post ID: ${fbRes.postId})!`);
-  } catch (fbErr: any) {
-    console.error('[CronJob] [Weekly Accuracy Report] Error posting report to Facebook:', fbErr?.message || fbErr);
-  }
+  // Note: Weekly Accuracy Report is published exclusively to X (omitted from FB/IG per policy)
 }
 
 // --- CRON JOBS SETUP ---
@@ -955,38 +968,49 @@ if (FORCE_TEST_FB_IG) {
     try {
       // 1. Reporte de Telemetría (Portada + Tarjetas de las 6 centrales)
       console.log('\n[FORCE FB/IG TEST] [1/2] 📊 Generando reporte de telemetría para Instagram (Carrusel) y Facebook (Álbum)...');
-      const plantCards: Buffer[] = [];
+      const collectedPlants: Array<{ plantKey: string; plant: any; telemetry: any; cardBuffer: Buffer }> = [];
       for (const plantKey of TARGET_PLANT_KEYS) {
         try {
+          const plant = hydroelectricPlants[plantKey];
           const telemetry = await fetchTelemetry(plantKey, false);
-          if (telemetry) {
+          if (telemetry && plant) {
             const cardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
-            plantCards.push(cardBuffer);
-            console.log(`[FORCE FB/IG TEST] ↳ Tarjeta generada para ${hydroelectricPlants[plantKey]?.name}`);
+            collectedPlants.push({ plantKey, plant, telemetry, cardBuffer });
+            console.log(`[FORCE FB/IG TEST] ↳ Tarjeta generada para ${plant.name}`);
           }
         } catch (plantErr: any) {
           console.warn(`[FORCE FB/IG TEST] No se pudo generar tarjeta para ${plantKey}:`, plantErr?.message || plantErr);
         }
       }
 
-      if (plantCards.length > 0) {
+      if (collectedPlants.length > 0) {
+        // Sort plants: 1: Mazar, 2: Coca Codo Sinclair, 3+: Remaining by generation descending
+        const sortedPlants = sortPlantsForSocial(collectedPlants);
+
         console.log('[FORCE FB/IG TEST] ↳ Generando portada social en alta resolución (1200x1200px)...');
         const coverBuffer = await generateSocialCover();
-        const carouselItems = [coverBuffer, ...plantCards];
+        const carouselItems = [coverBuffer, ...sortedPlants.map(p => p.cardBuffer)];
 
         const now = new Date();
         const dateFormatted = getFormattedEcuadorDate(now);
         const ecParts = new Date(now.getTime() - 5 * 3600 * 1000);
         const hourStr = `${String(ecParts.getUTCHours()).padStart(2, '0')}:${String(ecParts.getUTCMinutes()).padStart(2, '0')} ECT`;
 
+        const totalMW = sortedPlants.reduce((acc, p) => acc + (p.telemetry.gen || 0), 0);
+        const maxMWTotal = sortedPlants.reduce((acc, p) => acc + (p.plant.physicalData?.maxEnergyMW || 0), 0);
+        const capacityPct = maxMWTotal > 0 ? Math.round((totalMW / maxMWTotal) * 100) : undefined;
+
         const caption = buildSocialRoundupCaption({
           dateStr: dateFormatted,
           hourStr,
-          plantCount: plantCards.length
+          totalMW,
+          capacityPct,
+          plantCount: sortedPlants.length,
+          plants: sortedPlants
         });
 
         // Instagram Carousel
-        console.log(`[FORCE FB/IG TEST] 📸 Publicando Carrusel en Instagram (${carouselItems.length} diapositivas)...`);
+        console.log(`[FORCE FB/IG TEST] 📸 Publicando Carrusel en Instagram (${carouselItems.length} diapositivas: Portada, Mazar, CCS, y mayor generación)...`);
         try {
           const igRes = await instagramService.postCarousel(carouselItems, caption);
           console.log(`[FORCE FB/IG TEST] ✅ Instagram Carousel publicado exitosamente! (ID: ${igRes.mediaId}, URL: ${igRes.permalink || 'N/A'})`);
@@ -995,7 +1019,7 @@ if (FORCE_TEST_FB_IG) {
         }
 
         // Facebook Multi-Photo Album
-        console.log(`[FORCE FB/IG TEST] 📘 Publicando Álbum en Facebook (${carouselItems.length} fotos)...`);
+        console.log(`[FORCE FB/IG TEST] 📘 Publicando Álbum en Facebook (${carouselItems.length} fotos: Portada, Mazar, CCS, y mayor generación)...`);
         try {
           const fbRes = await facebookService.postPhotos(carouselItems, caption);
           console.log(`[FORCE FB/IG TEST] ✅ Facebook Álbum publicado exitosamente! (Post ID: ${fbRes.postId}, URL: ${fbRes.permalink || 'N/A'})`);
