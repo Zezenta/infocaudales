@@ -203,38 +203,29 @@
 
     .cover-timestamp {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 6px 0 0 0;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      margin: 4px 0 0 0;
       line-height: 1.0;
     }
 
     .cover-date-text {
-      font-size: 13.5px;
+      font-size: 11.5px;
       font-weight: 600;
       color: #94a3b8;
       font-family: 'Space Grotesk', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    .cover-time-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13.5px;
+    .cover-time-text {
+      font-size: 21px;
       font-weight: 800;
-      font-family: 'DejaVu Sans Mono', monospace;
-      background: rgba(0, 176, 255, 0.12);
-      border: 1.5px solid rgba(0, 176, 255, 0.4);
+      font-family: 'Space Grotesk', sans-serif;
       color: #00b0ff;
-      padding: 3px 9px;
-      border-radius: 5px;
-      letter-spacing: 0.03em;
-    }
-
-    .live-dot-pulse {
-      color: #00e676;
-      font-size: 9px;
-      line-height: 1;
+      letter-spacing: -0.01em;
+      line-height: 1.0;
     }
 
     /* Watermark matching hydro-card exactly, with Instagram Icon */
@@ -849,8 +840,8 @@
             <span class="cover-pre-title">REPORTE DEL SISTEMA HIDROELÉCTRICO</span>
             <h1 class="cover-main-title" id="card-main-title">HIDROELÉCTRICAS EN VIVO</h1>
             <div class="cover-timestamp" id="card-datetime-container">
-              <span class="cover-date-text" id="card-date-str">15/10/2026</span>
-              <span class="cover-time-badge" id="card-time-badge"><span class="live-dot-pulse">●</span> <span id="card-time-str">19:25 ECT</span></span>
+              <span class="cover-date-text" id="card-date-str">Jueves, 15 de Octubre 2026</span>
+              <span class="cover-time-text" id="card-time-str">19:25 ECT</span>
             </div>
           </div>
           <div class="cover-watermark">
@@ -883,7 +874,7 @@
           </div>
           <div class="stats-summary-box">
             <span class="stats-box-label">Capacidad Operativa</span>
-            <span class="stats-box-value text-cyan" id="kpi-total-pct" style="color: #00b0ff;">76.5%</span>
+            <span class="stats-box-value text-green" id="kpi-total-pct" style="color: #00e676;">76.5%</span>
             <span class="stats-box-sub" id="kpi-pct-desc">De la capacidad máxima</span>
           </div>
         </div>
@@ -1380,7 +1371,7 @@
       pctEl.innerText = `${pctTotal}%`;
 
       if (pctTotal >= 70) {
-        pctEl.style.color = '#00b0ff';
+        pctEl.style.color = '#00e676';
       } else if (pctTotal >= 50) {
         pctEl.style.color = '#fbbf24';
       } else {
