@@ -219,6 +219,21 @@
       letter-spacing: 0.05em;
     }
 
+    .cover-time-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      line-height: 1.0;
+    }
+
+    .live-dot-red {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      flex-shrink: 0;
+    }
+
     .cover-time-text {
       font-size: 21px;
       font-weight: 800;
@@ -841,7 +856,10 @@
             <h1 class="cover-main-title" id="card-main-title">HIDROELÉCTRICAS EN VIVO</h1>
             <div class="cover-timestamp" id="card-datetime-container">
               <span class="cover-date-text" id="card-date-str">Jueves, 15 de Octubre 2026</span>
-              <span class="cover-time-text" id="card-time-str">19:25 ECT</span>
+              <div class="cover-time-row">
+                <span class="live-dot-red"></span>
+                <span class="cover-time-text" id="card-time-str">19:25 ECT</span>
+              </div>
             </div>
           </div>
           <div class="cover-watermark">
