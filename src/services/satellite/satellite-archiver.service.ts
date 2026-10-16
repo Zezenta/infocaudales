@@ -99,7 +99,7 @@ export class SatelliteArchiverService {
 
     const layers = source === 'nasa_gibs'
       ? 'GOES-East_ABI_Band13_Clean_Infrared'
-      : 'goes:goes_abi_l2_cmipf_13';
+      : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
 
     const minSize = options?.minSizeBytes ?? (source === 'nasa_gibs' ? 20000 : 0);
 

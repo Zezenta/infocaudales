@@ -208,7 +208,12 @@ export class VideoCompilerService {
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
 
     // Provincial Delineation Vector Overlay (Ecuador Continental)
-    const showProvinces = options.showProvinces === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    // GeoServer already burns ecuador:provincias into the raster tile.
+    // The SVG vector overlay is rendered if explicitly forced OR if the frame source is nasa_gibs.
+    const isNasaGibs = frame.source === 'nasa_gibs';
+    const showProvinces = (options.showProvinces === true || isNasaGibs) &&
+      frame.source !== 'geoserver' &&
+      (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     const provincesColor = options.provincesColor || '#38bdf8';
     const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
     const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;
