@@ -958,6 +958,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Serve Social Media / Instagram Cover HTML
+  if (req.url === '/social' || req.url === '/cover' || req.url === '/instagram' || req.url === '/social-cover.html') {
+    const socialHtmlPath = path.join(TEMPLATE_DIR, 'social-cover.html');
+    fs.readFile(socialHtmlPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading social cover HTML');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
   // Serve the CSS files
   if (req.url === '/hydro-card.css') {
     fs.readFile(CSS_FILE, 'utf8', (err, data) => {
@@ -1043,7 +1061,7 @@ fs.watch(TEMPLATE_DIR, (eventType, filename) => {
   if (!filename) return;
   
   // Only trigger for the actual template files
-  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html', 'rain-map.html', 'rain-map.css'];
+  const watchedFiles = ['hydro-card.html', 'hydro-card.css', 'daily-report.html', 'daily-report.css', 'forecast-card.html', 'rain-map.html', 'rain-map.css', 'social-cover.html'];
   if (!watchedFiles.includes(filename)) {
     return;
   }
