@@ -226,13 +226,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
+      width: 25px;
+      height: 25px;
       background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6.5px;
       flex-shrink: 0;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     }
 
     .ig-logo {
@@ -293,7 +293,7 @@
 
     .matrix-table-header {
       display: grid;
-      grid-template-columns: 138px 48px 94px 130px 130px;
+      grid-template-columns: 138px 52px 88px 146px 116px;
       padding: 0 10px 3px 10px;
       font-size: 10px;
       font-weight: bold;
@@ -313,7 +313,7 @@
     /* PLANT ROW CARD */
     .plant-matrix-row {
       display: grid;
-      grid-template-columns: 138px 48px 94px 130px 130px;
+      grid-template-columns: 138px 52px 88px 146px 116px;
       align-items: center;
       background-color: #0c111c;
       border: 1.5px solid #1e293b;
@@ -465,26 +465,20 @@
       font-size: 11px;
     }
 
-    /* Trend Arrows */
-    .trend-arrow {
-      font-size: 9.5px;
-      margin-left: 3.5px;
+    /* Trend Arrows (con colita) */
+    .trend-arrow-svg {
       display: inline-block;
-      vertical-align: middle;
-      font-weight: 800;
-      line-height: 1;
+      vertical-align: -1px;
+      margin-left: 4px;
+      flex-shrink: 0;
     }
 
-    .trend-up {
-      color: #00e676;
+    .trend-arrow-svg.trend-up {
+      stroke: #00e676;
     }
 
-    .trend-down {
-      color: #f43f5e;
-    }
-
-    .trend-neutral {
-      color: #64748b;
+    .trend-arrow-svg.trend-down {
+      stroke: #f43f5e;
     }
 
     /* FOOTER: DESLIZA PARA VER LOS DETALLES */
@@ -809,11 +803,11 @@
           </div>
           <div class="cover-watermark">
             <div class="ig-icon-container">
-              <!-- Official Instagram SVG Icon -->
-              <svg class="ig-logo" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              <!-- Official Instagram SVG Icon - tight fit, no zoom out -->
+              <svg class="ig-logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" ry="5.5"></rect>
+                <circle cx="12" cy="12" r="4.5"></circle>
+                <circle cx="17.3" cy="6.7" r="1.3" fill="#ffffff" stroke="none"></circle>
               </svg>
             </div>
             <span>@Hidro_Info_Bot</span>
@@ -825,12 +819,12 @@
           <div class="stats-summary-box">
             <span class="stats-box-label">Generación Total</span>
             <span class="stats-box-value text-green" id="kpi-total-mw" style="color: #00e676;">2,801 MW</span>
-            <span class="stats-box-sub" id="kpi-total-pct">76.5% de 3,663 MW máx</span>
+            <span class="stats-box-sub" id="kpi-total-cap">De 3,663 MW instalados</span>
           </div>
           <div class="stats-summary-box">
-            <span class="stats-box-label">Disponibilidad</span>
-            <span class="stats-box-value text-cyan" id="kpi-active-plants" style="color: #00b0ff;">6 / 6 Centrales</span>
-            <span class="stats-box-sub" id="kpi-status-tag" style="color: #00e676;">Operando en línea</span>
+            <span class="stats-box-label">Capacidad Operativa</span>
+            <span class="stats-box-value text-cyan" id="kpi-total-pct" style="color: #00b0ff;">76.5%</span>
+            <span class="stats-box-sub" id="kpi-pct-desc">De la capacidad máxima</span>
           </div>
         </div>
 
@@ -965,8 +959,8 @@
             <div class="form-row" style="margin-top: 2px;">
               <span style="font-size: 11px; color: #64748b;">Tendencia Cota</span>
               <div style="display: flex; gap: 4px;">
-                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-up">▲ Sube</button>
-                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-down">▼ Baja</button>
+                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-up">↑ Sube</button>
+                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-down">↓ Baja</button>
               </div>
             </div>
           </div>
@@ -980,8 +974,8 @@
             <div class="form-row" style="margin-top: 2px;">
               <span style="font-size: 11px; color: #64748b;">Tendencia Caudal</span>
               <div style="display: flex; gap: 4px;">
-                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-up">▲ Sube</button>
-                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-down">▼ Baja</button>
+                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-up">↑ Sube</button>
+                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-down">↓ Baja</button>
               </div>
             </div>
           </div>
@@ -1111,12 +1105,12 @@
     let activePlantKey = 'cocaCodoSinclair';
     let isPortrait45 = false;
 
-    // Helper for delta / trend arrow
+    // Helper for delta / trend arrow (con colita)
     function getTrendArrowHtml(trend) {
       if (trend === 'up') {
-        return '<span class="trend-arrow trend-up">▲</span>';
+        return `<svg class="trend-arrow-svg trend-up" viewBox="0 0 10 13" width="9" height="12" fill="none" stroke="#00e676" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="5" y2="1.5"></line><polyline points="1.5,5 5,1.5 8.5,5"></polyline></svg>`;
       } else if (trend === 'down') {
-        return '<span class="trend-arrow trend-down">▼</span>';
+        return `<svg class="trend-arrow-svg trend-down" viewBox="0 0 10 13" width="9" height="12" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="1" x2="5" y2="11.5"></line><polyline points="1.5,8 5,11.5 8.5,8"></polyline></svg>`;
       }
       return '';
     }
@@ -1293,22 +1287,18 @@
 
       // Update KPI Blocks
       document.getElementById('kpi-total-mw').innerText = `${Math.round(totalMW).toLocaleString()} MW`;
+      document.getElementById('kpi-total-cap').innerText = `De ${totalCapacity.toLocaleString()} MW instalados`;
+
       const pctTotal = ((totalMW / totalCapacity) * 100).toFixed(1);
-      document.getElementById('kpi-total-pct').innerText = `${pctTotal}% de ${totalCapacity.toLocaleString()} MW máx`;
+      const pctEl = document.getElementById('kpi-total-pct');
+      pctEl.innerText = `${pctTotal}%`;
 
-      const activeEl = document.getElementById('kpi-active-plants');
-      activeEl.innerText = `${activeCount} / 6 Centrales`;
-      const statusTag = document.getElementById('kpi-status-tag');
-
-      if (activeCount === 6) {
-        statusTag.innerText = 'Operando en línea';
-        statusTag.style.color = '#00e676';
-      } else if (activeCount >= 4) {
-        statusTag.innerText = `${6 - activeCount} central(es) fuera`;
-        statusTag.style.color = '#fbbf24';
+      if (pctTotal >= 70) {
+        pctEl.style.color = '#00b0ff';
+      } else if (pctTotal >= 50) {
+        pctEl.style.color = '#fbbf24';
       } else {
-        statusTag.innerText = `Alerta: solo ${activeCount} operando`;
-        statusTag.style.color = '#f43f5e';
+        pctEl.style.color = '#f43f5e';
       }
     }
 
