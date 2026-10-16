@@ -14,7 +14,7 @@ describe('XService (X SDK API Integration)', () => {
       return;
     }
     const xService = new XService();
-    const generatedDir = path.join(__dirname, '..', '..', 'generated');
+    const generatedDir = path.join(__dirname, '..', '..', '..', 'generated');
     let testImagePath = path.join(generatedDir, 'testimage.png');
 
     if (!fs.existsSync(testImagePath)) {

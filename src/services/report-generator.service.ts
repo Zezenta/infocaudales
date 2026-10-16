@@ -99,7 +99,8 @@ function loadSavedConfigs(): SavedConfig {
 
 export async function generateReportCard(
   plantKey: string,
-  telemetry: TelemetryData
+  telemetry: TelemetryData,
+  options?: { brand?: 'x' | 'instagram' }
 ): Promise<Buffer> {
   const browser = await getBrowser();
   const page = await browser.newPage();
@@ -148,6 +149,7 @@ export async function generateReportCard(
     await page.goto(fileUrl, { waitUntil: 'domcontentloaded' });
 
     // Inject and apply telemetry into the UI
+    const targetBrand = options?.brand || 'x';
     await page.evaluate(async (key, data, plantsObj, turbinesObj, savedConfigData, drawingsPath) => {
       // Re-ensure global state in DOM context
       // @ts-ignore
@@ -227,7 +229,7 @@ export async function generateReportCard(
     }, plantKey, telemetry, plantsData, turbineLayouts, savedConfigs, drawingsDir);
 
     // Wait for images to load cleanly and re-update cards with cached image dimensions
-    await page.evaluate(async (drawingsPath) => {
+    await page.evaluate(async (drawingsPath, brandToSet) => {
       const images = Array.from(document.querySelectorAll('img, image'));
       await Promise.all(images.map(img => {
         const htmlImg = img as HTMLImageElement;
@@ -250,7 +252,13 @@ export async function generateReportCard(
           htmlImg.src = `file://${drawingsPath}/${iconName}`;
         }
       });
-    }, drawingsDir);
+
+      // @ts-ignore
+      if (typeof updateWatermarkBrand === 'function') {
+        // @ts-ignore
+        updateWatermarkBrand(brandToSet);
+      }
+    }, drawingsDir, targetBrand);
 
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
 
@@ -316,6 +324,11 @@ export async function generateDailyReport(outputPath: string, liveData?: any): P
           // @ts-ignore
           window.renderPlants();
         }
+        // @ts-ignore
+        if (data.brand && typeof window.updateWatermarkBrand === 'function') {
+          // @ts-ignore
+          window.updateWatermarkBrand(data.brand);
+        }
       }, liveData);
     }
 
@@ -347,6 +360,7 @@ export async function generateForecastCard(
     rain2?: number;
     date?: Date;
     stepPredictions?: Array<{ step: number; flow: number; mae?: number; modelSpec?: any }>;
+    brand?: 'x' | 'instagram';
   }
 ): Promise<Buffer> {
   const browser = await getBrowser();
@@ -421,6 +435,10 @@ export async function generateForecastCard(
       if (typeof updateBadges === 'function') updateBadges();
       // @ts-ignore
       if (typeof renderForecast === 'function') renderForecast(opts.stepPredictions);
+      if (opts.brand) {
+        // @ts-ignore
+        if (typeof updateWatermarkBrand === 'function') updateWatermarkBrand(opts.brand);
+      }
     }, plantKey, options);
 
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));

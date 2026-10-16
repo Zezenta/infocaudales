@@ -61,6 +61,7 @@ export interface OverlayCustomizationOptions {
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
   layers?: string | string[];
+  watermarkBrand?: 'x' | 'instagram';
 }
 
 export interface DynamicSummaryCards {
@@ -603,6 +604,19 @@ export class VideoCompilerService {
 
     summaryCardSvg = `${card1Svg}\n${card2Svg}`;
 
+    const isInstagram = options.watermarkBrand === 'instagram';
+    const watermarkIconSvg = isInstagram
+      ? `<rect width="24" height="24" rx="6.5" fill="url(#ig-grad-satellite)"/>
+        <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+        <circle cx="12" cy="12" r="3.8" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+        <circle cx="16.3" cy="7.7" r="1.15" fill="#ffffff"/>`
+      : `<rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
+        <g transform="translate(5, 5)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </g>`;
+
     return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -613,6 +627,13 @@ export class VideoCompilerService {
             font-weight: 100 900;
           }
         </style>
+        <linearGradient id="ig-grad-satellite" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ffd521"/>
+          <stop offset="12%" stop-color="#f50000"/>
+          <stop offset="50%" stop-color="#c13584"/>
+          <stop offset="85%" stop-color="#833ab4"/>
+          <stop offset="100%" stop-color="#405de6"/>
+        </linearGradient>
         <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
           <stop offset="65%" stop-color="#04060c" stop-opacity="0.94"/>
@@ -645,13 +666,7 @@ export class VideoCompilerService {
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
       <g transform="translate(${width - 180}, 18)">
-        <!-- X Icon Box: 24x24, solid black bg, subtle border -->
-        <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
-        <g transform="translate(5, 5)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-        </g>
+        ${watermarkIconSvg}
         <!-- Handle Text in high contrast Space Grotesk -->
         <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
       </g>

@@ -833,6 +833,7 @@ const server = http.createServer(async (req, res) => {
           customTitle,
           customBadge,
           customDateSubtitle: payload.customDateSubtitle,
+          watermarkBrand: payload.watermarkBrand,
           singlePinLabel: pinLabel,
           showSinglePin,
           showAllPins,

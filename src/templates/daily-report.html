@@ -87,11 +87,13 @@
             <div class="report-title">Complejo Hidroeléctrico Nacional</div>
             <div class="report-date" id="report-date-str">Lunes, 29 de junio del 2026</div>
           </div>
-          <div class="report-watermark">
-            <div class="x-icon-box">
-              <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
+          <div class="report-watermark" id="card-watermark">
+            <div id="watermark-icon-wrap" style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex-shrink: 0;">
+              <div class="x-icon-box">
+                <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </div>
             </div>
             <span>@Hidro_Info_Bot</span>
           </div>
@@ -168,6 +170,15 @@
         <div class="form-group">
           <label class="form-label" for="date-input">Fecha del Reporte</label>
           <input type="text" id="date-input" class="form-input" placeholder="Lunes, 29 de junio del 2026">
+        </div>
+
+        <!-- Social Brand / Logo Dropdown -->
+        <div class="form-group">
+          <label class="form-label" for="brand-select">Logo Red Social</label>
+          <select id="brand-select" class="form-select">
+            <option value="x" selected>X / Twitter</option>
+            <option value="instagram">Instagram</option>
+          </select>
         </div>
       </div>
 
@@ -698,6 +709,48 @@
       localStorage.setItem('FILL_STYLE', window.FILL_STYLE);
       renderPlants();
     });
+
+    // Social Brand / Watermark Handler
+    const brandSelect = document.getElementById('brand-select');
+    function updateWatermarkBrand(brand) {
+      const wrap = document.getElementById('watermark-icon-wrap');
+      if (!wrap) return;
+      if (brand === 'instagram') {
+        wrap.innerHTML = `
+          <svg class="ig-logo-badge" viewBox="0 0 24 24" width="24" height="24" style="border-radius: 6.5px; display: block; flex-shrink: 0;">
+            <defs>
+              <linearGradient id="ig-grad-daily" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ffd521"/>
+                <stop offset="12%" stop-color="#f50000"/>
+                <stop offset="50%" stop-color="#c13584"/>
+                <stop offset="85%" stop-color="#833ab4"/>
+                <stop offset="100%" stop-color="#405de6"/>
+              </linearGradient>
+            </defs>
+            <rect width="24" height="24" rx="6.5" fill="url(#ig-grad-daily)"/>
+            <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+            <circle cx="12" cy="12" r="3.8" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+            <circle cx="16.3" cy="7.7" r="1.15" fill="#ffffff"/>
+          </svg>
+        `;
+      } else {
+        wrap.innerHTML = `
+          <div class="x-icon-box">
+            <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </div>
+        `;
+      }
+    }
+    if (brandSelect) {
+      brandSelect.addEventListener('change', (e) => updateWatermarkBrand(e.target.value));
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialBrand = urlParams.get('brand') || window.__WATERMARK_BRAND__ || 'x';
+      brandSelect.value = initialBrand;
+      updateWatermarkBrand(initialBrand);
+    }
+    window.updateWatermarkBrand = updateWatermarkBrand;
 
     // Run initial sync
     syncSliders();
