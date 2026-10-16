@@ -1,6 +1,13 @@
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import axios, { AxiosError } from 'axios';
 import { instagramLogger } from '../../utils/logger.js';
 import { MediaStorageService } from './media-storage.service.js';
+
+const execFileAsync = promisify(execFile);
 
 export interface InstagramConfig {
   accessToken?: string;
@@ -40,6 +47,81 @@ export class InstagramService {
     }
     if (!this.igUserId) {
       instagramLogger.warn('[InstagramService] Missing IG_USER_ID in environment.');
+    }
+  }
+
+  /**
+   * Ensures an image meets Instagram Feed aspect ratio constraints (between 4:5 and 1.91:1).
+   * If an image is too tall (e.g. 1200x1800, ratio 0.67 < 0.80), pads it horizontally
+   * to a 4:5 canvas (#070a13 obsidian background) so Meta Graph API accepts it seamlessly.
+   */
+  public async ensureInstagramAspectRatio(input: Buffer | string): Promise<Buffer> {
+    const runId = crypto.randomBytes(6).toString('hex');
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+    const inPath = path.join(tempDir, `ig_aspect_in_${runId}.png`);
+    const outPath = path.join(tempDir, `ig_aspect_out_${runId}.png`);
+
+    try {
+      if (Buffer.isBuffer(input)) {
+        fs.writeFileSync(inPath, input);
+      } else if (typeof input === 'string') {
+        if (!fs.existsSync(input)) {
+          throw new Error(`File not found: ${input}`);
+        }
+        fs.copyFileSync(input, inPath);
+      } else {
+        return input as any;
+      }
+
+      // Check dimensions with ffprobe
+      const probeRes = await execFileAsync('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'stream=width,height',
+        '-of', 'csv=p=0',
+        inPath
+      ]);
+      const [wStr, hStr] = probeRes.stdout.trim().split(',');
+      const width = parseInt(wStr, 10);
+      const height = parseInt(hStr, 10);
+
+      if (!width || !height) {
+        return fs.readFileSync(inPath);
+      }
+
+      const ratio = width / height;
+      const minRatio = 0.80; // 4:5
+      const maxRatio = 1.91; // 1.91:1
+
+      // If within acceptable range, return original buffer
+      if (ratio >= minRatio && ratio <= maxRatio) {
+        return fs.readFileSync(inPath);
+      }
+
+      instagramLogger.info(
+        `[InstagramService] Adjusting aspect ratio for Instagram (${width}x${height}, ratio: ${ratio.toFixed(2)}) to fit 4:5 - 1.91:1...`
+      );
+
+      // Pad horizontally if too tall (ratio < 0.8), or vertically if too wide (ratio > 1.91)
+      const padFilter = 'pad=max(iw\\,ih*4/5):max(ih\\,iw/1.91):(ow-iw)/2:(oh-ih)/2:color=#070a13';
+      await execFileAsync('ffmpeg', [
+        '-y',
+        '-i', inPath,
+        '-vf', padFilter,
+        '-frames:v', '1',
+        '-update', '1',
+        outPath
+      ]);
+
+      return fs.readFileSync(outPath);
+    } catch (err: any) {
+      instagramLogger.warn(`[InstagramService] Aspect ratio check/pad skipped or failed: ${err?.message || err}`);
+      if (fs.existsSync(inPath)) return fs.readFileSync(inPath);
+      return Buffer.isBuffer(input) ? input : fs.readFileSync(input);
+    } finally {
+      try { if (fs.existsSync(inPath)) fs.unlinkSync(inPath); } catch {}
+      try { if (fs.existsSync(outPath)) fs.unlinkSync(outPath); } catch {}
     }
   }
 
@@ -159,7 +241,8 @@ export class InstagramService {
    */
   async postPhoto(photo: Buffer | string, caption?: string): Promise<InstagramPostResult> {
     try {
-      const imageUrl = await this.mediaStorage.uploadImage(photo, 'ig_photo');
+      const validPhoto = await this.ensureInstagramAspectRatio(photo);
+      const imageUrl = await this.mediaStorage.uploadImage(validPhoto, 'ig_photo');
       instagramLogger.info(`[InstagramService] Creating single photo container: ${imageUrl}...`);
 
       const params: Record<string, any> = {

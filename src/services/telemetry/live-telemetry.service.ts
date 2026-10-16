@@ -485,15 +485,16 @@ export async function fetchCoverLiveData(): Promise<CoverLiveData> {
           if (ccsGen === null) {
             const currentMWh = await cenaceService.fetchPlantProduction('cocaCodoSinclair');
             if (currentMWh !== null && currentMWh > 0) {
-              const currentLocalHour = Math.max(1, hora === 0 ? 24 : hora);
-              ccsGen = Math.min(1500, Math.round(currentMWh / currentLocalHour));
+              const ecDate = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+              const elapsedHours = Math.max(0.5, ecDate.getUTCHours() + ecDate.getUTCMinutes() / 60);
+              ccsGen = Math.min(1500, Math.round(currentMWh / elapsedHours));
             }
           }
 
           if (ccsGen !== null) {
             metrics.currentMW = ccsGen;
             metrics.currentStatus = ccsGen > 0 ? 'online' : 'offline';
-            metrics.activeTurbines = Math.min(8, Math.max(1, Math.round(ccsGen / 187.5)));
+            metrics.activeTurbines = ccsGen > 0 ? Math.min(8, Math.max(1, Math.round(ccsGen / 187.5))) : 0;
           }
         } catch (e) {}
       }
@@ -538,3 +539,90 @@ export async function fetchCoverLiveData(): Promise<CoverLiveData> {
     plants: plantsMap
   };
 }
+
+/**
+ * Builds CoverLiveData directly from already-collected social plants telemetry,
+ * avoiding redundant CELEC queries and guaranteeing 100% data consistency.
+ */
+export function buildCoverDataFromCollectedPlants(
+  collectedPlants: Array<{ plantKey: string; plant: any; telemetry: TelemetryData }>
+): CoverLiveData {
+  const shortNames: Record<string, string> = {
+    cocaCodoSinclair: 'Coca Codo',
+    molino: 'Paute Molino',
+    sopladora: 'Sopladora',
+    mazar: 'Paute Mazar',
+    minasSanFrancisco: 'Minas S.F.',
+    agoyan: 'Agoyán'
+  };
+
+  const now = new Date();
+  const { hora } = celecService.getEcuadorDateParts(now);
+  const plantsMap: Record<string, PlantCoverMetrics> = {};
+  let totalMW = 0;
+  let totalCapacityMW = 0;
+  let latestTs = now;
+
+  for (const item of collectedPlants) {
+    const { plantKey, plant, telemetry } = item;
+    const maxMW = plant.physicalData?.maxEnergyMW || 0;
+    const maxTurbines = plant.physicalData?.maxTurbines || 0;
+    const hasReservoir = plant.physicalData?.minLevelMasl !== undefined && plantKey !== 'sopladora' && plantKey !== 'cocaCodoSinclair';
+    const currentMW = telemetry.gen || 0;
+    const activeTurbines = telemetry.turbines !== undefined
+      ? telemetry.turbines
+      : (plantKey === 'cocaCodoSinclair' && currentMW > 0 ? Math.min(8, Math.max(1, Math.round(currentMW / 187.5))) : 0);
+    const currentStatus = currentMW > 0 ? 'online' : 'offline';
+
+    const currentFlow = telemetry.flow || 0;
+    const flowTrend = telemetry.flow3hAgo !== undefined ? (telemetry.flow >= telemetry.flow3hAgo ? 'up' : 'down') : 'up';
+    const currentCota = telemetry.cota || 0;
+    const cotaTrend = (telemetry.cota !== undefined && telemetry.cota24hAgo !== undefined)
+      ? (telemetry.cota >= telemetry.cota24hAgo ? 'up' : 'down')
+      : 'up';
+
+    if (telemetry.timestamp) {
+      const d = new Date(telemetry.timestamp);
+      if (d > latestTs || latestTs === now) {
+        latestTs = d;
+      }
+    }
+
+    const metrics: PlantCoverMetrics = {
+      key: plantKey,
+      name: plant.name,
+      shortName: shortNames[plantKey] || plant.name,
+      maxMW,
+      maxTurbines,
+      currentMW,
+      activeTurbines,
+      currentStatus,
+      hasReservoir,
+      currentCota,
+      cotaTrend,
+      currentFlow,
+      flowTrend,
+      timestamp: telemetry.timestamp ? new Date(telemetry.timestamp).toISOString() : null
+    };
+
+    plantsMap[plantKey] = metrics;
+    totalCapacityMW += maxMW;
+    if (currentStatus === 'online') {
+      totalMW += currentMW;
+    }
+  }
+
+  const capacityPercent = totalCapacityMW > 0 ? Math.round((totalMW / totalCapacityMW) * 1000) / 10 : 0;
+
+  return {
+    success: true,
+    updatedAtIso: now.toISOString(),
+    formattedDateEcuador: formatEcuadorDateString(latestTs),
+    hourEcuador: hora,
+    totalMW,
+    totalCapacityMW,
+    capacityPercent,
+    plants: plantsMap
+  };
+}
+

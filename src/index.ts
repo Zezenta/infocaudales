@@ -94,10 +94,11 @@ export const TARGET_PLANT_KEYS = [
 import {
   DataPendingError,
   extractCelecPoint,
-  fetchTelemetry
+  fetchTelemetry,
+  buildCoverDataFromCollectedPlants
 } from './services/telemetry/live-telemetry.service.js';
 
-export { DataPendingError, extractCelecPoint, fetchTelemetry };
+export { DataPendingError, extractCelecPoint, fetchTelemetry, buildCoverDataFromCollectedPlants };
 
 /**
  * Runs the reporting publishing cycle for specified target plants with pending retries.
@@ -230,7 +231,8 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
       // Sort plants: 1: Mazar, 2: Coca Codo Sinclair, 3+: Remaining by generation descending
       const sortedPlants = sortPlantsForSocial(collectedSocialPlants);
 
-      const coverBuffer = await generateSocialCover();
+      const coverData = buildCoverDataFromCollectedPlants(sortedPlants);
+      const coverBuffer = await generateSocialCover(coverData);
       const allSocialItems = [coverBuffer, ...sortedPlants.map(p => p.cardBuffer)];
 
       const now = new Date();
@@ -988,7 +990,7 @@ if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
 // TEMPORARY: Forzar publicación de prueba en Facebook e Instagram
 // (Eliminar este bloque cuando se hayan verificado las publicaciones)
 // ============================================================================
-const FORCE_TEST_FB_IG = true;
+const FORCE_TEST_FB_IG = false;
 
 if (FORCE_TEST_FB_IG) {
   console.log('\n[FORCE FB/IG TEST] 🚀 Activada condicional de prueba para Facebook e Instagram...');
@@ -1016,7 +1018,8 @@ if (FORCE_TEST_FB_IG) {
         const sortedPlants = sortPlantsForSocial(collectedPlants);
 
         console.log('[FORCE FB/IG TEST] ↳ Generando portada social en alta resolución (1200x1200px)...');
-        const coverBuffer = await generateSocialCover();
+        const coverData = buildCoverDataFromCollectedPlants(sortedPlants);
+        const coverBuffer = await generateSocialCover(coverData);
         const carouselItems = [coverBuffer, ...sortedPlants.map(p => p.cardBuffer)];
 
         const now = new Date();

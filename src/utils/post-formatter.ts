@@ -344,6 +344,7 @@ export function sortPlantsForSocial<T extends { plantKey: string; telemetry: Tel
 export interface SocialRoundupCaptionOptions {
   dateStr: string;
   hourStr?: string;
+  reportTimestamp?: Date;
   totalMW?: number;
   capacityPct?: number;
   plantCount?: number;
@@ -389,18 +390,31 @@ export function buildSocialRoundupCaption(options: SocialRoundupCaptionOptions):
       }
 
       let dataLagNote = '';
-      if (telemetry.timestamp && options.hourStr) {
-        const reportHourMatch = options.hourStr.match(/(\d{1,2}):(\d{2})/);
-        if (reportHourMatch) {
-          const repHour = parseInt(reportHourMatch[1], 10);
-          const dt = new Date(telemetry.timestamp);
-          const ecDate = new Date(dt.getTime() - 5 * 3600 * 1000);
-          const plantHour = ecDate.getUTCHours();
-          const plantMin = ecDate.getUTCMinutes();
-          const diffHours = Math.abs(repHour - plantHour);
-          if (diffHours >= 1 && diffHours <= 23) {
-            const timeFormatted = `${String(plantHour).padStart(2, '0')}:${String(plantMin).padStart(2, '0')} ECT`;
-            dataLagNote = ` (corte ${timeFormatted})`;
+      if (telemetry.timestamp) {
+        let reportTime = options.reportTimestamp;
+        if (!reportTime && options.hourStr) {
+          const m = options.hourStr.match(/(\d{1,2}):(\d{2})/);
+          if (m) {
+            // Build reportTime from the telemetry's Ecuador date + report hour/min
+            const telEc = new Date(new Date(telemetry.timestamp).getTime() - 5 * 3600 * 1000);
+            const repUtcMs = Date.UTC(telEc.getUTCFullYear(), telEc.getUTCMonth(), telEc.getUTCDate(), parseInt(m[1], 10) + 5, parseInt(m[2], 10));
+            reportTime = new Date(repUtcMs);
+          }
+        }
+        if (!reportTime) reportTime = new Date();
+
+        const telemetryDate = new Date(telemetry.timestamp);
+        const lagMinutes = Math.round((reportTime.getTime() - telemetryDate.getTime()) / (60 * 1000));
+        if (lagMinutes >= 60) {
+          const ecDate = new Date(telemetryDate.getTime() - 5 * 3600 * 1000);
+          const plantHour = String(ecDate.getUTCHours()).padStart(2, '0');
+          const plantMin = String(ecDate.getUTCMinutes()).padStart(2, '0');
+          if (lagMinutes >= 20 * 60) {
+            const plantDay = String(ecDate.getUTCDate()).padStart(2, '0');
+            const plantMonth = String(ecDate.getUTCMonth() + 1).padStart(2, '0');
+            dataLagNote = ` (corte ${plantDay}/${plantMonth} ${plantHour}:${plantMin} ECT)`;
+          } else {
+            dataLagNote = ` (corte ${plantHour}:${plantMin} ECT)`;
           }
         }
       }

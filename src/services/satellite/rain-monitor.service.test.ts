@@ -125,7 +125,7 @@ describe('RainMonitorService', () => {
   describe('checkBasin state machine', () => {
     it('transitions to STORM_STARTED when cloud coverage exceeds threshold', async () => {
       const mockSat = new SatelliteMapService();
-      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue(['2026-10-01T20:00:00.000Z']);
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 30)); // 30% coverage
 
       const rainMonitor = new RainMonitorService(mockSat);

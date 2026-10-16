@@ -392,9 +392,11 @@ export class RainMonitorService {
     // 2. Fetch live tile from satelliteService
     const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 4, source: effectiveSource });
     let tileBuffer: Buffer | null = null;
-    let selectedTimestamp = timestamps[0] || new Date().toISOString();
+    let selectedTimestamp = timestamps[timestamps.length - 1] || new Date().toISOString();
 
-    for (const ts of timestamps) {
+    // Iterate from newest to oldest to assess the freshest real-time satellite scan
+    const candidates = [...timestamps].reverse();
+    for (const ts of candidates) {
       try {
         tileBuffer = await this.satelliteService.fetchMapTile({
           source: effectiveSource,
@@ -470,17 +472,23 @@ export class RainMonitorService {
     const effectiveSource = options.source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
     const maxStaleMinutes = effectiveSource === 'nasa_gibs' ? 90 : 45;
     const frameAgeMinutes = Math.round((now - new Date(timestampIso).getTime()) / 60000);
-    if (frameAgeMinutes > maxStaleMinutes && existingEvent && existingEvent.status === 'ACTIVE') {
-      systemLogger.warn(
-        `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old, max allowed is ${maxStaleMinutes} min). Aborting stale storm event to prevent false compilation.`
-      );
-      db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
-      existingEvent.status = 'CLOSED';
+    if (frameAgeMinutes > maxStaleMinutes) {
+      if (existingEvent && existingEvent.status === 'ACTIVE') {
+        systemLogger.warn(
+          `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old, max allowed is ${maxStaleMinutes} min). Aborting stale storm event to prevent false compilation.`
+        );
+        db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+        existingEvent.status = 'CLOSED';
+      } else {
+        systemLogger.warn(
+          `[RainMonitor] Satellite feed stalled for ${plantKey} (${frameAgeMinutes} min old, max allowed is ${maxStaleMinutes} min). Skipping storm detection to prevent false onset.`
+        );
+      }
       return {
         plantKey,
         action: 'NO_STORM',
         coveragePct: 0,
-        message: `Flujo satelital estancado (${frameAgeMinutes} min sin nuevos fotogramas). Evento cerrado por seguridad.`
+        message: `Flujo satelital estancado (${frameAgeMinutes} min sin nuevos fotogramas). Monitoreo en pausa por seguridad.`
       };
     }
 
@@ -624,6 +632,49 @@ export class RainMonitorService {
       if (legacyFrames.length >= 4) {
         framesToCompile = legacyFrames;
       }
+    }
+
+    // 3. Strict Frame Continuity Validation:
+    // Avoid corrupted/spliced storm videos with huge gaps across hours/days or sparse frame density.
+    let isDiscontinuous = false;
+    let discontinuityReason = '';
+
+    if (framesToCompile.length >= 2) {
+      for (let i = 1; i < framesToCompile.length; i++) {
+        const prevT = new Date(framesToCompile[i - 1].timestampIso).getTime();
+        const currT = new Date(framesToCompile[i].timestampIso).getTime();
+        const gapMin = (currT - prevT) / (60 * 1000);
+        if (gapMin > 45) {
+          isDiscontinuous = true;
+          discontinuityReason = `Salto temporal excesivo (${Math.round(gapMin)} min entre fotogramas)`;
+          break;
+        }
+      }
+
+      if (!isDiscontinuous && framesToCompile.length >= 4) {
+        const firstT = new Date(framesToCompile[0].timestampIso).getTime();
+        const lastT = new Date(framesToCompile[framesToCompile.length - 1].timestampIso).getTime();
+        const totalSpanMin = (lastT - firstT) / (60 * 1000);
+        const avgIntervalMin = totalSpanMin / (framesToCompile.length - 1);
+        if (avgIntervalMin > 25) {
+          isDiscontinuous = true;
+          discontinuityReason = `Densidad de fotogramas insuficiente (${framesToCompile.length} fotogramas en ${Math.round(totalSpanMin)} min, promedio ${Math.round(avgIntervalMin)} min/fotograma)`;
+        }
+      }
+    }
+
+    if (isDiscontinuous) {
+      systemLogger.warn(
+        `[RainMonitor] Rain event #${existingEvent.id} for ${plantKey} rejected due to temporal discontinuity: ${discontinuityReason}. Discarding event without compiling or publishing.`
+      );
+      db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
+      existingEvent.status = 'CLOSED';
+      return {
+        plantKey,
+        action: 'NO_STORM',
+        coveragePct: 0,
+        message: `Evento descartado por discontinuidad temporal (${discontinuityReason}).`
+      };
     }
 
     const postStormFramesCount = 3;
@@ -945,8 +996,8 @@ export class RainMonitorService {
   public async initStormFrameCache(eventId: number, currentTimestamp: string): Promise<void> {
     try {
       const timestamps = await this.satelliteService.fetchGoesTimestamps({ limit: 6 });
-      const chrono = [...timestamps].reverse();
-      for (const ts of chrono) {
+      // timestamps is already sorted oldest to newest (chronological order)
+      for (const ts of timestamps) {
         await this.cacheEcuadorFrame(eventId, ts);
       }
     } catch (err: any) {
