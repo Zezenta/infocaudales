@@ -292,7 +292,7 @@
 
     .matrix-table-header {
       display: grid;
-      grid-template-columns: 155px 75px 115px 120px 85px;
+      grid-template-columns: 138px 48px 94px 130px 130px;
       padding: 0 10px 3px 10px;
       font-size: 10px;
       font-weight: bold;
@@ -312,7 +312,7 @@
     /* PLANT ROW CARD */
     .plant-matrix-row {
       display: grid;
-      grid-template-columns: 155px 75px 115px 120px 85px;
+      grid-template-columns: 138px 48px 94px 130px 130px;
       align-items: center;
       background-color: #0c111c;
       border: 1.5px solid #1e293b;
@@ -464,6 +464,28 @@
       font-size: 11px;
     }
 
+    /* Trend Arrows */
+    .trend-arrow {
+      font-size: 9.5px;
+      margin-left: 3.5px;
+      display: inline-block;
+      vertical-align: middle;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .trend-up {
+      color: #00e676;
+    }
+
+    .trend-down {
+      color: #f43f5e;
+    }
+
+    .trend-neutral {
+      color: #64748b;
+    }
+
     /* FOOTER: DESLIZA PARA VER LOS DETALLES */
     .cover-footer {
       display: flex;
@@ -475,59 +497,64 @@
 
     .swipe-cta-banner {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       background-color: #0c111c;
       border: 1.5px solid #1e293b;
       border-radius: 6px;
-      padding: 7px 14px;
-    }
-
-    .carousel-dots-preview {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .carousel-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: #334155;
-    }
-
-    .carousel-dot.active {
-      width: 18px;
-      height: 6px;
-      border-radius: 3px;
-      background-color: #00b0ff;
+      padding: 9px 16px;
     }
 
     .swipe-cta-text {
-      font-size: 13px;
-      font-weight: bold;
+      font-size: 16px;
+      font-weight: 800;
       color: #f3f4f6;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
     }
 
     .swipe-arrow {
       color: #00b0ff;
-      font-size: 15px;
+      font-size: 18px;
+      line-height: 1;
     }
 
     .footer-sources-row {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      font-size: 9px;
+      font-size: 9.5px;
       color: #4b5563;
       font-family: 'DejaVu Sans Mono', monospace;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       padding: 0 2px;
+    }
+
+    .trend-toggle-btn {
+      background: #080c14;
+      border: 1.5px solid #1e293b;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .trend-toggle-btn:hover {
+      border-color: #475569;
+      color: #ffffff;
+    }
+
+    .trend-toggle-btn.active {
+      border-color: #00b0ff;
+      color: #ffffff;
+      background: #1e293b;
     }
 
     /* ==========================================================================
@@ -812,8 +839,8 @@
             <div>Central</div>
             <div class="matrix-col-center">Turbinas</div>
             <div class="matrix-col-right">Generación</div>
-            <div class="matrix-col-right">Cota (msnm)</div>
-            <div class="matrix-col-right">Caudal</div>
+            <div class="matrix-col-right">💧 Cota (msnm)</div>
+            <div class="matrix-col-right">🌊 Caudal</div>
           </div>
 
           <!-- Dynamic Plant Rows Container -->
@@ -825,15 +852,6 @@
         <!-- FOOTER: DESLIZA PARA VER LOS DETALLES -->
         <div class="cover-footer">
           <div class="swipe-cta-banner">
-            <div class="carousel-dots-preview">
-              <span class="carousel-dot active"></span>
-              <span class="carousel-dot"></span>
-              <span class="carousel-dot"></span>
-              <span class="carousel-dot"></span>
-              <span class="carousel-dot"></span>
-              <span class="carousel-dot"></span>
-              <span class="carousel-dot"></span>
-            </div>
             <div class="swipe-cta-text">
               <span>Desliza para ver los detalles</span>
               <span class="swipe-arrow">➔</span>
@@ -842,7 +860,6 @@
 
           <div class="footer-sources-row">
             <span>Fuentes: CENACE • CELEC EP</span>
-            <span>Diapositiva 1 de 7</span>
           </div>
         </div>
 
@@ -944,6 +961,13 @@
               <span class="form-val-badge" id="edit-plant-cota-val">-</span>
             </div>
             <input type="range" class="range-slider" id="edit-plant-cota-slider" min="2098" max="2153" step="0.1" value="2135.2">
+            <div class="form-row" style="margin-top: 2px;">
+              <span style="font-size: 11px; color: #64748b;">Tendencia Cota</span>
+              <div style="display: flex; gap: 4px;">
+                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-up">▲ Sube</button>
+                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-down">▼ Baja</button>
+              </div>
+            </div>
           </div>
 
           <div id="flow-control-group" style="display: flex; flex-direction: column; gap: 4px;">
@@ -952,6 +976,13 @@
               <span class="form-val-badge" id="edit-plant-flow-val">480 m³/s</span>
             </div>
             <input type="range" class="range-slider" id="edit-plant-flow-slider" min="0" max="1000" step="1" value="480">
+            <div class="form-row" style="margin-top: 2px;">
+              <span style="font-size: 11px; color: #64748b;">Tendencia Caudal</span>
+              <div style="display: flex; gap: 4px;">
+                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-up">▲ Sube</button>
+                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-down">▼ Baja</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -976,7 +1007,8 @@
         flowThresholds: { low: 190, normal: 420 },
         currentStatus: 'online',
         currentMW: 1120.0,
-        currentFlow: 480.0
+        currentFlow: 480.0,
+        flowTrend: 'up'
       },
       molino: {
         id: 'molino',
@@ -994,7 +1026,9 @@
         currentStatus: 'online',
         currentMW: 890.0,
         currentCota: 1987.4,
-        currentFlow: 154.0
+        currentFlow: 154.0,
+        cotaTrend: 'up',
+        flowTrend: 'up'
       },
       sopladora: {
         id: 'sopladora',
@@ -1008,7 +1042,8 @@
         flowThresholds: { low: 80, normal: 140 },
         currentStatus: 'online',
         currentMW: 380.0,
-        currentFlow: 145.0
+        currentFlow: 145.0,
+        flowTrend: 'up'
       },
       mazar: {
         id: 'mazar',
@@ -1026,7 +1061,9 @@
         currentStatus: 'online',
         currentMW: 136.0,
         currentCota: 2135.2,
-        currentFlow: 85.0
+        currentFlow: 85.0,
+        cotaTrend: 'up',
+        flowTrend: 'down'
       },
       minasSanFrancisco: {
         id: 'minasSanFrancisco',
@@ -1044,7 +1081,9 @@
         currentStatus: 'online',
         currentMW: 180.0,
         currentCota: 788.5,
-        currentFlow: 45.0
+        currentFlow: 45.0,
+        cotaTrend: 'down',
+        flowTrend: 'down'
       },
       agoyan: {
         id: 'agoyan',
@@ -1062,12 +1101,24 @@
         currentStatus: 'online',
         currentMW: 95.0,
         currentCota: 1649.0,
-        currentFlow: 80.0
+        currentFlow: 80.0,
+        cotaTrend: 'up',
+        flowTrend: 'up'
       }
     };
 
     let activePlantKey = 'cocaCodoSinclair';
     let isPortrait45 = false;
+
+    // Helper for delta / trend arrow
+    function getTrendArrowHtml(trend) {
+      if (trend === 'up') {
+        return '<span class="trend-arrow trend-up">▲</span>';
+      } else if (trend === 'down') {
+        return '<span class="trend-arrow trend-down">▼</span>';
+      }
+      return '';
+    }
 
     // Date formatting helper for Ecuador (UTC-5)
     function getEcuadorDateString(date = new Date()) {
@@ -1089,9 +1140,9 @@
     function getCotaDisplay(plant) {
       if (!plant.hasReservoir) {
         if (plant.id === 'cocaCodoSinclair') {
-          return { text: 'De paso', colorClass: 'val-dimmed' };
+          return { text: 'De paso', colorClass: 'val-dimmed', trendHtml: '' };
         }
-        return { text: 'En cascada', colorClass: 'val-dimmed' };
+        return { text: 'En cascada', colorClass: 'val-dimmed', trendHtml: '' };
       }
 
       let text = '';
@@ -1135,7 +1186,8 @@
         }
       }
 
-      return { text, colorClass };
+      const trendHtml = getTrendArrowHtml(plant.cotaTrend || 'up');
+      return { text, colorClass, trendHtml };
     }
 
     // Dynamic Flow styling
@@ -1152,9 +1204,11 @@
         colorClass = 'val-good';
       }
 
+      const trendHtml = getTrendArrowHtml(plant.flowTrend || 'up');
       return {
         text: `${Math.round(flow)} m³/s`,
-        colorClass
+        colorClass,
+        trendHtml
       };
     }
 
@@ -1224,12 +1278,12 @@
 
           <!-- Col 4: Cota (XX/XX) -->
           <div class="cota-cell">
-            <span class="cota-val-text ${cotaInfo.colorClass}">${cotaInfo.text}</span>
+            <span class="cota-val-text ${cotaInfo.colorClass}">${cotaInfo.text}${cotaInfo.trendHtml}</span>
           </div>
 
           <!-- Col 5: Caudal -->
           <div class="flow-cell">
-            <span class="flow-val-text ${flowInfo.colorClass}">${flowInfo.text}</span>
+            <span class="flow-val-text ${flowInfo.colorClass}">${flowInfo.text}${flowInfo.trendHtml}</span>
           </div>
         `;
 
@@ -1299,6 +1353,14 @@
       } else {
         flowGroup.style.display = 'none';
       }
+
+      // Trend buttons state
+      if (p.hasReservoir) {
+        document.getElementById('btn-cota-trend-up').classList.toggle('active', (p.cotaTrend || 'up') === 'up');
+        document.getElementById('btn-cota-trend-down').classList.toggle('active', p.cotaTrend === 'down');
+      }
+      document.getElementById('btn-flow-trend-up').classList.toggle('active', (p.flowTrend || 'up') === 'up');
+      document.getElementById('btn-flow-trend-down').classList.toggle('active', p.flowTrend === 'down');
     }
 
     // Set up interactive listeners
@@ -1377,6 +1439,28 @@
         renderCard();
       });
 
+      // Trend buttons listeners
+      document.getElementById('btn-cota-trend-up').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].cotaTrend = 'up';
+        updateEditorControls();
+        renderCard();
+      });
+      document.getElementById('btn-cota-trend-down').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].cotaTrend = 'down';
+        updateEditorControls();
+        renderCard();
+      });
+      document.getElementById('btn-flow-trend-up').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].flowTrend = 'up';
+        updateEditorControls();
+        renderCard();
+      });
+      document.getElementById('btn-flow-trend-down').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].flowTrend = 'down';
+        updateEditorControls();
+        renderCard();
+      });
+
       // Main Title input
       document.getElementById('input-main-title').addEventListener('input', (e) => {
         document.getElementById('card-main-title').innerText = e.target.value.toUpperCase();
@@ -1411,35 +1495,45 @@
         PLANTS_CONFIG.cocaCodoSinclair.activeTurbines = 8;
         PLANTS_CONFIG.cocaCodoSinclair.currentMW = 1120;
         PLANTS_CONFIG.cocaCodoSinclair.currentFlow = 480;
+        PLANTS_CONFIG.cocaCodoSinclair.flowTrend = 'up';
 
         PLANTS_CONFIG.molino.currentStatus = 'online';
         PLANTS_CONFIG.molino.activeTurbines = 8;
         PLANTS_CONFIG.molino.currentMW = 890;
         PLANTS_CONFIG.molino.currentCota = 1987.4;
         PLANTS_CONFIG.molino.currentFlow = 154;
+        PLANTS_CONFIG.molino.cotaTrend = 'up';
+        PLANTS_CONFIG.molino.flowTrend = 'up';
 
         PLANTS_CONFIG.sopladora.currentStatus = 'online';
         PLANTS_CONFIG.sopladora.activeTurbines = 3;
         PLANTS_CONFIG.sopladora.currentMW = 380;
         PLANTS_CONFIG.sopladora.currentFlow = 145;
+        PLANTS_CONFIG.sopladora.flowTrend = 'up';
 
         PLANTS_CONFIG.mazar.currentStatus = 'online';
         PLANTS_CONFIG.mazar.activeTurbines = 2;
         PLANTS_CONFIG.mazar.currentMW = 136;
         PLANTS_CONFIG.mazar.currentCota = 2135.2;
         PLANTS_CONFIG.mazar.currentFlow = 85;
+        PLANTS_CONFIG.mazar.cotaTrend = 'up';
+        PLANTS_CONFIG.mazar.flowTrend = 'up';
 
         PLANTS_CONFIG.minasSanFrancisco.currentStatus = 'online';
         PLANTS_CONFIG.minasSanFrancisco.activeTurbines = 2;
         PLANTS_CONFIG.minasSanFrancisco.currentMW = 180;
         PLANTS_CONFIG.minasSanFrancisco.currentCota = 788.5;
         PLANTS_CONFIG.minasSanFrancisco.currentFlow = 45;
+        PLANTS_CONFIG.minasSanFrancisco.cotaTrend = 'up';
+        PLANTS_CONFIG.minasSanFrancisco.flowTrend = 'up';
 
         PLANTS_CONFIG.agoyan.currentStatus = 'online';
         PLANTS_CONFIG.agoyan.activeTurbines = 2;
         PLANTS_CONFIG.agoyan.currentMW = 95;
         PLANTS_CONFIG.agoyan.currentCota = 1649.0;
         PLANTS_CONFIG.agoyan.currentFlow = 80;
+        PLANTS_CONFIG.agoyan.cotaTrend = 'up';
+        PLANTS_CONFIG.agoyan.flowTrend = 'up';
 
         updateEditorControls();
         renderCard();
@@ -1451,11 +1545,15 @@
         PLANTS_CONFIG.mazar.currentMW = 75;
         PLANTS_CONFIG.mazar.currentCota = 2118.0; // Alerta 2118m (3m sobre crítico)
         PLANTS_CONFIG.mazar.currentFlow = 40;
+        PLANTS_CONFIG.mazar.cotaTrend = 'down';
+        PLANTS_CONFIG.mazar.flowTrend = 'down';
 
         PLANTS_CONFIG.molino.currentStatus = 'online';
         PLANTS_CONFIG.molino.activeTurbines = 6;
         PLANTS_CONFIG.molino.currentMW = 650;
         PLANTS_CONFIG.molino.currentCota = 1978.5;
+        PLANTS_CONFIG.molino.cotaTrend = 'down';
+        PLANTS_CONFIG.molino.flowTrend = 'down';
 
         updateEditorControls();
         renderCard();
@@ -1467,17 +1565,28 @@
         PLANTS_CONFIG.mazar.currentMW = 0;
         PLANTS_CONFIG.mazar.currentCota = 2113.2; // BAJO COTA CRÍTICA 2115m (-1.8m)
         PLANTS_CONFIG.mazar.currentFlow = 25;
+        PLANTS_CONFIG.mazar.cotaTrend = 'down';
+        PLANTS_CONFIG.mazar.flowTrend = 'down';
 
         PLANTS_CONFIG.molino.currentStatus = 'online';
         PLANTS_CONFIG.molino.activeTurbines = 4;
         PLANTS_CONFIG.molino.currentMW = 450;
         PLANTS_CONFIG.molino.currentCota = 1975.4; // Muy cerca al mínimo 1975m
         PLANTS_CONFIG.molino.currentFlow = 68;
+        PLANTS_CONFIG.molino.cotaTrend = 'down';
+        PLANTS_CONFIG.molino.flowTrend = 'down';
 
         PLANTS_CONFIG.cocaCodoSinclair.currentStatus = 'online';
         PLANTS_CONFIG.cocaCodoSinclair.activeTurbines = 6;
         PLANTS_CONFIG.cocaCodoSinclair.currentMW = 980;
         PLANTS_CONFIG.cocaCodoSinclair.currentFlow = 175; // Caudal bajo
+        PLANTS_CONFIG.cocaCodoSinclair.flowTrend = 'down';
+
+        PLANTS_CONFIG.sopladora.flowTrend = 'down';
+        PLANTS_CONFIG.minasSanFrancisco.cotaTrend = 'down';
+        PLANTS_CONFIG.minasSanFrancisco.flowTrend = 'down';
+        PLANTS_CONFIG.agoyan.cotaTrend = 'down';
+        PLANTS_CONFIG.agoyan.flowTrend = 'down';
 
         updateEditorControls();
         renderCard();
@@ -1487,10 +1596,13 @@
         PLANTS_CONFIG.mazar.currentStatus = 'standby';
         PLANTS_CONFIG.mazar.activeTurbines = 0;
         PLANTS_CONFIG.mazar.currentMW = 0;
+        PLANTS_CONFIG.mazar.cotaTrend = 'down';
         PLANTS_CONFIG.molino.activeTurbines = 5;
         PLANTS_CONFIG.molino.currentMW = 550;
+        PLANTS_CONFIG.molino.cotaTrend = 'down';
         PLANTS_CONFIG.sopladora.activeTurbines = 2;
         PLANTS_CONFIG.sopladora.currentMW = 240;
+        PLANTS_CONFIG.sopladora.flowTrend = 'down';
         updateEditorControls();
         renderCard();
       });
