@@ -606,6 +606,13 @@
       background: #0369a1;
     }
 
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    .spin-animation {
+      animation: spin 0.9s linear infinite;
+    }
+
     .btn-secondary {
       background: #1e293b;
       color: #cbd5e1;
@@ -897,6 +904,19 @@
           <label class="form-label">Título Principal</label>
           <input type="text" id="input-main-title" value="HIDROELÉCTRICAS EN VIVO" style="background: #080c14; border: 1.5px solid #1e293b; color: #fff; padding: 5px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; width: 220px; font-family: 'Space Grotesk';">
         </div>
+      </div>
+
+      <!-- Live Telemetry Query Button (Official Endpoints) -->
+      <div class="panel-section" style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="section-heading" style="color: #38bdf8; margin: 0; font-size: 11px;">Telemetría en Vivo (Endpoints)</span>
+          <span id="live-indicator-badge" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #94a3b8; font-family: 'DejaVu Sans Mono', monospace;">Manual / Preset</span>
+        </div>
+        <button type="button" class="btn-action-primary" id="btn-fetch-live-data" style="width: 100%; background: #0284c7; border-color: #38bdf8; font-size: 12.5px; padding: 9px 12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          <span id="btn-fetch-live-data-text">Consultar Endpoints (CELEC & CENACE)</span>
+        </button>
+        <div id="live-fetch-status" style="font-size: 11px; color: #94a3b8; margin-top: 6px; min-height: 14px; text-align: center; font-weight: 500;"></div>
       </div>
 
       <!-- Quick Preset Scenarios -->
@@ -1493,8 +1513,86 @@
         }
       });
 
+      // Preset helper to update badge
+      function markPresetActive(presetName) {
+        const badgeEl = document.getElementById('live-indicator-badge');
+        if (badgeEl) {
+          badgeEl.style.background = '#1e293b';
+          badgeEl.style.color = '#94a3b8';
+          badgeEl.textContent = `Preset: ${presetName}`;
+        }
+        const statusEl = document.getElementById('live-fetch-status');
+        if (statusEl) statusEl.textContent = '';
+      }
+
+      // Live Telemetry Query Button (Official Endpoints: CELEC & CENACE)
+      const fetchLiveBtn = document.getElementById('btn-fetch-live-data');
+      if (fetchLiveBtn) {
+        fetchLiveBtn.addEventListener('click', async () => {
+          const statusEl = document.getElementById('live-fetch-status');
+          const badgeEl = document.getElementById('live-indicator-badge');
+          const btnText = document.getElementById('btn-fetch-live-data-text');
+
+          fetchLiveBtn.disabled = true;
+          if (btnText) btnText.textContent = 'Consultando endpoints oficiales...';
+          statusEl.style.color = '#38bdf8';
+          statusEl.textContent = 'Obteniendo telemetría en tiempo real de 6 centrales...';
+
+          try {
+            const res = await fetch('/api/cover-live-data');
+            const data = await res.json();
+
+            if (!data.success) {
+              throw new Error(data.error || 'Error al obtener datos en vivo');
+            }
+
+            // Update each plant in PLANTS_CONFIG
+            for (const [key, plantMetrics] of Object.entries(data.plants)) {
+              if (PLANTS_CONFIG[key]) {
+                PLANTS_CONFIG[key].currentMW = plantMetrics.currentMW;
+                PLANTS_CONFIG[key].activeTurbines = plantMetrics.activeTurbines;
+                PLANTS_CONFIG[key].currentStatus = plantMetrics.currentStatus;
+                if (PLANTS_CONFIG[key].hasReservoir) {
+                  PLANTS_CONFIG[key].currentCota = plantMetrics.currentCota;
+                  PLANTS_CONFIG[key].cotaTrend = plantMetrics.cotaTrend;
+                }
+                PLANTS_CONFIG[key].currentFlow = plantMetrics.currentFlow;
+                PLANTS_CONFIG[key].flowTrend = plantMetrics.flowTrend;
+              }
+            }
+
+            // Update date subtitle with official ECT time
+            if (data.formattedDateEcuador) {
+              document.getElementById('card-datetime-str').innerText = data.formattedDateEcuador;
+            }
+
+            // Update badge & status message
+            if (badgeEl) {
+              badgeEl.style.background = 'rgba(0, 230, 118, 0.15)';
+              badgeEl.style.color = '#00e676';
+              badgeEl.textContent = `En vivo • ${data.hourEcuador}:00 ECT`;
+            }
+
+            statusEl.style.color = '#00e676';
+            statusEl.textContent = `✓ Datos reales actualizados (${data.totalMW.toLocaleString()} MW • ${data.capacityPercent}%)`;
+
+            // Update active plant controls and re-render card
+            updateEditorControls();
+            renderCard();
+          } catch (err) {
+            console.error('Error fetching live data:', err);
+            statusEl.style.color = '#f43f5e';
+            statusEl.textContent = `Error: ${err.message}`;
+          } finally {
+            fetchLiveBtn.disabled = false;
+            if (btnText) btnText.textContent = 'Consultar Endpoints (CELEC & CENACE)';
+          }
+        });
+      }
+
       // Presets
       document.getElementById('preset-normal').addEventListener('click', () => {
+        markPresetActive('Normal');
         PLANTS_CONFIG.cocaCodoSinclair.currentStatus = 'online';
         PLANTS_CONFIG.cocaCodoSinclair.activeTurbines = 8;
         PLANTS_CONFIG.cocaCodoSinclair.currentMW = 1120;
@@ -1544,6 +1642,7 @@
       });
 
       document.getElementById('preset-alert').addEventListener('click', () => {
+        markPresetActive('Alerta Mazar');
         PLANTS_CONFIG.mazar.currentStatus = 'online';
         PLANTS_CONFIG.mazar.activeTurbines = 1;
         PLANTS_CONFIG.mazar.currentMW = 75;
@@ -1564,6 +1663,7 @@
       });
 
       document.getElementById('preset-critical').addEventListener('click', () => {
+        markPresetActive('Estiaje Crítico');
         PLANTS_CONFIG.mazar.currentStatus = 'offline';
         PLANTS_CONFIG.mazar.activeTurbines = 0;
         PLANTS_CONFIG.mazar.currentMW = 0;
@@ -1597,6 +1697,7 @@
       });
 
       document.getElementById('preset-partial').addEventListener('click', () => {
+        markPresetActive('Operación Parcial');
         PLANTS_CONFIG.mazar.currentStatus = 'standby';
         PLANTS_CONFIG.mazar.activeTurbines = 0;
         PLANTS_CONFIG.mazar.currentMW = 0;

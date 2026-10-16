@@ -10,6 +10,7 @@ import { SatelliteArchiverService } from '../services/satellite/satellite-archiv
 import { VideoCompilerService } from '../services/satellite/video-compiler.service.js';
 import { RainMonitorService } from '../services/satellite/rain-monitor.service.js';
 import { db } from '../utils/db.js';
+import { fetchCoverLiveData, fetchTelemetry } from '../services/telemetry/live-telemetry.service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -283,6 +284,38 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, data: JSON.parse(data) }));
     });
+    return;
+  }
+
+  // Cover Live Data API (Parallel fetch across CELEC & CENACE for all 6 plants)
+  if (req.method === 'GET' && req.url === '/api/cover-live-data') {
+    try {
+      console.log('[Visualizer] Querying live telemetry for cover from CELEC & CENACE...');
+      const data = await fetchCoverLiveData();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+    } catch (err: any) {
+      console.error('[Visualizer] Error fetching cover live data:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
+  // Single Plant Live Telemetry API
+  if (req.method === 'GET' && req.url && req.url.startsWith('/api/plant-telemetry')) {
+    try {
+      const urlObj = new URL(req.url, `http://${req.headers.host}`);
+      const plantKey = urlObj.searchParams.get('plant') || 'cocaCodoSinclair';
+      console.log(`[Visualizer] Querying live telemetry for plant ${plantKey}...`);
+      const telemetry = await fetchTelemetry(plantKey, false);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, plantKey, telemetry }));
+    } catch (err: any) {
+      console.error('[Visualizer] Error fetching plant live telemetry:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
     return;
   }
   
