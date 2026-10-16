@@ -1286,6 +1286,16 @@ export class RainMonitorService {
     let rows: Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string; source: string }> = [];
 
     if (requestedSource) {
+      if (requestedSource === 'nasa_gibs') {
+        const existingCount = db.prepare(`SELECT COUNT(*) as count FROM satellite_archive WHERE date_ecuador = ? AND source = 'nasa_gibs' AND plant_key = 'ecuador'`).get(targetDate) as { count: number } | undefined;
+        if (!existingCount || existingCount.count < 144) {
+          try {
+            await this.archiverService.backfillDateFrames(targetDate, 'nasa_gibs', 'ecuador');
+          } catch (e: any) {
+            systemLogger.warn(`[RainMonitor] Error during date backfill for NASA GIBS: ${e?.message || e}`);
+          }
+        }
+      }
       rows = db.prepare(`
         SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
         FROM satellite_archive
@@ -1332,11 +1342,11 @@ export class RainMonitorService {
           ORDER BY timestamp_iso ASC
         `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string; source: string }>;
 
-        // If not enough NASA frames exist in SQLite, attempt online backfill from NASA GIBS
-        if (!nasaRows || nasaRows.length < 24) {
+        // If not all 144 NASA frames exist in SQLite, backfill the specific missing frames from NASA GIBS
+        if (!nasaRows || nasaRows.length < 144) {
           try {
-            systemLogger.info(`[RainMonitor] Attempting online 24h backfill from NASA GIBS for ${targetDate}...`);
-            await this.archiverService.backfillNasaFrames(24, 'ecuador');
+            systemLogger.info(`[RainMonitor] NASA GIBS archive has ${nasaRows?.length || 0}/144 frames for ${targetDate}. Ensuring complete 24h coverage...`);
+            await this.archiverService.backfillDateFrames(targetDate, 'nasa_gibs', 'ecuador');
             nasaRows = db.prepare(`
               SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
               FROM satellite_archive

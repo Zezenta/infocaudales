@@ -97,6 +97,19 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
     if (flowResult.value !== null) {
       flow = flowResult.value;
       if (flowResult.timestamp) telemetryTimestamp = flowResult.timestamp;
+    } else if (!requireTargetHour) {
+      // Graceful fallback: If today has no published flow at or before targetIdx, query yesterday's flow
+      try {
+        const flowPointsYesterday = await celecService.fetchFlow(plant, yesterday);
+        const yestResult = extractCelecPoint(flowPointsYesterday, 0, false);
+        if (yestResult.value !== null) {
+          flow = yestResult.value;
+          if (yestResult.timestamp) telemetryTimestamp = yestResult.timestamp;
+          console.log(`[LiveTelemetry] Fallback applied: using yesterday's last known flow (${flow} m³/s at ${telemetryTimestamp.toISOString()}) for ${plant.name}.`);
+        }
+      } catch (e) {
+        console.warn(`[LiveTelemetry] Could not fetch yesterday's flow fallback for ${plant.name}:`, e);
+      }
     }
 
     // Contingency for Coca Codo Sinclair: if read flow is 0 m³/s, fallback to current day's latest non-zero flow
@@ -141,6 +154,15 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
       if (levelResult.value !== null) {
         cota = levelResult.value;
         if (levelResult.timestamp && telemetryTimestamp === now) telemetryTimestamp = levelResult.timestamp;
+      } else if (!requireTargetHour) {
+        try {
+          const levelPointsYesterday = await celecService.fetchLevel(plant, yesterday);
+          const yestLvl = extractCelecPoint(levelPointsYesterday, 0, false);
+          if (yestLvl.value !== null) {
+            cota = yestLvl.value;
+            if (yestLvl.timestamp && telemetryTimestamp === now) telemetryTimestamp = yestLvl.timestamp;
+          }
+        } catch (e) {}
       }
     } catch (err) {
       if (err instanceof DataPendingError) throw err;
@@ -168,6 +190,14 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
       const turbineResult = extractCelecPoint(turbinePointsToday, targetIdx, requireTargetHour);
       if (turbineResult.value !== null) {
         turbines = turbineResult.value;
+      } else if (!requireTargetHour) {
+        try {
+          const turbinePointsYesterday = await celecService.fetchActiveTurbines(plant, yesterday);
+          const yestTurb = extractCelecPoint(turbinePointsYesterday, 0, false);
+          if (yestTurb.value !== null) {
+            turbines = yestTurb.value;
+          }
+        } catch (e) {}
       }
     } catch (err) {
       if (err instanceof DataPendingError) throw err;
@@ -234,6 +264,15 @@ export async function fetchTelemetry(plantKey: string, requireTargetHour: boolea
       const energyResult = extractCelecPoint(energyPointsToday, targetIdx, requireTargetHour);
       if (energyResult.value !== null) {
         gen = energyResult.value;
+      } else if (!requireTargetHour) {
+        try {
+          const energyPointsYesterday = await celecService.fetchDailyEnergy(plant, yesterday);
+          const yestGen = extractCelecPoint(energyPointsYesterday, 0, false);
+          if (yestGen.value !== null) {
+            gen = yestGen.value;
+            console.log(`[LiveTelemetry] Fallback applied: using yesterday's last known generation (${gen} MW) for ${plant.name}.`);
+          }
+        } catch (e) {}
       }
     } catch (err) {
       if (err instanceof DataPendingError) throw err;
@@ -344,7 +383,17 @@ export async function fetchCoverLiveData(): Promise<CoverLiveData> {
       // 1. Flow & Trend
       try {
         const flowPts = await celecService.fetchFlow(p, now);
-        const { current, trend, timestamp } = extractPointsWithTrend(flowPts);
+        let { current, trend, timestamp } = extractPointsWithTrend(flowPts);
+        if (current === null) {
+          try {
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const yestPts = await celecService.fetchFlow(p, yesterday);
+            const yest = extractPointsWithTrend(yestPts);
+            current = yest.current;
+            trend = yest.trend;
+            timestamp = yest.timestamp;
+          } catch (e) {}
+        }
         if (current !== null) {
           metrics.currentFlow = Math.round(current);
           metrics.flowTrend = trend;
@@ -356,7 +405,17 @@ export async function fetchCoverLiveData(): Promise<CoverLiveData> {
       if (hasReservoir) {
         try {
           const lvlPts = await celecService.fetchLevel(p, now);
-          const { current, trend, timestamp } = extractPointsWithTrend(lvlPts);
+          let { current, trend, timestamp } = extractPointsWithTrend(lvlPts);
+          if (current === null) {
+            try {
+              const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+              const yestPts = await celecService.fetchLevel(p, yesterday);
+              const yest = extractPointsWithTrend(yestPts);
+              current = yest.current;
+              trend = yest.trend;
+              timestamp = yest.timestamp;
+            } catch (e) {}
+          }
           if (current !== null) {
             metrics.currentCota = Math.round(current * 10) / 10;
             metrics.cotaTrend = trend;
@@ -369,7 +428,15 @@ export async function fetchCoverLiveData(): Promise<CoverLiveData> {
       if (key !== 'cocaCodoSinclair') {
         try {
           const genPts = await celecService.fetchDailyEnergy(p, now);
-          const { current } = extractPointsWithTrend(genPts);
+          let { current } = extractPointsWithTrend(genPts);
+          if (current === null) {
+            try {
+              const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+              const yestPts = await celecService.fetchDailyEnergy(p, yesterday);
+              const yest = extractPointsWithTrend(yestPts);
+              current = yest.current;
+            } catch (e) {}
+          }
           if (current !== null) {
             metrics.currentMW = Math.round(current);
             metrics.currentStatus = metrics.currentMW > 0 ? 'online' : 'offline';
@@ -378,7 +445,15 @@ export async function fetchCoverLiveData(): Promise<CoverLiveData> {
 
         try {
           const turbPts = await celecService.fetchActiveTurbines(p, now);
-          const { current } = extractPointsWithTrend(turbPts);
+          let { current } = extractPointsWithTrend(turbPts);
+          if (current === null) {
+            try {
+              const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+              const yestPts = await celecService.fetchActiveTurbines(p, yesterday);
+              const yest = extractPointsWithTrend(yestPts);
+              current = yest.current;
+            } catch (e) {}
+          }
           if (current !== null) {
             metrics.activeTurbines = Math.round(current);
           }
