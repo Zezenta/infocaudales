@@ -18,11 +18,11 @@ export class MediaStorageService {
   private publicBaseUrl: string;
 
   constructor(config?: StorageConfig) {
-    const endpoint = config?.endpoint || process.env.R2_ENDPOINT;
-    const accessKeyId = config?.accessKeyId || process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = config?.secretAccessKey || process.env.R2_SECRET_ACCESS_KEY;
-    this.bucket = config?.bucketName || process.env.R2_BUCKET_NAME || 'hidro-info-bot-media';
-    this.publicBaseUrl = (config?.publicBaseUrl || process.env.R2_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const endpoint = config?.endpoint !== undefined ? config.endpoint : process.env.R2_ENDPOINT;
+    const accessKeyId = config?.accessKeyId !== undefined ? config.accessKeyId : process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = config?.secretAccessKey !== undefined ? config.secretAccessKey : process.env.R2_SECRET_ACCESS_KEY;
+    this.bucket = config?.bucketName !== undefined ? config.bucketName : (process.env.R2_BUCKET_NAME || 'hidro-info-bot-media');
+    this.publicBaseUrl = (config?.publicBaseUrl !== undefined ? config.publicBaseUrl : (process.env.R2_PUBLIC_BASE_URL || '')).replace(/\/$/, '');
 
     if (endpoint && accessKeyId && secretAccessKey) {
       this.s3Client = new S3Client({
