@@ -48,3 +48,6 @@ export const xLogger = createCategoryLogger('X');
 export const inamhiLogger = createCategoryLogger('INAMHI');
 export const geoglowsLogger = createCategoryLogger('GEOGLOWS');
 export const predictionLogger = createCategoryLogger('Prediction');
+export const metaLogger = createCategoryLogger('Meta');
+export const facebookLogger = createCategoryLogger('Facebook');
+export const instagramLogger = createCategoryLogger('Instagram');
