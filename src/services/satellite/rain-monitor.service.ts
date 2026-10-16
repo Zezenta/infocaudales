@@ -36,6 +36,7 @@ export interface RainCheckOptions {
   cooldownHours?: number;          // Hours to wait before allowing another event for this basin (default: 6h)
   autoCompileVideo?: boolean;      // Whether to compile MP4 video automatically when triggered (default: true)
   autoPublishToX?: boolean;        // Whether to automatically post video to X if XService is available (default: true)
+  autoPublishToSocial?: boolean;   // Whether to automatically post video to Facebook & Instagram (default: follows autoPublishToX)
   tileResolution?: number;         // Tile width & height in pixels for analysis (default: 80)
   source?: 'geoserver' | 'nasa_gibs'; // Satellite imagery source
   watermarkBrand?: 'x' | 'instagram'; // Social brand watermark (default: instagram)
@@ -719,40 +720,42 @@ export class RainMonitorService {
     existingEvent.cooldown_until = cooldownUntil;
 
     let publishedTweetId: string | undefined = undefined;
-    if (options.autoPublishToX && this.xService && compilationResult.mp4Path) {
-      try {
-        const startDate = compilationResult.timestamps.startDateEcuador || compilationResult.timestamps.startEcuador?.split(' ')[0];
-        const startTime = compilationResult.timestamps.startTimeEcuador || compilationResult.timestamps.startEcuador?.split(' ')[1];
-        const endDate = compilationResult.timestamps.endDateEcuador || compilationResult.timestamps.endEcuador?.split(' ')[0];
-        const endTime = compilationResult.timestamps.endTimeEcuador || compilationResult.timestamps.endEcuador?.split(' ')[1];
-        const postText = buildStormAlertPostText({
-          plantKey,
-          peakCoveragePct: newPeak,
-          durationMinutes: elapsedMinutes,
-          dateEcuador: endDate || startDate,
-          startTimeEcuador: startTime,
-          endTimeEcuador: endTime,
-          timeEcuador: endTime
-        });
-        const postRes = await this.xService.postVideo(postText, compilationResult.mp4Path);
-        publishedTweetId = postRes?.data?.id || postRes?.id;
-        systemLogger.info(`[RainMonitor] 🐦 Successfully published rain alert video to X (Tweet ID: ${publishedTweetId})`);
+    let archivedPath: string | undefined = undefined;
 
-        // Move published video to persistent archive directory (data/published_videos/)
-        const archivedPath = this.archivePublishedVideo(compilationResult.mp4Path);
-        compilationResult.mp4Path = archivedPath;
-        existingEvent.video_path = archivedPath;
+    if (compilationResult.mp4Path) {
+      archivedPath = this.archivePublishedVideo(compilationResult.mp4Path);
+      compilationResult.mp4Path = archivedPath;
+      existingEvent.video_path = archivedPath;
 
-        db.prepare(`
-          UPDATE rain_events 
-          SET published_at = ?, tweet_id = ?, video_path = ? 
-          WHERE id = ?
-        `).run(Date.now(), publishedTweetId || null, archivedPath, existingEvent.id);
+      const startDate = compilationResult.timestamps?.startDateEcuador || compilationResult.timestamps?.startEcuador?.split(' ')[0];
+      const startTime = compilationResult.timestamps?.startTimeEcuador || compilationResult.timestamps?.startEcuador?.split(' ')[1];
+      const endDate = compilationResult.timestamps?.endDateEcuador || compilationResult.timestamps?.endEcuador?.split(' ')[0];
+      const endTime = compilationResult.timestamps?.endTimeEcuador || compilationResult.timestamps?.endEcuador?.split(' ')[1];
+      const postText = buildStormAlertPostText({
+        plantKey,
+        peakCoveragePct: newPeak,
+        durationMinutes: elapsedMinutes,
+        dateEcuador: endDate || startDate,
+        startTimeEcuador: startTime,
+        endTimeEcuador: endTime,
+        timeEcuador: endTime
+      });
 
-        existingEvent.published_at = Date.now();
-        existingEvent.tweet_id = publishedTweetId;
+      // 1. Publish to X (Twitter)
+      const shouldPublishX = options.autoPublishToX !== false;
+      if (shouldPublishX && this.xService) {
+        try {
+          const postRes = await this.xService.postVideo(postText, archivedPath);
+          publishedTweetId = postRes?.data?.id || postRes?.id;
+          systemLogger.info(`[RainMonitor] 🐦 Successfully published rain alert video to X (Tweet ID: ${publishedTweetId})`);
+        } catch (pubErr: any) {
+          systemLogger.error(`[RainMonitor] Failed to auto-publish rain video to X: ${pubErr?.message || pubErr}`);
+        }
+      }
 
-        // Also publish to Facebook Video and Instagram Reel
+      // 2. Publish to Facebook Video & Instagram Reel (Decoupled from X)
+      const autoPublishSocial = options.autoPublishToSocial !== undefined ? options.autoPublishToSocial : shouldPublishX;
+      if (autoPublishSocial) {
         if (this.facebookService) {
           try {
             await this.facebookService.postVideo(archivedPath, {
@@ -770,14 +773,21 @@ export class RainMonitorService {
             await this.instagramService.postReel(archivedPath, {
               caption: postText
             });
-            systemLogger.info(`[RainMonitor] 📸 Successfully published storm alert Reel to Instagram`);
+            systemLogger.info(`[RainMonitor] 📸 Successfully published rain alert Reel to Instagram`);
           } catch (igErr: any) {
-            systemLogger.error(`[RainMonitor] Failed to auto-publish storm Reel to Instagram: ${igErr?.message || igErr}`);
+            systemLogger.error(`[RainMonitor] Failed to auto-publish rain Reel to Instagram: ${igErr?.message || igErr}`);
           }
         }
-      } catch (pubErr: any) {
-        systemLogger.error(`[RainMonitor] Failed to auto-publish storm video to X: ${pubErr?.message || pubErr}`);
       }
+
+      db.prepare(`
+        UPDATE rain_events 
+        SET published_at = ?, tweet_id = ?, video_path = ? 
+        WHERE id = ?
+      `).run(Date.now(), publishedTweetId || null, archivedPath, existingEvent.id);
+
+      existingEvent.published_at = Date.now();
+      existingEvent.tweet_id = publishedTweetId;
     }
 
     return {
@@ -1582,7 +1592,7 @@ export class RainMonitorService {
     });
 
     const autoPublishX = options.autoPublishToX !== false;
-    const autoPublishSocial = options.autoPublishToSocial !== false;
+    const autoPublishSocial = options.autoPublishToSocial !== undefined ? options.autoPublishToSocial : autoPublishX;
 
     let publishedTweetId: string | undefined;
     if (compilation.mp4Path) {

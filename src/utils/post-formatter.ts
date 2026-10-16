@@ -388,7 +388,24 @@ export function buildSocialRoundupCaption(options: SocialRoundupCaptionOptions):
         genStr += ` [${telemetry.turbines}/${maxTurbines} turbinas]`;
       }
 
-      caption += `🔹 ${plant.name}\n${caudalStr}\n${genStr}\n`;
+      let dataLagNote = '';
+      if (telemetry.timestamp && options.hourStr) {
+        const reportHourMatch = options.hourStr.match(/(\d{1,2}):(\d{2})/);
+        if (reportHourMatch) {
+          const repHour = parseInt(reportHourMatch[1], 10);
+          const dt = new Date(telemetry.timestamp);
+          const ecDate = new Date(dt.getTime() - 5 * 3600 * 1000);
+          const plantHour = ecDate.getUTCHours();
+          const plantMin = ecDate.getUTCMinutes();
+          const diffHours = Math.abs(repHour - plantHour);
+          if (diffHours >= 1 && diffHours <= 23) {
+            const timeFormatted = `${String(plantHour).padStart(2, '0')}:${String(plantMin).padStart(2, '0')} ECT`;
+            dataLagNote = ` (corte ${timeFormatted})`;
+          }
+        }
+      }
+
+      caption += `🔹 ${plant.name}${dataLagNote}\n${caudalStr}\n${genStr}\n`;
 
       if (telemetry.cota !== undefined && minLevelMasl !== undefined && plantKey !== 'sopladora' && plantKey !== 'cocaCodoSinclair') {
         let diff24h = '';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMessageText, formatVal, buildStormAlertPostText, sortPlantsForSocial } from './post-formatter.js';
+import { buildMessageText, formatVal, buildStormAlertPostText, sortPlantsForSocial, buildSocialRoundupCaption } from './post-formatter.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 
 describe('post-formatter', () => {
@@ -199,6 +199,52 @@ describe('post-formatter', () => {
         'sopladora',
         'agoyan'
       ]);
+    });
+  });
+
+  describe('buildSocialRoundupCaption', () => {
+    it('appends corte HH:MM ECT when plant telemetry is delayed relative to report hour', () => {
+      const delayedTimestamp = new Date('2026-10-16T16:00:00.000Z'); // 11:00 ECT
+      const currentTimestamp = new Date('2026-10-16T18:00:00.000Z'); // 13:00 ECT
+
+      const caption = buildSocialRoundupCaption({
+        dateStr: 'Viernes, 16 de octubre del 2026',
+        hourStr: '13:15 ECT',
+        totalMW: 1800,
+        capacityPct: 45,
+        plants: [
+          {
+            plantKey: 'mazar',
+            plant: hydroelectricPlants.mazar,
+            telemetry: {
+              gen: 120,
+              flow: 85,
+              flow3hAgo: 80,
+              cota: 2130,
+              cota24hAgo: 2129,
+              turbines: 2,
+              timestamp: currentTimestamp
+            }
+          },
+          {
+            plantKey: 'agoyan',
+            plant: hydroelectricPlants.agoyan,
+            telemetry: {
+              gen: 80,
+              flow: 75,
+              flow3hAgo: 70,
+              cota: 1648,
+              cota24hAgo: 1648,
+              turbines: 1,
+              timestamp: delayedTimestamp
+            }
+          }
+        ]
+      });
+
+      expect(caption).toContain('🔹 Mazar\n');
+      expect(caption).toContain('🔹 Agoyán (corte 11:00 ECT)\n');
+      expect(caption).toContain('Generación hidroeléctrica total: 1,800 MW');
     });
   });
 });

@@ -198,6 +198,31 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     }
   }
 
+  // For Instagram & Facebook: ensure all 6 plants are included in the carousel & album
+  const existingKeys = new Set(collectedSocialPlants.map(p => p.plantKey));
+  for (const plantKey of TARGET_PLANT_KEYS) {
+    if (!existingKeys.has(plantKey)) {
+      const plant = hydroelectricPlants[plantKey];
+      if (plant) {
+        try {
+          const telemetry = await fetchTelemetry(plantKey, false);
+          if (telemetry) {
+            const cardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
+            collectedSocialPlants.push({
+              plantKey,
+              plant,
+              telemetry,
+              cardBuffer
+            });
+            console.log(`[Bot] [Social Roundup] Added ${plant.name} to complete 6-plant social carousel`);
+          }
+        } catch (plantErr: any) {
+          console.warn(`[Bot] [Social Roundup] Could not fetch missing plant ${plantKey} for social carousel:`, plantErr?.message || plantErr);
+        }
+      }
+    }
+  }
+
   // Publish consolidated Carousel to Instagram and Multi-Photo Album to Facebook
   if (collectedSocialPlants.length > 0) {
     try {
@@ -783,7 +808,8 @@ async function runRainMonitoringCycle() {
   for (const basinKey of MONITORED_RAIN_BASINS) {
     try {
       const result = await rainMonitorService.checkBasin(basinKey, {
-        autoPublishToX: autoPublish
+        autoPublishToX: autoPublish,
+        autoPublishToSocial: autoPublish
       });
 
       if (result.action === 'STORM_STARTED') {
@@ -839,7 +865,8 @@ const dailySatelliteTimelapseCronJob = new CronJob(
     try {
       console.log('[CronJob] Running 24h Daily Satellite Summary Video Generation (00:00 AM)...');
       await rainMonitorService.generateDailySummaryVideo({
-        autoPublishToX: autoPublish
+        autoPublishToX: autoPublish,
+        autoPublishToSocial: autoPublish
       });
     } catch (err: any) {
       console.error('[CronJob] Error generating 24h daily satellite summary video:', err?.message || err);
@@ -948,7 +975,8 @@ if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
   setTimeout(async () => {
     try {
       await rainMonitorService.generateDailySummaryVideo({
-        autoPublishToX: false
+        autoPublishToX: false,
+        autoPublishToSocial: false
       });
     } catch (err: any) {
       console.error('[FORCE DAILY TIMELAPSE] Forced daily timelapse failed:', err?.message || err);

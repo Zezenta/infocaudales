@@ -136,7 +136,11 @@ export class FacebookService {
         feedParams.message = message;
       }
 
-      const postRes = await axios.post(`${this.baseUrl}/${this.pageId}/feed`, feedParams);
+      const postRes = await axios.post(`${this.baseUrl}/${this.pageId}/feed`, feedParams, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       const postId = postRes.data?.id;
 
       facebookLogger.info(`[FacebookService] Multi-photo post published successfully (postId: ${postId})`);
