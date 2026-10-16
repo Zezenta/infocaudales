@@ -4,6 +4,7 @@ test.js
 index.html
 *.png
 !src/hydroelectric-drawings/**
+!src/assets/**
 infos.txt
 nohup.out
 *.log

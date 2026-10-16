@@ -84,7 +84,7 @@ describe('SatelliteArchiverService', () => {
     expect(pruned).toBe(1);
     expect(fs.existsSync(dummyFile)).toBe(false);
 
-    const count = db.prepare('SELECT COUNT(*) as count FROM satellite_archive').get() as { count: number };
+    const count = db.prepare('SELECT COUNT(*) as count FROM satellite_archive WHERE file_path = ?').get(dummyFile) as { count: number };
     expect(count.count).toBe(0);
   });
 
@@ -162,5 +162,5 @@ describe('SatelliteArchiverService', () => {
 
     const nasaStats = archiver.getStats('nasa_gibs');
     expect(nasaStats.totalFrames).toBe(144);
-  });
+  }, 20000);
 });

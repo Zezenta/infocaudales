@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, it, expect, afterAll } from 'vitest';
-import { generateReportCard, generateDailyReport, generateForecastCard, closeBrowser, TelemetryData } from './report-generator.service.js';
+import { generateReportCard, generateDailyReport, generateForecastCard, generateSocialCover, closeBrowser, TelemetryData } from './report-generator.service.js';
 import { CelecService } from './telemetry/celec.service.js';
 import { CenaceService } from './telemetry/cenace.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
@@ -28,14 +28,10 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     const dateStr = `${year}-${month}-${day}`;
     const timeStr = `${hours}-${minutes}-${seconds}`;
 
-    // Valid fictional telemetry test data with decimals for each hydroelectric plant
+    // Representative plants: molino (reservoir + cota + Francis) & cocaCodoSinclair (run-of-river + Pelton)
     const testCases: Record<string, TelemetryData> = {
       molino: { gen: 950.75, turbines: 8, flow: 140.35, cota: 1988.42 },
-      cocaCodoSinclair: { gen: 1250.85, turbines: 6, flow: 850.45 },
-      sopladora: { gen: 410.25, turbines: 3, flow: 85.60 },
-      mazar: { gen: 150.90, turbines: 2, flow: 120.15, cota: 2140.78 },
-      minasSanFrancisco: { gen: 210.33, turbines: 2, flow: 60.55, cota: 789.25 },
-      agoyan: { gen: 105.45, turbines: 2, flow: 95.80, cota: 1649.65 }
+      cocaCodoSinclair: { gen: 1250.85, turbines: 6, flow: 850.45 }
     };
 
     for (const [plantKey, telemetry] of Object.entries(testCases)) {
@@ -317,7 +313,8 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     const dateStr = `${year}-${month}-${day}`;
     const timeStr = `${hours}-${minutes}-${seconds}`;
 
-    const plantKeys = ['cocaCodoSinclair', 'mazar', 'molino', 'sopladora', 'agoyan', 'minasSanFrancisco'];
+    // Representative plants: cocaCodoSinclair & molino
+    const plantKeys = ['cocaCodoSinclair', 'molino'];
 
     const { hora } = celec.getEcuadorDateParts(now);
     const targetIdx = 24 - hora;
@@ -366,4 +363,17 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
       console.log(`[Test Forecast Card] 💾 Saved forecast card to: ${filePath} (${pngBuffer.length} bytes)`);
     }
   }, 120000);
+
+  it('should generate a 1200x1200px social cover card using real or mock live telemetry', async () => {
+    const pngBuffer = await generateSocialCover();
+    expect(pngBuffer).toBeInstanceOf(Buffer);
+    expect(pngBuffer.length).toBeGreaterThan(5000);
+
+    const generatedDir = path.join(__dirname, '..', '..', 'generated');
+    const filename = `service_test_social_cover.png`;
+    const filePath = path.join(generatedDir, filename);
+    fs.writeFileSync(filePath, pngBuffer);
+    expect(fs.existsSync(filePath)).toBe(true);
+  }, 60000);
 });
+

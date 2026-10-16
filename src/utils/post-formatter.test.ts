@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMessageText, formatVal, buildStormAlertPostText } from './post-formatter.js';
+import { buildMessageText, formatVal, buildStormAlertPostText, sortPlantsForSocial, buildSocialRoundupCaption } from './post-formatter.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
 
 describe('post-formatter', () => {
@@ -163,5 +163,89 @@ describe('post-formatter', () => {
       expect(text).toContain('• Registro: 2026-10-10 18:40 ECT');
       expect(text).not.toContain('2026-10-10 18:40 2026-10-10 18:40');
     });
+
+    it('formats rain event alert with time range and without using the word tormenta', () => {
+      const text = buildStormAlertPostText({
+        plantKey: 'paute',
+        peakCoveragePct: 35.5,
+        durationMinutes: 45,
+        dateEcuador: '2026-10-16',
+        startTimeEcuador: '01:10',
+        endTimeEcuador: '01:55'
+      });
+
+      expect(text).toContain('• Registro: 2026-10-16 de 01:10 a 01:55 ECT');
+      expect(text).toContain('🌧️ Evento de Lluvia en Complejo Hidroeléctrico Paute');
+      expect(text).not.toContain('Monitoreo Satelital GOES-16');
+      expect(text.toLowerCase()).not.toContain('tormenta');
+    });
+  });
+
+  describe('sortPlantsForSocial', () => {
+    it('sorts Mazar first, Coca Codo Sinclair second, and remaining by generation descending', () => {
+      const items = [
+        { plantKey: 'molino', telemetry: { gen: 500 } as any },
+        { plantKey: 'agoyan', telemetry: { gen: 80 } as any },
+        { plantKey: 'cocaCodoSinclair', telemetry: { gen: 300 } as any },
+        { plantKey: 'mazar', telemetry: { gen: 120 } as any },
+        { plantKey: 'sopladora', telemetry: { gen: 450 } as any }
+      ];
+
+      const sorted = sortPlantsForSocial(items);
+      expect(sorted.map(s => s.plantKey)).toEqual([
+        'mazar',
+        'cocaCodoSinclair',
+        'molino',
+        'sopladora',
+        'agoyan'
+      ]);
+    });
+  });
+
+  describe('buildSocialRoundupCaption', () => {
+    it('appends corte HH:MM ECT when plant telemetry is delayed relative to report hour', () => {
+      const delayedTimestamp = new Date('2026-10-16T16:00:00.000Z'); // 11:00 ECT
+      const currentTimestamp = new Date('2026-10-16T18:00:00.000Z'); // 13:00 ECT
+
+      const caption = buildSocialRoundupCaption({
+        dateStr: 'Viernes, 16 de octubre del 2026',
+        hourStr: '13:15 ECT',
+        totalMW: 1800,
+        capacityPct: 45,
+        plants: [
+          {
+            plantKey: 'mazar',
+            plant: hydroelectricPlants.mazar,
+            telemetry: {
+              gen: 120,
+              flow: 85,
+              flow3hAgo: 80,
+              cota: 2130,
+              cota24hAgo: 2129,
+              turbines: 2,
+              timestamp: currentTimestamp
+            }
+          },
+          {
+            plantKey: 'agoyan',
+            plant: hydroelectricPlants.agoyan,
+            telemetry: {
+              gen: 80,
+              flow: 75,
+              flow3hAgo: 70,
+              cota: 1648,
+              cota24hAgo: 1648,
+              turbines: 1,
+              timestamp: delayedTimestamp
+            }
+          }
+        ]
+      });
+
+      expect(caption).toContain('🔹 Mazar\n');
+      expect(caption).toContain('🔹 Agoyán (corte 11:00 ECT)\n');
+      expect(caption).toContain('Generación hidroeléctrica total: 1,800 MW');
+    });
   });
 });
+

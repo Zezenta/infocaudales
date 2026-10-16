@@ -21,14 +21,16 @@ import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
 import { CelecService, CelecPointValue } from './services/telemetry/celec.service.js';
 import { CenaceService } from './services/telemetry/cenace.service.js';
-import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
+import { generateReportCard, generateDailyReport, generateForecastCard, generateSocialCover, TelemetryData } from './services/report-generator.service.js';
 import { PredictionService } from './services/prediction.service.js';
-import { XService } from './services/x.service.js';
+import { XService } from './services/social/x.service.js';
+import { FacebookService } from './services/social/facebook.service.js';
+import { InstagramService } from './services/social/instagram.service.js';
 import { SatelliteTelemetryService, SatelliteMapService } from './services/telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './services/satellite/video-compiler.service.js';
 import { RainMonitorService } from './services/satellite/rain-monitor.service.js';
 import { SatelliteArchiverService } from './services/satellite/satellite-archiver.service.js';
-import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from './utils/post-formatter.js';
+import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText, buildSocialRoundupCaption, sortPlantsForSocial } from './utils/post-formatter.js';
 import {
   recordForecastBatch,
   reconcileForecastsWithCelec,
@@ -61,21 +63,23 @@ console.error = (message?: any, ...optionalParams: any[]) => {
 const celecService = new CelecService();
 const cenaceService = new CenaceService();
 const xService = new XService();
+const facebookService = new FacebookService();
+const instagramService = new InstagramService();
 const predictionService = new PredictionService();
 const satelliteService = new SatelliteMapService();
 const videoCompilerService = new VideoCompilerService(satelliteService);
-const rainMonitorService = new RainMonitorService(satelliteService, videoCompilerService, xService);
 const satelliteArchiverService = new SatelliteArchiverService(satelliteService);
+const rainMonitorService = new RainMonitorService(
+  satelliteService,
+  videoCompilerService,
+  xService,
+  satelliteArchiverService,
+  facebookService,
+  instagramService
+);
 
 // Target basins monitored continuously for convective rain
 export const MONITORED_RAIN_BASINS = ['cocaCodoSinclair', 'paute'];
-
-class DataPendingError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'DataPendingError';
-  }
-}
 
 // The 6 hydroelectric plants to publish
 export const TARGET_PLANT_KEYS = [
@@ -87,232 +91,14 @@ export const TARGET_PLANT_KEYS = [
   'cocaCodoSinclair'
 ];
 
-/**
- * Helper to safely extract point value and timestamp from CELEC arrays.
- * If requireTargetHour is true and current hour value is null, throws DataPendingError for retry.
- */
-function extractCelecPoint(
-  pointsToday: CelecPointValue[],
-  targetIdx: number,
-  requireTargetHour: boolean = false
-): { value: number | null; timestamp?: Date } {
-  if (!pointsToday || pointsToday.length === 0) return { value: null };
+import {
+  DataPendingError,
+  extractCelecPoint,
+  fetchTelemetry,
+  buildCoverDataFromCollectedPlants
+} from './services/telemetry/live-telemetry.service.js';
 
-  const safeIdx = Math.min(Math.max(0, targetIdx), pointsToday.length - 1);
-
-  if (pointsToday[safeIdx] && pointsToday[safeIdx].value !== null && pointsToday[safeIdx].value !== undefined) {
-    const pointDate = pointsToday[safeIdx].timestamp ? new Date(pointsToday[safeIdx].timestamp) : undefined;
-    return { value: pointsToday[safeIdx].value, timestamp: pointDate };
-  }
-
-  if (requireTargetHour) {
-    throw new DataPendingError(`CELEC target point at index ${safeIdx} is not yet published (null)`);
-  }
-
-  // Fallback mode: find first available non-null point starting from safeIdx onwards
-  for (let i = safeIdx; i < pointsToday.length; i++) {
-    if (pointsToday[i] && pointsToday[i].value !== null && pointsToday[i].value !== undefined) {
-      const pointDate = pointsToday[i].timestamp ? new Date(pointsToday[i].timestamp) : undefined;
-      return { value: pointsToday[i].value, timestamp: pointDate };
-    }
-  }
-
-  return { value: null };
-}
-
-/**
- * Fetches real-time telemetry data for a specific plant.
- * Supports retry validation when requireTargetHour is true.
- * Returns null if essential live metrics (gen, flow) cannot be obtained.
- */
-export async function fetchTelemetry(plantKey: string, requireTargetHour: boolean = false): Promise<TelemetryData | null> {
-  const plant = hydroelectricPlants[plantKey];
-  if (!plant) throw new Error(`Plant ${plantKey} not found in configuration`);
-
-  const now = new Date();
-  const { hora } = celecService.getEcuadorDateParts(now);
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const targetIdx = Math.max(0, 24 - hora);
-
-  let flow: number | null = null;
-  let flow3hAgo: number | null = null;
-  let cota: number | undefined = undefined;
-  let cota24hAgo: number | undefined = undefined;
-  let turbines: number | undefined = undefined;
-  let gen: number | null = null;
-  let telemetryTimestamp: Date = now;
-
-  // 1. Fetch Flow (Caudal) from CELEC
-  try {
-    const flowPointsToday = await celecService.fetchFlow(plant, now);
-    const flowResult = extractCelecPoint(flowPointsToday, targetIdx, requireTargetHour);
-    if (flowResult.value !== null) {
-      flow = flowResult.value;
-      if (flowResult.timestamp) telemetryTimestamp = flowResult.timestamp;
-    }
-
-    // Contingency for Coca Codo Sinclair: if read flow is 0 m³/s, fallback to current day's latest non-zero flow
-    if (plantKey === 'cocaCodoSinclair' && flow === 0) {
-      console.warn(`[Index] Coca Codo Sinclair flow is 0 m³/s. Searching current day for latest non-zero flow...`);
-      for (let i = targetIdx; i < flowPointsToday.length; i++) {
-        const pVal = flowPointsToday[i]?.value;
-        if (pVal !== null && pVal !== undefined && pVal > 0) {
-          flow = pVal;
-          console.log(`[Index] Contingency applied: using current day's non-zero flow (${flow} m³/s) for Coca Codo Sinclair.`);
-          break;
-        }
-      }
-    }
-
-    // Extract 3h ago flow
-    if (hora >= 4) {
-      const idx3h = 24 - hora + 3;
-      const flow3hResult = extractCelecPoint(flowPointsToday, idx3h, false);
-      if (flow3hResult.value !== null) flow3hAgo = flow3hResult.value;
-    } else {
-      try {
-        const flowPointsYesterday = await celecService.fetchFlow(plant, yesterday);
-        const idxYesterday = Math.max(0, 3 - hora);
-        const flow3hResult = extractCelecPoint(flowPointsYesterday, idxYesterday, false);
-        if (flow3hResult.value !== null) {
-          flow3hAgo = flow3hResult.value;
-        }
-      } catch (e) {}
-    }
-  } catch (err) {
-    if (err instanceof DataPendingError) throw err;
-    console.warn(`[Index] Failed to fetch flow for ${plant.name}:`, err);
-  }
-
-  // 2. Fetch Cota (Reservoir Level) from CELEC (ignored for Sopladora & CCS)
-  const minLevel = plant.physicalData?.minLevelMasl;
-  if (plantKey !== 'sopladora' && plantKey !== 'cocaCodoSinclair' && minLevel !== undefined) {
-    try {
-      const levelPointsToday = await celecService.fetchLevel(plant, now);
-      const levelResult = extractCelecPoint(levelPointsToday, targetIdx, requireTargetHour);
-      if (levelResult.value !== null) {
-        cota = levelResult.value;
-        if (levelResult.timestamp && telemetryTimestamp === now) telemetryTimestamp = levelResult.timestamp;
-      }
-    } catch (err) {
-      if (err instanceof DataPendingError) throw err;
-      console.warn(`[Index] Failed to fetch level for ${plant.name}:`, err);
-    }
-
-    try {
-      const levelPointsYesterday = await celecService.fetchLevel(plant, yesterday);
-      const level24hResult = extractCelecPoint(levelPointsYesterday, targetIdx, false);
-      if (level24hResult.value !== null) {
-        cota24hAgo = level24hResult.value;
-      }
-    } catch (err) {
-      console.warn(`[Index] Failed to fetch 24h ago level for ${plant.name}:`, err);
-    }
-  } else {
-    cota = undefined;
-    cota24hAgo = undefined;
-  }
-
-  // 3. Fetch Active Turbines from CELEC (ignored for CCS)
-  if (plantKey !== 'cocaCodoSinclair') {
-    try {
-      const turbinePointsToday = await celecService.fetchActiveTurbines(plant, now);
-      const turbineResult = extractCelecPoint(turbinePointsToday, targetIdx, requireTargetHour);
-      if (turbineResult.value !== null) {
-        turbines = turbineResult.value;
-      }
-    } catch (err) {
-      if (err instanceof DataPendingError) throw err;
-      console.warn(`[Index] Failed to fetch turbines for ${plant.name}:`, err);
-    }
-  } else {
-    turbines = undefined;
-  }
-
-  // 4. Fetch Generation
-  if (plantKey === 'cocaCodoSinclair') {
-    try {
-      // Find today's date parts in Ecuador timezone
-      const ecTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-      const year = ecTime.getUTCFullYear();
-      const month = ecTime.getUTCMonth();
-      const date = ecTime.getUTCDate();
-      
-      // Target UTC timestamp of the completed hour (e.g. 7:00 AM local = 12:00:00 UTC)
-      const targetUtcMs = Date.UTC(year, month, date, hora + 5);
-      const prevUtcMs = targetUtcMs - 60 * 60 * 1000;
-
-      const rows = db.prepare(`
-        SELECT timestamp, accumulated_mwh 
-        FROM coca_codo_hourly_log 
-        WHERE timestamp = ? OR timestamp = ?
-        ORDER BY timestamp ASC
-      `).all(prevUtcMs, targetUtcMs) as any[];
-
-      let ccsGen: number | null = null;
-
-      if (rows.length === 2) {
-        const start = rows[0];
-        const end = rows[1];
-        const diffHours = (end.timestamp - start.timestamp) / (1000 * 60 * 60);
-        let deltaMWh = end.accumulated_mwh - start.accumulated_mwh;
-        if (deltaMWh < 0) {
-          // Midnight counter reset: at 00:00 local time, CENACE resets its accumulated MWh counter to 0.
-          deltaMWh = end.accumulated_mwh;
-        }
-        
-        if (diffHours > 0.05 && deltaMWh >= 0) {
-          const rawRate = deltaMWh / diffHours;
-          ccsGen = Math.min(rawRate, 1500); // Cap at max capacity
-          console.log(`[Index] Inferred completed hourly generation for Coca Codo Sinclair from SQLite: ${ccsGen.toFixed(2)} MW`);
-        }
-      }
-
-      if (ccsGen === null) {
-        // Fallback to daily average from CENACE live scrape
-        console.log(`[Index] Completed hourly logs for Coca Codo Sinclair not found in SQLite. Falling back to daily average.`);
-        const currentMWh = await cenaceService.fetchPlantProduction('cocaCodoSinclair');
-        if (currentMWh !== null && currentMWh > 0) {
-          const currentLocalHour = Math.max(1, hora === 0 ? 24 : hora);
-          ccsGen = currentMWh / currentLocalHour;
-        }
-      }
-
-      if (ccsGen !== null) {
-        gen = ccsGen;
-      }
-    } catch (err) {
-      console.warn(`[Index] Failed to fetch SQLite/CENACE generation for Coca Codo Sinclair:`, err);
-    }
-  } else {
-    try {
-      const energyPointsToday = await celecService.fetchDailyEnergy(plant, now);
-      const energyResult = extractCelecPoint(energyPointsToday, targetIdx, requireTargetHour);
-      if (energyResult.value !== null) {
-        gen = energyResult.value;
-      }
-    } catch (err) {
-      if (err instanceof DataPendingError) throw err;
-      console.warn(`[Index] Failed to fetch CELEC generation for ${plant.name}:`, err);
-    }
-  }
-
-  // Strict live validation: do not return mock/fake numbers if vital telemetry is unavailable
-  if (gen === null || flow === null) {
-    console.warn(`[Index] Aborting telemetry for ${plant.name}: missing live data (gen: ${gen}, flow: ${flow})`);
-    return null;
-  }
-
-  return {
-    gen,
-    flow,
-    flow3hAgo: flow3hAgo ?? flow,
-    cota,
-    cota24hAgo,
-    turbines,
-    timestamp: telemetryTimestamp
-  };
-}
+export { DataPendingError, extractCelecPoint, fetchTelemetry, buildCoverDataFromCollectedPlants };
 
 /**
  * Runs the reporting publishing cycle for specified target plants with pending retries.
@@ -344,6 +130,13 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     console.warn('[Index] Could not fetch national demand from CENACE, using fallback.');
   }
 
+  const collectedSocialPlants: Array<{
+    plantKey: string;
+    plant: any;
+    telemetry: TelemetryData;
+    cardBuffer: Buffer;
+  }> = [];
+
   for (let i = 0; i < targetPlantKeys.length; i++) {
     const plantKey = targetPlantKeys[i];
     const plant = hydroelectricPlants[plantKey];
@@ -374,12 +167,25 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     if (telemetry) {
       try {
         const messageText = buildMessageText(plant, plantKey, telemetry, nationalDemandMW);
-        const imageBuffer = await generateReportCard(plantKey, telemetry);
+        const imageBuffer = await generateReportCard(plantKey, telemetry, { brand: 'x' });
 
         const timeStr = (telemetry.timestamp ?? new Date()).toLocaleTimeString();
         console.log(`[Bot] Publishing report card for ${plant.name} to X (Data Timestamp: ${timeStr})...`);
         await xService.postTweet(messageText, imageBuffer);
-        console.log(`[Bot] Successfully published ${plant.name}!`);
+        console.log(`[Bot] Successfully published ${plant.name} to X!`);
+
+        // Also generate card with Instagram brand for carousel/album
+        try {
+          const igCardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
+          collectedSocialPlants.push({
+            plantKey,
+            plant,
+            telemetry,
+            cardBuffer: igCardBuffer
+          });
+        } catch (igGenErr) {
+          console.warn(`[Bot] Could not generate Instagram card for ${plant.name}:`, igGenErr);
+        }
       } catch (error) {
         console.error(`[Bot] Error publishing ${plant.name}:`, error);
       }
@@ -390,6 +196,82 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     if (i < targetPlantKeys.length - 1) {
       console.log(`[Bot] Waiting 20 seconds before next post...`);
       await new Promise(resolve => setTimeout(resolve, 20000));
+    }
+  }
+
+  // For Instagram & Facebook: ensure all 6 plants are included in the carousel & album
+  const existingKeys = new Set(collectedSocialPlants.map(p => p.plantKey));
+  for (const plantKey of TARGET_PLANT_KEYS) {
+    if (!existingKeys.has(plantKey)) {
+      const plant = hydroelectricPlants[plantKey];
+      if (plant) {
+        try {
+          const telemetry = await fetchTelemetry(plantKey, false);
+          if (telemetry) {
+            const cardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
+            collectedSocialPlants.push({
+              plantKey,
+              plant,
+              telemetry,
+              cardBuffer
+            });
+            console.log(`[Bot] [Social Roundup] Added ${plant.name} to complete 6-plant social carousel`);
+          }
+        } catch (plantErr: any) {
+          console.warn(`[Bot] [Social Roundup] Could not fetch missing plant ${plantKey} for social carousel:`, plantErr?.message || plantErr);
+        }
+      }
+    }
+  }
+
+  // Publish consolidated Carousel to Instagram and Multi-Photo Album to Facebook
+  if (collectedSocialPlants.length > 0) {
+    try {
+      console.log(`\n[Bot] [Social Roundup] Preparing Carousel for Instagram & Album for Facebook...`);
+      // Sort plants: 1: Mazar, 2: Coca Codo Sinclair, 3+: Remaining by generation descending
+      const sortedPlants = sortPlantsForSocial(collectedSocialPlants);
+
+      const coverData = buildCoverDataFromCollectedPlants(sortedPlants);
+      const coverBuffer = await generateSocialCover(coverData);
+      const allSocialItems = [coverBuffer, ...sortedPlants.map(p => p.cardBuffer)];
+
+      const now = new Date();
+      const dateFormatted = getFormattedEcuadorDate(now);
+      const ecParts = new Date(now.getTime() - 5 * 3600 * 1000);
+      const hourStr = `${String(ecParts.getUTCHours()).padStart(2, '0')}:${String(ecParts.getUTCMinutes()).padStart(2, '0')} ECT`;
+
+      const totalMW = sortedPlants.reduce((acc, p) => acc + (p.telemetry.gen || 0), 0);
+      const maxMWTotal = sortedPlants.reduce((acc, p) => acc + (p.plant.physicalData?.maxEnergyMW || 0), 0);
+      const capacityPct = maxMWTotal > 0 ? Math.round((totalMW / maxMWTotal) * 100) : undefined;
+
+      const caption = buildSocialRoundupCaption({
+        dateStr: dateFormatted,
+        hourStr,
+        totalMW,
+        capacityPct,
+        plantCount: sortedPlants.length,
+        plants: sortedPlants
+      });
+
+      // 1. Post to Instagram Carousel
+      try {
+        console.log(`[Bot] [Instagram] Publishing ${allSocialItems.length}-slide carousel (Cover, Mazar, CCS, and highest generators)...`);
+        const igRes = await instagramService.postCarousel(allSocialItems, caption);
+        console.log(`[Bot] [Instagram] Carousel published successfully! (Media ID: ${igRes.mediaId}, URL: ${igRes.permalink || 'N/A'})`);
+      } catch (igErr: any) {
+        console.error(`[Bot] [Instagram] Error publishing carousel:`, igErr?.message || igErr);
+      }
+
+      // 2. Post to Facebook Multi-Photo Album
+      try {
+        console.log(`[Bot] [Facebook] Publishing ${allSocialItems.length}-photo album (Cover, Mazar, CCS, and highest generators)...`);
+        const fbRes = await facebookService.postPhotos(allSocialItems, caption);
+        console.log(`[Bot] [Facebook] Album published successfully! (Post ID: ${fbRes.postId}, URL: ${fbRes.permalink || 'N/A'})`);
+      } catch (fbErr: any) {
+        console.error(`[Bot] [Facebook] Error publishing album:`, fbErr?.message || fbErr);
+      }
+    } catch (socialErr: any) {
+      console.error(`[Bot] [Social Roundup] Error creating social media package:`, socialErr?.message || socialErr);
     }
   }
 
@@ -637,8 +519,30 @@ async function publishDailyConsolidatedReport() {
       `#Ecuador #Energía #EnergíaEc`;
 
     console.log(`[CronJob] [Daily Report] Posting daily report to X...`);
-    await xService.postTweet(postMessage, imageBuffer);
-    console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully!');
+    try {
+      await xService.postTweet(postMessage, imageBuffer);
+      console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully to X!');
+    } catch (xErr: any) {
+      console.error(`[CronJob] [Daily Report] Error posting to X:`, xErr?.message || xErr);
+    }
+
+    // 7. Post to Facebook Page
+    console.log(`[CronJob] [Daily Report] Posting daily report to Facebook...`);
+    try {
+      const fbRes = await facebookService.postPhoto(imageBuffer, postMessage);
+      console.log(`[CronJob] [Daily Report] Daily Consolidated Report published successfully to Facebook (Post ID: ${fbRes.postId})!`);
+    } catch (fbErr: any) {
+      console.error(`[CronJob] [Daily Report] Error posting to Facebook:`, fbErr?.message || fbErr);
+    }
+
+    // 8. Post to Instagram Feed
+    console.log(`[CronJob] [Daily Report] Posting daily report to Instagram...`);
+    try {
+      const igRes = await instagramService.postPhoto(imageBuffer, postMessage);
+      console.log(`[CronJob] [Daily Report] Daily Consolidated Report published successfully to Instagram (Media ID: ${igRes.mediaId})!`);
+    } catch (igErr: any) {
+      console.error(`[CronJob] [Daily Report] Error posting to Instagram:`, igErr?.message || igErr);
+    }
 
     // Cleanup temp file
     try { fs.unlinkSync(tempPath); } catch {}
@@ -813,6 +717,8 @@ export async function publishWeeklyAccuracyReport(): Promise<void> {
       console.error('[CronJob] [Weekly Accuracy Report] Error posting compact fallback report to X:', fallbackErr?.message || fallbackErr);
     }
   }
+
+  // Note: Weekly Accuracy Report is published exclusively to X (omitted from FB/IG per policy)
 }
 
 // --- CRON JOBS SETUP ---
@@ -908,7 +814,8 @@ async function runRainMonitoringCycle() {
   for (const basinKey of MONITORED_RAIN_BASINS) {
     try {
       const result = await rainMonitorService.checkBasin(basinKey, {
-        autoPublishToX: autoPublish
+        autoPublishToX: autoPublish,
+        autoPublishToSocial: autoPublish
       });
 
       if (result.action === 'STORM_STARTED') {
@@ -964,7 +871,8 @@ const dailySatelliteTimelapseCronJob = new CronJob(
     try {
       console.log('[CronJob] Running 24h Daily Satellite Summary Video Generation (00:00 AM)...');
       await rainMonitorService.generateDailySummaryVideo({
-        autoPublishToX: autoPublish
+        autoPublishToX: autoPublish,
+        autoPublishToSocial: autoPublish
       });
     } catch (err: any) {
       console.error('[CronJob] Error generating 24h daily satellite summary video:', err?.message || err);
@@ -1073,10 +981,102 @@ if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
   setTimeout(async () => {
     try {
       await rainMonitorService.generateDailySummaryVideo({
-        autoPublishToX: false
+        autoPublishToX: false,
+        autoPublishToSocial: false
       });
     } catch (err: any) {
       console.error('[FORCE DAILY TIMELAPSE] Forced daily timelapse failed:', err?.message || err);
     }
   }, 5000);
 }
+
+// ============================================================================
+// TEMPORARY: Forzar publicación de prueba en Facebook e Instagram
+// (Eliminar este bloque cuando se hayan verificado las publicaciones)
+// ============================================================================
+const FORCE_TEST_FB_IG = false;
+
+if (FORCE_TEST_FB_IG) {
+  console.log('\n[FORCE FB/IG TEST] 🚀 Activada condicional de prueba para Facebook e Instagram...');
+  setTimeout(async () => {
+    try {
+      // 1. Reporte de Telemetría (Portada + Tarjetas de las 6 centrales)
+      console.log('\n[FORCE FB/IG TEST] [1/2] 📊 Generando reporte de telemetría para Instagram (Carrusel) y Facebook (Álbum)...');
+      const collectedPlants: Array<{ plantKey: string; plant: any; telemetry: any; cardBuffer: Buffer }> = [];
+      for (const plantKey of TARGET_PLANT_KEYS) {
+        try {
+          const plant = hydroelectricPlants[plantKey];
+          const telemetry = await fetchTelemetry(plantKey, false);
+          if (telemetry && plant) {
+            const cardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
+            collectedPlants.push({ plantKey, plant, telemetry, cardBuffer });
+            console.log(`[FORCE FB/IG TEST] ↳ Tarjeta generada para ${plant.name}`);
+          }
+        } catch (plantErr: any) {
+          console.warn(`[FORCE FB/IG TEST] No se pudo generar tarjeta para ${plantKey}:`, plantErr?.message || plantErr);
+        }
+      }
+
+      if (collectedPlants.length > 0) {
+        // Sort plants: 1: Mazar, 2: Coca Codo Sinclair, 3+: Remaining by generation descending
+        const sortedPlants = sortPlantsForSocial(collectedPlants);
+
+        console.log('[FORCE FB/IG TEST] ↳ Generando portada social en alta resolución (1200x1200px)...');
+        const coverData = buildCoverDataFromCollectedPlants(sortedPlants);
+        const coverBuffer = await generateSocialCover(coverData);
+        const carouselItems = [coverBuffer, ...sortedPlants.map(p => p.cardBuffer)];
+
+        const now = new Date();
+        const dateFormatted = getFormattedEcuadorDate(now);
+        const ecParts = new Date(now.getTime() - 5 * 3600 * 1000);
+        const hourStr = `${String(ecParts.getUTCHours()).padStart(2, '0')}:${String(ecParts.getUTCMinutes()).padStart(2, '0')} ECT`;
+
+        const totalMW = sortedPlants.reduce((acc, p) => acc + (p.telemetry.gen || 0), 0);
+        const maxMWTotal = sortedPlants.reduce((acc, p) => acc + (p.plant.physicalData?.maxEnergyMW || 0), 0);
+        const capacityPct = maxMWTotal > 0 ? Math.round((totalMW / maxMWTotal) * 100) : undefined;
+
+        const caption = buildSocialRoundupCaption({
+          dateStr: dateFormatted,
+          hourStr,
+          totalMW,
+          capacityPct,
+          plantCount: sortedPlants.length,
+          plants: sortedPlants
+        });
+
+        // Instagram Carousel
+        console.log(`[FORCE FB/IG TEST] 📸 Publicando Carrusel en Instagram (${carouselItems.length} diapositivas: Portada, Mazar, CCS, y mayor generación)...`);
+        try {
+          const igRes = await instagramService.postCarousel(carouselItems, caption);
+          console.log(`[FORCE FB/IG TEST] ✅ Instagram Carousel publicado exitosamente! (ID: ${igRes.mediaId}, URL: ${igRes.permalink || 'N/A'})`);
+        } catch (igErr: any) {
+          console.error('[FORCE FB/IG TEST] ❌ Error publicando carrusel en Instagram:', igErr?.message || igErr);
+        }
+
+        // Facebook Multi-Photo Album
+        console.log(`[FORCE FB/IG TEST] 📘 Publicando Álbum en Facebook (${carouselItems.length} fotos: Portada, Mazar, CCS, y mayor generación)...`);
+        try {
+          const fbRes = await facebookService.postPhotos(carouselItems, caption);
+          console.log(`[FORCE FB/IG TEST] ✅ Facebook Álbum publicado exitosamente! (Post ID: ${fbRes.postId}, URL: ${fbRes.permalink || 'N/A'})`);
+        } catch (fbErr: any) {
+          console.error('[FORCE FB/IG TEST] ❌ Error publicando álbum en Facebook:', fbErr?.message || fbErr);
+        }
+      }
+
+      // 2. Video Satelital 24h (Reel en Instagram y Video en Facebook)
+      console.log('\n[FORCE FB/IG TEST] [2/2] 🛰️ Generando video resumen satelital de 24 horas (GeoServer por defecto, fallback a NASA GIBS si faltan fotogramas)...');
+      try {
+        await rainMonitorService.generateDailySummaryVideo({
+          autoPublishToX: false,
+          autoPublishToSocial: true
+        });
+        console.log('[FORCE FB/IG TEST] ✅ Video satelital 24h procesado para Facebook e Instagram.');
+      } catch (satErr: any) {
+        console.error('[FORCE FB/IG TEST] ❌ Error en generación/publicación satelital:', satErr?.message || satErr);
+      }
+    } catch (err: any) {
+      console.error('[FORCE FB/IG TEST] ❌ Error general en prueba de Facebook/Instagram:', err?.message || err);
+    }
+  }, 3000);
+}
+

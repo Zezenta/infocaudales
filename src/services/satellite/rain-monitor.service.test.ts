@@ -10,6 +10,7 @@ import {
 } from './rain-monitor.service.js';
 import { SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './video-compiler.service.js';
+import { SatelliteArchiverService } from './satellite-archiver.service.js';
 
 function createMockPng(
   width: number,
@@ -80,6 +81,8 @@ function createMockPng(
 describe('RainMonitorService', () => {
   beforeEach(() => {
     db.prepare('DELETE FROM rain_events').run();
+    vi.spyOn(SatelliteArchiverService.prototype, 'archiveSingleFrame').mockResolvedValue(true as any);
+    vi.spyOn(SatelliteArchiverService.prototype, 'archiveLatestFrames').mockResolvedValue({ archived: 0, skipped: 0, errors: [] } as any);
   });
 
   describe('analyzeStormCloudCoverage', () => {
@@ -122,7 +125,7 @@ describe('RainMonitorService', () => {
   describe('checkBasin state machine', () => {
     it('transitions to STORM_STARTED when cloud coverage exceeds threshold', async () => {
       const mockSat = new SatelliteMapService();
-      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue(['2026-10-01T20:00:00.000Z']);
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 30)); // 30% coverage
 
       const rainMonitor = new RainMonitorService(mockSat);
@@ -142,7 +145,7 @@ describe('RainMonitorService', () => {
 
     it('stays in STORM_MONITORING while storm is active and growing', async () => {
       const mockSat = new SatelliteMapService();
-      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue(['2026-10-01T20:00:00.000Z']);
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 35)); // 35% peak
 
       const rainMonitor = new RainMonitorService(mockSat);
@@ -162,7 +165,7 @@ describe('RainMonitorService', () => {
 
     it('triggers compilation when storm passes (dissipates) after minimum duration', async () => {
       const mockSat = new SatelliteMapService();
-      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue(['2026-10-01T20:00:00.000Z']);
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       // Clouds dropped to 10% (less than 50% of the 40% peak)
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 10));
 
@@ -225,16 +228,21 @@ describe('RainMonitorService', () => {
     });
 
     it('executes real satellite query for Coca Codo Sinclair', async () => {
+      if (process.env.TEST_LIVE_TELEMETRY !== 'true') {
+        // Skip unmocked live external API call in routine unit test runs
+        return;
+      }
       const rainMonitor = new RainMonitorService();
       const result = await rainMonitor.getBasinCurrentStormCoverage('cocaCodoSinclair', 50);
 
       expect(result.coveragePct).toBeGreaterThanOrEqual(0);
       expect(result.coveragePct).toBeLessThanOrEqual(100);
       expect(result.timestampIso).toBeDefined();
-    });
+    }, 15000);
 
     it('automatically publishes video to X when autoPublishToX is enabled', async () => {
       const mockSat = new SatelliteMapService();
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([new Date().toISOString()]);
       vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(20, 20, 4)); // 10% coverage
 
       const mockVideo = new VideoCompilerService();
@@ -253,6 +261,8 @@ describe('RainMonitorService', () => {
 
       let publishedMessage = '';
       let publishedVideoPath = '';
+      let fbVideoCalled = false;
+      let igReelCalled = false;
       const mockXService = {
         postVideo: async (msg: string, vidPath: string) => {
           publishedMessage = msg;
@@ -260,8 +270,27 @@ describe('RainMonitorService', () => {
           return { data: { id: 'tweet_storm_999' } };
         }
       } as any;
+      const mockFbService = {
+        postVideo: async () => {
+          fbVideoCalled = true;
+          return { id: 'fb_vid_123', postId: 'fb_vid_123' };
+        }
+      } as any;
+      const mockIgService = {
+        postReel: async () => {
+          igReelCalled = true;
+          return { mediaId: 'ig_reel_123' };
+        }
+      } as any;
 
-      const rainMonitor = new RainMonitorService(mockSat, mockVideo, mockXService);
+      const rainMonitor = new RainMonitorService(
+        mockSat,
+        mockVideo,
+        mockXService,
+        undefined as any,
+        mockFbService,
+        mockIgService
+      );
 
       const now = Date.now();
       const detectedAt = now - 90 * 60 * 1000;
@@ -282,6 +311,8 @@ describe('RainMonitorService', () => {
       expect(publishedVideoPath).toBe('/tmp/test_rain_autopublish.mp4');
       expect(publishedMessage).toContain('Coca Codo Sinclair');
       expect(publishedMessage).toContain('#CocaCodoSinclair');
+      expect(fbVideoCalled).toBe(true);
+      expect(igReelCalled).toBe(true);
 
       const savedEvent = rainMonitor.getActiveOrCooldownEvent('cocaCodoSinclair');
       expect(savedEvent?.tweet_id).toBe('tweet_storm_999');
@@ -325,7 +356,8 @@ describe('RainMonitorService', () => {
       expect(frames[0].timestampIso).toBe(t1);
       expect(frames[0].buffer.length).toBe(25000);
 
-      // Clean up test files
+      // Clean up test files and DB records
+      db.prepare('DELETE FROM satellite_archive WHERE file_path LIKE ?').run(`%${testDir}%`);
       fs.rmSync(testDir, { recursive: true, force: true });
     });
 

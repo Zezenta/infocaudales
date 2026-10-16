@@ -46,6 +46,7 @@ export class SatelliteArchiverService {
 
   /**
    * Archives a single frame by timestamp from GeoServer or NASA GIBS.
+   * If source is 'nasa_gibs' on Ecuador view, composites with provincial boundaries.
    */
   public async archiveSingleFrame(
     timeIso: string,
@@ -119,6 +120,9 @@ export class SatelliteArchiverService {
           if (minSize > 0 && tile.length < minSize) {
             throw new Error(`${source} tile data too small or placeholder (${tile.length} bytes < ${minSize})`);
           }
+
+          // Save clean raw satellite tile directly (boundaries are rendered as vector SVG overlay)
+          fs.writeFileSync(filePath, tile);
           buffer = tile;
           break;
         }
@@ -138,7 +142,6 @@ export class SatelliteArchiverService {
     }
 
     try {
-      fs.writeFileSync(filePath, buffer);
       fs.writeFileSync(
         metaPath,
         JSON.stringify(
@@ -193,7 +196,7 @@ export class SatelliteArchiverService {
     const plantKey = options.plantKey || 'ecuador';
     let limit = options.limit || 18;
 
-    // If source is nasa_gibs and there are no NASA frames in archive, initiate 24h backfill (144 frames)
+    // If source is nasa_gibs and archive has fewer than 144 frames, initiate 24h backfill (144 frames)
     if (source === 'nasa_gibs' && !options.limit) {
       try {
         const row = db.prepare(`
@@ -202,9 +205,9 @@ export class SatelliteArchiverService {
         `).get(plantKey) as { count: number } | undefined;
 
         const count = row?.count || 0;
-        if (count === 0) {
+        if (count < 144) {
           systemLogger.info(
-            `[SatelliteArchiver] No NASA GIBS frames found in archive for ${plantKey}. Initiating initial 24-hour backfill (144 frames)...`
+            `[SatelliteArchiver] NASA GIBS archive has only ${count}/144 frames for ${plantKey}. Initiating 24-hour backfill (144 frames)...`
           );
           limit = 144; // 24 hours back at 10-minute intervals
         }
@@ -263,6 +266,96 @@ export class SatelliteArchiverService {
       downloaded: downloadedCount,
       skipped: skippedCount,
       newestTimestamp: newestTs
+    };
+  }
+
+  /**
+   * Computes the exact 144 chronological timestamps (10-minute cadence) for a calendar day in Ecuador (GMT-5).
+   * Range: 00:00 ECT (05:00 UTC) to 23:50 ECT (04:50 UTC next day).
+   */
+  public getExpectedTimestampsForDate(dateEcuador: string): string[] {
+    const parts = dateEcuador.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+
+    // 00:00 ECT corresponds to 05:00 UTC
+    const startUtcMs = Date.UTC(year, month, day, 5, 0, 0, 0);
+    const timestamps: string[] = [];
+
+    for (let i = 0; i < 144; i++) {
+      const tMs = startUtcMs + i * 10 * 60 * 1000;
+      timestamps.push(new Date(tMs).toISOString());
+    }
+
+    return timestamps;
+  }
+
+  /**
+   * Verifies all 144 frames for an Ecuador calendar date and downloads any missing frames from NASA GIBS.
+   * Eliminates temporal gaps and missing dawn/night frames.
+   */
+  public async backfillDateFrames(
+    dateEcuador: string,
+    source: SatelliteSource = 'nasa_gibs',
+    plantKey: string = 'ecuador'
+  ): Promise<{
+    expected: number;
+    existing: number;
+    downloaded: number;
+    failed: number;
+  }> {
+    const expectedTimestamps = this.getExpectedTimestampsForDate(dateEcuador);
+
+    const existingRows = db.prepare(`
+      SELECT timestamp_iso FROM satellite_archive
+      WHERE date_ecuador = ? AND source = ? AND plant_key = ?
+    `).all(dateEcuador, source, plantKey) as Array<{ timestamp_iso: string }>;
+
+    const existingSet = new Set(existingRows.map(r => r.timestamp_iso));
+    const missingTimestamps = expectedTimestamps.filter(t => !existingSet.has(t));
+
+    if (missingTimestamps.length === 0) {
+      return {
+        expected: 144,
+        existing: existingRows.length,
+        downloaded: 0,
+        failed: 0
+      };
+    }
+
+    systemLogger.info(
+      `[SatelliteArchiver] Detected ${missingTimestamps.length} missing frame(s) for ${dateEcuador} (${source}). Initiating target backfill...`
+    );
+
+    let downloadedCount = 0;
+    let failedCount = 0;
+    const concurrency = 4;
+
+    for (let i = 0; i < missingTimestamps.length; i += concurrency) {
+      const chunk = missingTimestamps.slice(i, i + concurrency);
+      const results = await Promise.all(
+        chunk.map(timeIso => this.archiveSingleFrame(timeIso, plantKey, source))
+      );
+
+      for (const res of results) {
+        if (res === 'DOWNLOADED' || res === 'SKIPPED') {
+          downloadedCount++;
+        } else {
+          failedCount++;
+        }
+      }
+    }
+
+    systemLogger.info(
+      `[SatelliteArchiver] Completed backfill for ${dateEcuador} (${source}): ${downloadedCount} resolved, ${failedCount} failed.`
+    );
+
+    return {
+      expected: 144,
+      existing: existingRows.length,
+      downloaded: downloadedCount,
+      failed: failedCount
     };
   }
 
@@ -412,4 +505,3 @@ export class SatelliteArchiverService {
     };
   }
 }
-

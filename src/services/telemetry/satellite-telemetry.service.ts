@@ -1,6 +1,12 @@
+import fs from 'fs';
+import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import axios from 'axios';
 import { BASIN_GEOMETRIES, BasinGeometry } from '../../data/basin-geometries.js';
 import { systemLogger } from '../../utils/logger.js';
+
+const execFileAsync = promisify(execFile);
 
 export type SatelliteSource = 'geoserver' | 'nasa_gibs' | 'esri_satellite';
 
@@ -276,8 +282,12 @@ export class SatelliteTelemetryService {
           throw new Error(`WMS returned non-image payload: ${sample}`);
         }
         const effectiveSource = options.source ?? 'geoserver';
-        if (effectiveSource === 'nasa_gibs' && buf.length < 20000) {
-          throw new Error(`NASA GIBS tile unavailable or transparent placeholder (${buf.length} bytes)`);
+        if (effectiveSource === 'nasa_gibs') {
+          const isFullResolution = (options.width ?? 800) >= 400;
+          const minBytes = isFullResolution ? 20000 : 300;
+          if (buf.length < minBytes) {
+            throw new Error(`NASA GIBS tile unavailable or transparent placeholder (${buf.length} bytes)`);
+          }
         }
         if (this.tileCache.size >= this.maxCacheEntries) {
           const oldestKey = this.tileCache.keys().next().value;
@@ -391,7 +401,7 @@ export class SatelliteTelemetryService {
         chunk.map(async (timeIso, chunkIdx) => {
           const frameIdx = i + chunkIdx;
           try {
-            const buffer = await this.fetchMapTile({
+            let buffer = await this.fetchMapTile({
               source,
               layers,
               bbox,

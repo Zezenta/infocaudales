@@ -53,10 +53,15 @@ export interface OverlayCustomizationOptions {
   customDateSubtitle?: string;
   showCityPins?: boolean;
   cityPins?: CityPin[];
+  showProvinces?: boolean;
+  provincesColor?: string;
+  provincesWidth?: number;
+  provincesOpacity?: number;
   summaryCardItems?: BasinSummaryCardItem[];
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
   layers?: string | string[];
+  watermarkBrand?: 'x' | 'instagram';
 }
 
 export interface DynamicSummaryCards {
@@ -97,6 +102,8 @@ export interface CompiledAnimationResult {
     end: string;
     startEcuador: string;
     endEcuador: string;
+    startDateEcuador?: string;
+    startTimeEcuador?: string;
     endDateEcuador?: string;
     endTimeEcuador?: string;
   };
@@ -111,7 +118,41 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
 }
 
 export class VideoCompilerService {
+  private provincesVectorCache: string | null = null;
+
   constructor(private readonly satelliteMapService: SatelliteTelemetryService = new SatelliteTelemetryService()) {}
+
+  /**
+   * Helper to retrieve clean vector SVG paths of Ecuador provincial borders.
+   */
+  public getProvincesVectorSvg(): string | null {
+    if (this.provincesVectorCache) {
+      return this.provincesVectorCache;
+    }
+    const candidates = [
+      path.join(__dirname, '..', '..', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(__dirname, '..', '..', '..', 'src', 'assets', 'overlays', 'ecuador_provincias.svg'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias.svg')
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        try {
+          const raw = fs.readFileSync(c, 'utf8');
+          const start = raw.indexOf('<g id="provinciasPaths"');
+          const end = raw.indexOf('</svg>');
+          if (start !== -1 && end !== -1) {
+            const innerStart = raw.indexOf('>', start) + 1;
+            const innerEnd = raw.lastIndexOf('</g>', end);
+            this.provincesVectorCache = raw.substring(innerStart, innerEnd).trim();
+            return this.provincesVectorCache;
+          }
+        } catch (e) {
+          console.warn('[VideoCompilerService] Failed to read provinces vector overlay:', e);
+        }
+      }
+    }
+    return null;
+  }
 
   /**
    * Translates geographic (lat, lon) coordinates inside a bounding box to pixel coordinates (x, y).
@@ -165,6 +206,30 @@ export class VideoCompilerService {
     const subtitleBadge = escapeXml(options.customBadge || (geometry.key === 'ecuador'
       ? 'GOES-16 • Banda 13 IR (10.3 µm)'
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
+
+    // Provincial Delineation Vector Overlay (Ecuador Continental)
+    // GeoServer already burns ecuador:provincias into the raster tile.
+    // The SVG vector overlay is rendered if explicitly forced OR if the frame source is nasa_gibs.
+    const isNasaGibs = frame.source === 'nasa_gibs';
+    const showProvinces = (options.showProvinces === true || isNasaGibs) &&
+      frame.source !== 'geoserver' &&
+      (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    const provincesColor = options.provincesColor || '#38bdf8';
+    const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
+    const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;
+
+    let provincesOverlaySvg = '';
+    if (showProvinces) {
+      const paths = this.getProvincesVectorSvg();
+      if (paths) {
+        provincesOverlaySvg = `
+        <!-- Provincial Delineation Vector Layer -->
+        <g id="provincesLayer" fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
+          ${paths}
+        </g>
+        `;
+      }
+    }
 
     // Render Basin Storm Detection Boundary Boxes when displaying Ecuador Continental
     let detectionBoxesSvg = '';
@@ -546,6 +611,21 @@ export class VideoCompilerService {
 
     summaryCardSvg = `${card1Svg}\n${card2Svg}`;
 
+    const defaultBrand = (process.env.DEFAULT_VIDEO_BRAND as any) || 'instagram';
+    const chosenBrand = options.watermarkBrand || defaultBrand;
+    const isInstagram = chosenBrand === 'instagram';
+    const watermarkIconSvg = isInstagram
+      ? `<rect width="24" height="24" rx="6.5" fill="url(#ig-grad-satellite)"/>
+        <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+        <circle cx="12" cy="12" r="3.8" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+        <circle cx="16.3" cy="7.7" r="1.15" fill="#ffffff"/>`
+      : `<rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
+        <g transform="translate(5, 5)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </g>`;
+
     return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -556,6 +636,13 @@ export class VideoCompilerService {
             font-weight: 100 900;
           }
         </style>
+        <linearGradient id="ig-grad-satellite" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ffd521"/>
+          <stop offset="12%" stop-color="#f50000"/>
+          <stop offset="50%" stop-color="#c13584"/>
+          <stop offset="85%" stop-color="#833ab4"/>
+          <stop offset="100%" stop-color="#405de6"/>
+        </linearGradient>
         <linearGradient id="topBarGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#04060c" stop-opacity="0.98"/>
           <stop offset="65%" stop-color="#04060c" stop-opacity="0.94"/>
@@ -588,16 +675,13 @@ export class VideoCompilerService {
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
       <g transform="translate(${width - 180}, 18)">
-        <!-- X Icon Box: 24x24, solid black bg, subtle border -->
-        <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
-        <g transform="translate(5, 5)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-        </g>
+        ${watermarkIconSvg}
         <!-- Handle Text in high contrast Space Grotesk -->
         <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
       </g>
+
+      <!-- Provincial Delineation Layer -->
+      ${provincesOverlaySvg}
 
       <!-- Basin Storm Detection Boundary Boxes -->
       ${detectionBoxesSvg}
@@ -844,6 +928,8 @@ export class VideoCompilerService {
           end: lastFrame.timestampIso,
           startEcuador: `${firstFrame.dateEcuador} ${firstFrame.timeEcuador}`,
           endEcuador: `${lastFrame.dateEcuador} ${lastFrame.timeEcuador}`,
+          startDateEcuador: firstFrame.dateEcuador,
+          startTimeEcuador: firstFrame.timeEcuador,
           endDateEcuador: lastFrame.dateEcuador,
           endTimeEcuador: lastFrame.timeEcuador
         }

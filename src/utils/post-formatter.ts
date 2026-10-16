@@ -220,10 +220,12 @@ export interface StormAlertPostOptions {
   durationMinutes?: number;
   dateEcuador?: string;
   timeEcuador?: string;
+  startTimeEcuador?: string;
+  endTimeEcuador?: string;
 }
 
 /**
- * Builds the post text for a satellite storm alert on X.
+ * Builds the post text for a satellite rain event alert across all platforms.
  */
 export function buildStormAlertPostText(options: StormAlertPostOptions): string {
   const basin = BASIN_GEOMETRIES[options.plantKey] || { name: options.plantKey };
@@ -240,21 +242,25 @@ export function buildStormAlertPostText(options: StormAlertPostOptions): string 
     hashtag = '#Agoyan #Pastaza';
   }
 
-  let text = `🌧️ Monitoreo Satelital GOES-16: Evento de Lluvia en ${basinName}\n\n` +
+  let text = `🌧️ Evento de Lluvia en ${basinName}\n\n` +
     `Se registró actividad convectiva relevante sobre la cuenca de recarga hídrica:\n` +
     `• Pico de cobertura: ${peakPct}%\n`;
 
   if (durStr) {
     text += `• Duración aproximada: ${durStr}\n`;
   }
-  if (options.dateEcuador && options.timeEcuador) {
+
+  const dateStr = options.dateEcuador || '';
+  if (options.startTimeEcuador && options.endTimeEcuador) {
+    text += `• Registro: ${dateStr ? `${dateStr} ` : ''}de ${options.startTimeEcuador} a ${options.endTimeEcuador} ECT\n`;
+  } else if (options.dateEcuador && options.timeEcuador) {
     if (options.dateEcuador === options.timeEcuador) {
       text += `• Registro: ${options.dateEcuador} ECT\n`;
     } else {
       text += `• Registro: ${options.dateEcuador} ${options.timeEcuador} ECT\n`;
     }
-  } else if (options.dateEcuador) {
-    text += `• Registro: ${options.dateEcuador} ECT\n`;
+  } else if (dateStr) {
+    text += `• Registro: ${dateStr} ECT\n`;
   }
 
   text += `\nEvolución y desplazamiento de nubosidad en timelapse adjunto.\n\n` +
@@ -310,4 +316,134 @@ export function buildDailySatelliteSummaryPostText(options: DailySatelliteSummar
 
   return text;
 }
+
+export interface SocialPlantReportItem {
+  plantKey: string;
+  plant: HydroelectricPlant;
+  telemetry: TelemetryData;
+}
+
+/**
+ * Sorts hydroelectric plants for social media carousels and albums:
+ * 1: Mazar
+ * 2: Coca Codo Sinclair
+ * 3+: Remaining plants ordered by generation descending (highest generator first)
+ */
+export function sortPlantsForSocial<T extends { plantKey: string; telemetry: TelemetryData }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    if (a.plantKey === 'mazar') return -1;
+    if (b.plantKey === 'mazar') return 1;
+    if (a.plantKey === 'cocaCodoSinclair') return -1;
+    if (b.plantKey === 'cocaCodoSinclair') return 1;
+    const genA = a.telemetry.gen || 0;
+    const genB = b.telemetry.gen || 0;
+    return genB - genA;
+  });
+}
+
+export interface SocialRoundupCaptionOptions {
+  dateStr: string;
+  hourStr?: string;
+  reportTimestamp?: Date;
+  totalMW?: number;
+  capacityPct?: number;
+  plantCount?: number;
+  plants?: SocialPlantReportItem[];
+}
+
+/**
+ * Builds the caption for multi-photo album / carousel posts on Instagram and Facebook
+ * with a detailed, authoritative breakdown per plant.
+ */
+export function buildSocialRoundupCaption(options: SocialRoundupCaptionOptions): string {
+  let caption = `⚡ Reporte del Sistema Hidroeléctrico en Vivo\n` +
+    `📅 ${options.dateStr}${options.hourStr ? ` • ${options.hourStr}` : ''}\n\n`;
+
+  if (options.totalMW !== undefined) {
+    const capStr = options.capacityPct !== undefined ? ` (${options.capacityPct}% de capacidad instalada)` : '';
+    caption += `📊 Generación hidroeléctrica total: ${Math.round(options.totalMW).toLocaleString()} MW${capStr}.\n\n`;
+  }
+
+  if (options.plants && options.plants.length > 0) {
+    caption += `Resumen por central hidroeléctrica:\n\n`;
+
+    for (const item of options.plants) {
+      const { plant, plantKey, telemetry } = item;
+      const maxEnergyMW = plant.physicalData?.maxEnergyMW ?? 100;
+      const maxTurbines = plant.physicalData?.maxTurbines ?? 1;
+      const minLevelMasl = plant.physicalData?.minLevelMasl;
+
+      const flow3hAgo = telemetry.flow3hAgo ?? telemetry.flow;
+      let deltaCaudal = 0;
+      if (flow3hAgo === 0) {
+        deltaCaudal = telemetry.flow > 0 ? 100 : 0;
+      } else {
+        deltaCaudal = ((telemetry.flow - flow3hAgo) / flow3hAgo) * 100;
+      }
+      const signoCaudal = telemetry.flow >= flow3hAgo ? '+' : '-';
+      const caudalStr = `🌊 Caudal: ${formatVal(telemetry.flow)} m³/s (${signoCaudal}${formatVal(Math.abs(deltaCaudal))}% en 3h)`;
+
+      const trabajoEnergia = (telemetry.gen / maxEnergyMW) * 100;
+      let genStr = `🔋 Generación: ${formatVal(telemetry.gen)} MW (${formatVal(trabajoEnergia)}% cap)`;
+      if (telemetry.turbines !== undefined && maxTurbines > 0) {
+        genStr += ` [${telemetry.turbines}/${maxTurbines} turbinas]`;
+      }
+
+      let dataLagNote = '';
+      if (telemetry.timestamp) {
+        let reportTime = options.reportTimestamp;
+        if (!reportTime && options.hourStr) {
+          const m = options.hourStr.match(/(\d{1,2}):(\d{2})/);
+          if (m) {
+            // Build reportTime from the telemetry's Ecuador date + report hour/min
+            const telEc = new Date(new Date(telemetry.timestamp).getTime() - 5 * 3600 * 1000);
+            const repUtcMs = Date.UTC(telEc.getUTCFullYear(), telEc.getUTCMonth(), telEc.getUTCDate(), parseInt(m[1], 10) + 5, parseInt(m[2], 10));
+            reportTime = new Date(repUtcMs);
+          }
+        }
+        if (!reportTime) reportTime = new Date();
+
+        const telemetryDate = new Date(telemetry.timestamp);
+        const lagMinutes = Math.round((reportTime.getTime() - telemetryDate.getTime()) / (60 * 1000));
+        if (lagMinutes >= 60) {
+          const ecDate = new Date(telemetryDate.getTime() - 5 * 3600 * 1000);
+          const plantHour = String(ecDate.getUTCHours()).padStart(2, '0');
+          const plantMin = String(ecDate.getUTCMinutes()).padStart(2, '0');
+          if (lagMinutes >= 20 * 60) {
+            const plantDay = String(ecDate.getUTCDate()).padStart(2, '0');
+            const plantMonth = String(ecDate.getUTCMonth() + 1).padStart(2, '0');
+            dataLagNote = ` (corte ${plantDay}/${plantMonth} ${plantHour}:${plantMin} ECT)`;
+          } else {
+            dataLagNote = ` (corte ${plantHour}:${plantMin} ECT)`;
+          }
+        }
+      }
+
+      caption += `🔹 ${plant.name}${dataLagNote}\n${caudalStr}\n${genStr}\n`;
+
+      if (telemetry.cota !== undefined && minLevelMasl !== undefined && plantKey !== 'sopladora' && plantKey !== 'cocaCodoSinclair') {
+        let diff24h = '';
+        if (telemetry.cota24hAgo !== undefined) {
+          const diff = telemetry.cota - telemetry.cota24hAgo;
+          if (Math.abs(diff) < 0.005) {
+            diff24h = ' (= sin variación en 24h)';
+          } else if (diff < 0) {
+            diff24h = ` (📉 bajó ${formatVal(Math.abs(diff))} m en 24h)`;
+          } else {
+            diff24h = ` (📈 subió ${formatVal(diff)} m en 24h)`;
+          }
+        }
+        caption += `💧 Cota: ${formatVal(telemetry.cota)} msnm${diff24h}\n`;
+      }
+
+      caption += `\n`;
+    }
+  }
+
+  caption += `Desliza ➔ para revisar el reporte visual detallado de cada central.\n\n` +
+    `#Ecuador #Energía #Hidroeléctricas #SectorEléctrico #CENACE #CELEC #Mazar #CocaCodoSinclair #Paute`;
+
+  return caption;
+}
+
 

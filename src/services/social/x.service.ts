@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { Client, OAuth1, type OAuth1Config, type ClientConfig } from '@xdevplatform/xdk';
-import { xLogger } from '../utils/logger.js';
+import { xLogger } from '../../utils/logger.js';
 
 export interface PostMediaOptions {
   imageBuffer?: Buffer;

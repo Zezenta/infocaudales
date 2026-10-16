@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portada Instagram / Redes Sociales - Visualizador Hidroeléctrico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* Font face registrations for DejaVu Sans Mono */
+    @font-face {
+      font-family: 'DejaVu Sans Mono';
+      src: url('/fonts/DejaVuSansMono.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'DejaVu Sans Mono';
+      src: url('/fonts/DejaVuSansMono-Bold.ttf') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0c0f17;
+      color: #f3f4f6;
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      margin: 0;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    /* Top Navigation Switcher */
+    .nav-switcher {
+      display: flex;
+      gap: 12px;
+      background: #0d1527;
+      padding: 6px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 5px;
+      z-index: 1000;
+    }
+
+    .nav-link {
+      color: #94a3b8;
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13.5px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .nav-link.active {
+      background: #38bdf8;
+      color: #070b12;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    .nav-link:hover:not(.active) {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* Page Header */
+    .page-title-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .page-badge {
+      background: #0c111c;
+      border: 1px solid #1e293b;
+      color: #00b0ff;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 4px 14px;
+      border-radius: 20px;
+    }
+
+    .page-heading {
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+
+    /* Main 2-column layout */
+    .main-layout {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 28px;
+      width: 100%;
+      max-width: 1280px;
+    }
+
+    /* LEFT COLUMN: Card Canvas */
+    .cards-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .card-meta-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 600px;
+      font-size: 13px;
+      color: #64748b;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .aspect-badge {
+      background: #0c111c;
+      border: 1px solid #1e293b;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-family: 'DejaVu Sans Mono', monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    /* ==========================================================================
+       THE INSTAGRAM COVER CARD (OBSIDIAN GROTESK STYLE - EXACT 600px x 600px)
+       ========================================================================== */
+    .cover-card-container {
+      width: 600px;
+      height: 600px;
+      background-color: #080c14;
+      border: 3px solid #1e293b;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px 20px 14px 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+      transition: height 0.2s ease;
+    }
+
+    .cover-card-container.aspect-4-5 {
+      height: 750px;
+    }
+
+    /* HEADER AREA (Matches hydro-card exactly) */
+    .cover-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1.5px solid #1e293b;
+      padding-bottom: 10px;
+    }
+
+    .cover-header-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .cover-pre-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      line-height: 1.0;
+      margin-bottom: 4px;
+    }
+
+    .cover-main-title {
+      font-size: 26px;
+      font-weight: bold;
+      color: #f3f4f6;
+      margin: 0;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .cover-timestamp {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      margin: 4px 0 0 0;
+      line-height: 1.0;
+    }
+
+    .cover-date-text {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #94a3b8;
+      font-family: 'Space Grotesk', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .cover-time-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      line-height: 1.0;
+    }
+
+    .live-dot-red {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      flex-shrink: 0;
+    }
+
+    .cover-time-text {
+      font-size: 21px;
+      font-weight: 800;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #00b0ff;
+      letter-spacing: -0.01em;
+      line-height: 1.0;
+    }
+
+    /* Watermark matching hydro-card exactly, with Instagram Icon */
+    .cover-watermark {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #4b5563;
+      margin: 0;
+      line-height: 1.0;
+    }
+
+    .ig-logo-badge, .fb-logo-badge {
+      display: block;
+      border-radius: 6.5px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      flex-shrink: 0;
+    }
+
+    /* STATS SUMMARY BOXES (2-column layout matching hydro-card stats-row has-boxes) */
+    .stats-summary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+
+    .stats-summary-box {
+      border: 1.5px solid #1e293b;
+      background-color: #0c111c;
+      padding: 7px 12px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stats-box-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      line-height: 1.0;
+    }
+
+    .stats-box-value {
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 1.1;
+      font-family: 'Space Grotesk', sans-serif;
+      margin-top: 1px;
+    }
+
+    .stats-box-sub {
+      font-size: 11px;
+      font-weight: normal;
+      color: #64748b;
+      font-family: 'DejaVu Sans Mono', monospace;
+      line-height: 1.0;
+    }
+
+    /* THE 6 PLANTS TABLE MATRIX */
+    .plants-matrix-container {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin: 3px 0;
+    }
+
+    .matrix-table-header {
+      display: grid;
+      grid-template-columns: 144px 48px 86px 146px 112px;
+      padding: 0 12px 3px 12px;
+      font-size: 10px;
+      font-weight: bold;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .matrix-col-right {
+      text-align: right;
+    }
+
+    .matrix-col-center {
+      text-align: center;
+    }
+
+    .matrix-col-caudal {
+      padding-right: 8px;
+    }
+
+    /* PLANT ROW CARD */
+    .plant-matrix-row {
+      display: grid;
+      grid-template-columns: 144px 48px 86px 146px 112px;
+      align-items: center;
+      background-color: #0c111c;
+      border: 1.5px solid #1e293b;
+      border-radius: 6px;
+      padding: 6.5px 12px;
+    }
+
+    /* Col 1: Drawing Thumbnail + Name */
+    .plant-info-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .plant-thumb-img {
+      width: 34px;
+      height: 26px;
+      object-fit: contain;
+      background-color: #080c14;
+      border: 1px solid #1e293b;
+      border-radius: 3px;
+      padding: 1px;
+      flex-shrink: 0;
+    }
+
+    .plant-names {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      line-height: 1.1;
+    }
+
+    .plant-name-text {
+      font-size: 13px;
+      font-weight: bold;
+      color: #f3f4f6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .plant-cap-text {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #64748b;
+      font-family: 'DejaVu Sans Mono', monospace;
+    }
+
+    /* Col 2: Turbines (x/x) */
+    .turbines-cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .turbines-val {
+      font-size: 13.5px;
+      font-weight: bold;
+      font-family: 'DejaVu Sans Mono', monospace;
+      color: #f3f4f6;
+    }
+
+    /* Col 3: Generation + Battery */
+    .gen-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      padding-right: 4px;
+    }
+
+    .gen-val-text {
+      font-size: 13px;
+      font-weight: bold;
+      color: #f3f4f6;
+      font-family: 'DejaVu Sans Mono', monospace;
+    }
+
+    .battery-icon-wrap {
+      display: flex;
+      align-items: center;
+    }
+
+    .battery-icon-body {
+      width: 44px;
+      height: 9px;
+      border: 1.5px solid #475569;
+      background-color: #080c14;
+      padding: 1px;
+      border-radius: 2px;
+      box-sizing: border-box;
+    }
+
+    .battery-icon-fill {
+      height: 100%;
+      background-color: #00e676;
+      border-radius: 1px;
+    }
+
+    .battery-icon-cap {
+      width: 2.5px;
+      height: 5px;
+      background-color: #475569;
+      margin-left: 1.5px;
+      border-radius: 0 1px 1px 0;
+    }
+
+    /* Col 4: Cota (msnm) */
+    .cota-cell {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .cota-val-text {
+      font-size: 12.5px;
+      font-weight: bold;
+      font-family: 'DejaVu Sans Mono', monospace;
+      text-align: right;
+    }
+
+    .cota-base-ref {
+      color: #64748b !important;
+      font-weight: 500;
+      font-size: 12.5px;
+      font-family: 'DejaVu Sans Mono', monospace;
+      margin-left: 4px;
+    }
+
+    /* Col 5: Caudal (m³/s) */
+    .flow-cell {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-right: 8px;
+    }
+
+    .flow-val-text {
+      font-size: 12.5px;
+      font-weight: bold;
+      font-family: 'DejaVu Sans Mono', monospace;
+      text-align: right;
+    }
+
+    /* Dynamic text colors matching hydro-card */
+    .val-good {
+      color: #00e676 !important;
+    }
+
+    .val-warning {
+      color: #fbbf24 !important;
+    }
+
+    .val-danger {
+      color: #f43f5e !important;
+    }
+
+    .val-dimmed {
+      color: #64748b !important;
+      font-size: 11px;
+    }
+
+    /* Trend Arrows (con colita) */
+    .trend-arrow-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 4.5px;
+      vertical-align: -1.5px;
+      line-height: 1;
+    }
+
+    .trend-arrow-svg {
+      display: block;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: visible;
+      flex-shrink: 0;
+    }
+
+    .trend-arrow-svg.trend-up {
+      stroke: #00e676;
+    }
+
+    .trend-arrow-svg.trend-down {
+      stroke: #f43f5e;
+    }
+
+    /* FOOTER: DESLIZA PARA VER LOS DETALLES */
+    .cover-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-top: 1.5px solid #1e293b;
+      padding-top: 8px;
+    }
+
+    .swipe-cta-banner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #0c111c;
+      border: 1.5px solid #1e293b;
+      border-radius: 6px;
+      padding: 9px 16px;
+    }
+
+    .swipe-cta-text {
+      font-size: 16px;
+      font-weight: 800;
+      color: #f3f4f6;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .swipe-arrow {
+      color: #00b0ff;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .footer-sources-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 9.5px;
+      color: #4b5563;
+      font-family: 'DejaVu Sans Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0 2px;
+    }
+
+    .trend-toggle-btn {
+      background: #080c14;
+      border: 1.5px solid #1e293b;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .trend-toggle-btn:hover {
+      border-color: #475569;
+      color: #ffffff;
+    }
+
+    .trend-toggle-btn.active {
+      border-color: #00b0ff;
+      color: #ffffff;
+      background: #1e293b;
+    }
+
+    /* ==========================================================================
+       RIGHT COLUMN: INTERACTIVE CONTROL PANEL (CLEAN, NO EMOJIS)
+       ========================================================================== */
+    .control-panel {
+      width: 440px;
+      background: #0c111c;
+      border: 1.5px solid #1e293b;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 10px;
+    }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .btn-action-primary {
+      background: #0284c7;
+      color: #ffffff;
+      border: 1px solid #0369a1;
+      padding: 9px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+
+    .btn-action-primary:hover {
+      background: #0369a1;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    .spin-animation {
+      animation: spin 0.9s linear infinite;
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-secondary:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+    }
+
+    /* Preset Buttons Grid */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      background: #080c14;
+      border: 1.5px solid #1e293b;
+      color: #cbd5e1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      text-align: left;
+      cursor: pointer;
+      line-height: 1.3;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      background: #1e293b;
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+
+    .preset-btn small {
+      display: block;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* Plant Selector Tabs */
+    .plant-selector-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: #080c14;
+      padding: 4px;
+      border-radius: 6px;
+      border: 1.5px solid #1e293b;
+    }
+
+    .plant-tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 5px 9px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .plant-tab-btn.active {
+      background: #1e293b;
+      color: #00b0ff;
+    }
+
+    /* Active Plant Editor Form */
+    .plant-editor-card {
+      background: #080c14;
+      border: 1.5px solid #1e293b;
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .form-val-badge {
+      font-family: 'DejaVu Sans Mono', monospace;
+      font-size: 11.5px;
+      color: #00b0ff;
+      background: #0c111c;
+      border: 1px solid #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .range-slider {
+      width: 100%;
+      height: 5px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+      accent-color: #00b0ff;
+      cursor: pointer;
+    }
+
+    .status-select {
+      background: #0c111c;
+      border: 1.5px solid #1e293b;
+      color: #ffffff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      outline: none;
+    }
+
+    .status-message {
+      font-size: 11px;
+      color: #00e676;
+      font-family: 'DejaVu Sans Mono', monospace;
+      min-height: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Switcher -->
+  <nav class="nav-switcher">
+    <a href="/" class="nav-link">📊 Tarjetas de Telemetría</a>
+    <a href="/daily" class="nav-link">📑 Reporte Diario</a>
+    <a href="/forecast" class="nav-link">🔮 Pronósticos Hidrológicos</a>
+    <a href="/rain" class="nav-link">🛰️ Satélite & Lluvia</a>
+    <a href="/social" class="nav-link active">📱 Portada Redes (IG & FB)</a>
+  </nav>
+
+  <!-- Page Header -->
+  <div class="page-title-container">
+    <div class="page-badge">FORMATO REDES SOCIALES • INSTAGRAM & FACEBOOK (CARROUSEL / FEED)</div>
+    <h1 class="page-heading">Portada & Resumen de Hidroeléctricas en Vivo</h1>
+  </div>
+
+  <div class="main-layout">
+    
+    <!-- LEFT COLUMN: The Visualizer Card -->
+    <div class="cards-column">
+      <div class="card-meta-bar">
+        <span>Vista previa renderizada (1:1 Cuadrado)</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="aspect-badge" id="aspect-label">1080 x 1080 px</span>
+          <button class="btn-secondary" id="btn-toggle-aspect">Cambiar a 4:5</button>
+        </div>
+      </div>
+
+      <!-- THE COVER CARD CONTAINER (ID: cover-card) -->
+      <div class="cover-card-container" id="cover-card">
+        
+        <!-- HEADER (Exact hydro-card telemetry aesthetic) -->
+        <div class="cover-header">
+          <div class="cover-header-left">
+            <span class="cover-pre-title">REPORTE DEL SISTEMA HIDROELÉCTRICO</span>
+            <h1 class="cover-main-title" id="card-main-title">HIDROELÉCTRICAS EN VIVO</h1>
+            <div class="cover-timestamp" id="card-datetime-container">
+              <span class="cover-date-text" id="card-date-str">Jueves, 15 de Octubre 2026</span>
+              <div class="cover-time-row">
+                <span class="live-dot-red"></span>
+                <span class="cover-time-text" id="card-time-str">19:25 ECT</span>
+              </div>
+            </div>
+          </div>
+          <div class="cover-watermark" id="cover-watermark-wrap">
+            <!-- Official Instagram SVG Icon - single vector with authentic linearGradient, no border halo -->
+            <svg class="ig-logo-badge" viewBox="0 0 24 24" width="24" height="24">
+              <defs>
+                <linearGradient id="ig-grad-official" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ffd521"/>
+                  <stop offset="12%" stop-color="#f50000"/>
+                  <stop offset="50%" stop-color="#c13584"/>
+                  <stop offset="85%" stop-color="#833ab4"/>
+                  <stop offset="100%" stop-color="#405de6"/>
+                </linearGradient>
+              </defs>
+              <rect width="24" height="24" rx="6.5" fill="url(#ig-grad-official)"/>
+              <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+              <circle cx="12" cy="12" r="3.8" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+              <circle cx="16.3" cy="7.7" r="1.15" fill="#ffffff"/>
+            </svg>
+            <span id="watermark-brand-text">@Hidro_Info_Bot</span>
+          </div>
+        </div>
+
+        <!-- STATS SUMMARY BOXES (2-column layout) -->
+        <div class="stats-summary-row">
+          <div class="stats-summary-box">
+            <span class="stats-box-label">Generación Total</span>
+            <span class="stats-box-value text-green" id="kpi-total-mw" style="color: #00e676;">2,801 MW</span>
+            <span class="stats-box-sub" id="kpi-total-cap">De 3,663 MW instalados</span>
+          </div>
+          <div class="stats-summary-box">
+            <span class="stats-box-label">Capacidad Operativa</span>
+            <span class="stats-box-value text-green" id="kpi-total-pct" style="color: #00e676;">76.5%</span>
+            <span class="stats-box-sub" id="kpi-pct-desc">De la capacidad máxima</span>
+          </div>
+        </div>
+
+        <!-- THE 6 PLANTS TABLE -->
+        <div class="plants-matrix-container">
+          <div class="matrix-table-header">
+            <div>Central</div>
+            <div class="matrix-col-center">Turbinas</div>
+            <div class="matrix-col-right">Generación</div>
+            <div class="matrix-col-right"><svg width="11" height="11" viewBox="0 0 24 24" fill="#38bdf8" style="vertical-align: -1px; margin-right: 3px;"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Cota (msnm)</div>
+            <div class="matrix-col-right matrix-col-caudal"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><path d="M2 12c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 5.5-2.5 8 0"/><path d="M2 17c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 5.5-2.5 8 0"/></svg>Caudal</div>
+          </div>
+
+          <!-- Dynamic Plant Rows Container -->
+          <div id="plants-rows-list" style="display: flex; flex-direction: column; gap: 3.5px;">
+            <!-- Rows injected by JavaScript -->
+          </div>
+        </div>
+
+        <!-- FOOTER: DESLIZA PARA VER LOS DETALLES -->
+        <div class="cover-footer">
+          <div class="swipe-cta-banner">
+            <div class="swipe-cta-text">
+              <span>Desliza para ver los detalles</span>
+              <span class="swipe-arrow">➔</span>
+            </div>
+          </div>
+
+          <div class="footer-sources-row">
+            <span>Fuentes: CENACE • CELEC EP</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Buttons below preview -->
+      <div style="display: flex; gap: 12px; margin-top: 6px;">
+        <button class="btn-action-primary" id="btn-export-png">
+          Descargar Portada PNG (1200x1200px)
+        </button>
+        <button class="btn-secondary" id="btn-reset-defaults">Restablecer Valores</button>
+      </div>
+      <div class="status-message" id="export-status"></div>
+    </div>
+
+    <!-- RIGHT COLUMN: Control Panel -->
+    <div class="control-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Controles & Parámetros</h2>
+        <button class="btn-secondary" id="btn-sync-time">Hora Actual</button>
+      </div>
+
+      <!-- Header & General Settings -->
+      <div class="panel-section">
+        <span class="section-heading">Configuración General</span>
+        <div class="form-row">
+          <label class="form-label">Título Principal</label>
+          <input type="text" id="input-main-title" value="HIDROELÉCTRICAS EN VIVO" style="background: #080c14; border: 1.5px solid #1e293b; color: #fff; padding: 5px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; width: 220px; font-family: 'Space Grotesk';">
+        </div>
+      </div>
+
+      <!-- Live Telemetry Query Button (Official Endpoints) -->
+      <div class="panel-section" style="background: rgba(2, 132, 199, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="section-heading" style="color: #38bdf8; margin: 0; font-size: 11px;">Telemetría en Vivo (Endpoints)</span>
+          <span id="live-indicator-badge" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #94a3b8; font-family: 'DejaVu Sans Mono', monospace;">Manual / Preset</span>
+        </div>
+        <button type="button" class="btn-action-primary" id="btn-fetch-live-data" style="width: 100%; background: #0284c7; border-color: #38bdf8; font-size: 12.5px; padding: 9px 12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          <span id="btn-fetch-live-data-text">Consultar Endpoints (CELEC & CENACE)</span>
+        </button>
+        <div id="live-fetch-status" style="font-size: 11px; color: #94a3b8; margin-top: 6px; min-height: 14px; text-align: center; font-weight: 500;"></div>
+      </div>
+
+      <!-- Quick Preset Scenarios -->
+      <div class="panel-section">
+        <span class="section-heading">Escenarios de Prueba (Presets)</span>
+        <div class="presets-grid">
+          <button class="preset-btn" id="preset-normal">
+            Operación Normal
+            <small>6 activas • Cotas en nivel óptimo</small>
+          </button>
+          <button class="preset-btn" id="preset-alert">
+            Alerta Mazar
+            <small>Cota 2,118 m • 3m sobre crítico</small>
+          </button>
+          <button class="preset-btn" id="preset-critical">
+            Estiaje Crítico
+            <small>Mazar bajo cota 2,115 m • 0 MW</small>
+          </button>
+          <button class="preset-btn" id="preset-partial">
+            Operación Parcial
+            <small>Molino y Sopladora reducidas</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Per-Plant Interactive Editor -->
+      <div class="panel-section">
+        <span class="section-heading">Editar Central Individual</span>
+        
+        <!-- Plant Selector Tabs -->
+        <div class="plant-selector-tabs" id="plant-tabs-container">
+          <button class="plant-tab-btn active" data-plant="cocaCodoSinclair">Coca Codo</button>
+          <button class="plant-tab-btn" data-plant="molino">Molino</button>
+          <button class="plant-tab-btn" data-plant="sopladora">Sopladora</button>
+          <button class="plant-tab-btn" data-plant="mazar">Mazar</button>
+          <button class="plant-tab-btn" data-plant="minasSanFrancisco">Minas S.F.</button>
+          <button class="plant-tab-btn" data-plant="agoyan">Agoyán</button>
+        </div>
+
+        <!-- Active Plant Form Controls -->
+        <div class="plant-editor-card">
+          <div class="form-row">
+            <span class="form-label" id="edit-plant-name">Coca Codo Sinclair</span>
+            <select class="status-select" id="edit-plant-status">
+              <option value="online">Encendida (Operando)</option>
+              <option value="offline">Apagada (Detenida)</option>
+              <option value="standby">En Reserva</option>
+            </select>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="form-row">
+              <label class="form-label">Turbinas Activas</label>
+              <span class="form-val-badge" id="edit-plant-turbines-val">8/8</span>
+            </div>
+            <input type="range" class="range-slider" id="edit-plant-turbines-slider" min="0" max="8" step="1" value="8">
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="form-row">
+              <label class="form-label">Generación (MW)</label>
+              <span class="form-val-badge" id="edit-plant-gen-val">1120 MW (75%)</span>
+            </div>
+            <input type="range" class="range-slider" id="edit-plant-gen-slider" min="0" max="1500" step="1" value="1120">
+          </div>
+
+          <div id="cota-control-group" style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="form-row">
+              <label class="form-label" id="edit-cota-label">Cota Embalse (msnm)</label>
+              <span class="form-val-badge" id="edit-plant-cota-val">-</span>
+            </div>
+            <input type="range" class="range-slider" id="edit-plant-cota-slider" min="2098" max="2153" step="0.1" value="2135.2">
+            <div class="form-row" style="margin-top: 2px;">
+              <span style="font-size: 11px; color: #64748b;">Tendencia Cota</span>
+              <div style="display: flex; gap: 4px;">
+                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-up">↑ Sube</button>
+                <button type="button" class="trend-toggle-btn" id="btn-cota-trend-down">↓ Baja</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="flow-control-group" style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="form-row">
+              <label class="form-label">Caudal (m³/s)</label>
+              <span class="form-val-badge" id="edit-plant-flow-val">480 m³/s</span>
+            </div>
+            <input type="range" class="range-slider" id="edit-plant-flow-slider" min="0" max="1000" step="1" value="480">
+            <div class="form-row" style="margin-top: 2px;">
+              <span style="font-size: 11px; color: #64748b;">Tendencia Caudal</span>
+              <div style="display: flex; gap: 4px;">
+                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-up">↑ Sube</button>
+                <button type="button" class="trend-toggle-btn" id="btn-flow-trend-down">↓ Baja</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // State of the 6 Hydroelectric Plants
+    const PLANTS_CONFIG = {
+      cocaCodoSinclair: {
+        id: 'cocaCodoSinclair',
+        name: 'Coca Codo Sinclair',
+        shortName: 'Coca Codo',
+        drawing: '/hydroelectric-drawings/Coca_Codo_Sinclair.png',
+        maxMW: 1500,
+        maxTurbines: 8,
+        activeTurbines: 8,
+        hasReservoir: false,
+        flowThresholds: { low: 190, normal: 420 },
+        currentStatus: 'online',
+        currentMW: 1120.0,
+        currentFlow: 480.0,
+        flowTrend: 'up'
+      },
+      molino: {
+        id: 'molino',
+        name: 'Paute Molino',
+        shortName: 'Paute Molino',
+        drawing: '/hydroelectric-drawings/Molino.png',
+        maxMW: 1100,
+        maxTurbines: 10,
+        activeTurbines: 8,
+        hasReservoir: true,
+        criticalCota: 1975.0, // Nivel mínimo
+        minCota: 1975.0,
+        maxCota: 1991.0,
+        flowThresholds: { low: 75, normal: 160 },
+        currentStatus: 'online',
+        currentMW: 890.0,
+        currentCota: 1987.4,
+        currentFlow: 154.0,
+        cotaTrend: 'up',
+        flowTrend: 'up'
+      },
+      sopladora: {
+        id: 'sopladora',
+        name: 'Sopladora',
+        shortName: 'Sopladora',
+        drawing: '/hydroelectric-drawings/Sopladora.png',
+        maxMW: 487,
+        maxTurbines: 3,
+        activeTurbines: 3,
+        hasReservoir: false,
+        flowThresholds: { low: 80, normal: 140 },
+        currentStatus: 'online',
+        currentMW: 380.0,
+        currentFlow: 145.0,
+        flowTrend: 'up'
+      },
+      mazar: {
+        id: 'mazar',
+        name: 'Paute Mazar',
+        shortName: 'Paute Mazar',
+        drawing: '/hydroelectric-drawings/Mazar.png',
+        maxMW: 170,
+        maxTurbines: 2,
+        activeTurbines: 2,
+        hasReservoir: true,
+        criticalCota: 2115.0, // Nivel crítico
+        minCota: 2098.0,
+        maxCota: 2153.0,
+        flowThresholds: { low: 45, normal: 115 },
+        currentStatus: 'online',
+        currentMW: 136.0,
+        currentCota: 2135.2,
+        currentFlow: 85.0,
+        cotaTrend: 'up',
+        flowTrend: 'down'
+      },
+      minasSanFrancisco: {
+        id: 'minasSanFrancisco',
+        name: 'Minas San Francisco',
+        shortName: 'Minas S.F.',
+        drawing: '/hydroelectric-drawings/Minas_San_Francisco.png',
+        maxMW: 270,
+        maxTurbines: 3,
+        activeTurbines: 2,
+        hasReservoir: true,
+        criticalCota: 783.0, // Nivel mínimo
+        minCota: 783.0,
+        maxCota: 792.0,
+        flowThresholds: { low: 25, normal: 65 },
+        currentStatus: 'online',
+        currentMW: 180.0,
+        currentCota: 788.5,
+        currentFlow: 45.0,
+        cotaTrend: 'down',
+        flowTrend: 'down'
+      },
+      agoyan: {
+        id: 'agoyan',
+        name: 'Agoyán',
+        shortName: 'Agoyán',
+        drawing: '/hydroelectric-drawings/Agoyan.png',
+        maxMW: 156,
+        maxTurbines: 2,
+        activeTurbines: 2,
+        hasReservoir: true,
+        criticalCota: 1645.0, // Nivel mínimo
+        minCota: 1645.0,
+        maxCota: 1651.0,
+        flowThresholds: { low: 80, normal: 160 },
+        currentStatus: 'online',
+        currentMW: 95.0,
+        currentCota: 1649.0,
+        currentFlow: 80.0,
+        cotaTrend: 'up',
+        flowTrend: 'up'
+      }
+    };
+
+    let activePlantKey = 'cocaCodoSinclair';
+    let isPortrait45 = false;
+
+    // Helper for delta / trend arrow (con colita y margen seguro en viewBox)
+    function getTrendArrowHtml(trend) {
+      if (trend === 'up') {
+        return `<span class="trend-arrow-wrap"><svg class="trend-arrow-svg trend-up" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#00e676" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="14" x2="8" y2="2"></line><polyline points="3.5,6.5 8,2 12.5,6.5"></polyline></svg></span>`;
+      } else if (trend === 'down') {
+        return `<span class="trend-arrow-wrap"><svg class="trend-arrow-svg trend-down" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2" x2="8" y2="14"></line><polyline points="3.5,9.5 8,14 12.5,9.5"></polyline></svg></span>`;
+      }
+      return '';
+    }
+
+    // Date formatting helper for Ecuador (UTC-5)
+    function getEcuadorDateParts(date = new Date()) {
+      const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      
+      const ecDate = new Date(date.getTime());
+      const dayName = days[ecDate.getDay()];
+      const dayNum = ecDate.getDate();
+      const monthName = months[ecDate.getMonth()];
+      const year = ecDate.getFullYear();
+      const hours = String(ecDate.getHours()).padStart(2, '0');
+      const mins = String(ecDate.getMinutes()).padStart(2, '0');
+
+      return {
+        dateStr: `${dayName}, ${dayNum} de ${monthName} ${year}`,
+        timeStr: `${hours}:${mins} ECT`
+      };
+    }
+
+    function updateCardDateTime(dateStr, timeStr) {
+      const dateEl = document.getElementById('card-date-str');
+      const timeEl = document.getElementById('card-time-str');
+      if (dateEl) dateEl.innerText = dateStr;
+      if (timeEl) timeEl.innerText = timeStr;
+    }
+
+
+
+    // Dynamic Cota styling (current/base with attached trend arrow)
+    function getCotaDisplay(plant) {
+      if (!plant.hasReservoir) {
+        if (plant.id === 'cocaCodoSinclair') {
+          return { html: '<span class="cota-val-text val-dimmed">De paso</span>' };
+        }
+        return { html: '<span class="cota-val-text val-dimmed">En cascada</span>' };
+      }
+
+      let baseCota = 2115;
+      let colorClass = 'val-good';
+
+      if (plant.id === 'mazar') {
+        baseCota = 2115;
+        if (plant.currentCota <= 2120.0) {
+          colorClass = 'val-danger';
+        } else if (plant.currentCota < 2130.0) {
+          colorClass = 'val-warning';
+        } else {
+          colorClass = 'val-good';
+        }
+      } else if (plant.id === 'molino') {
+        baseCota = 1975;
+        if (plant.currentCota < 1978.0) {
+          colorClass = 'val-danger';
+        } else if (plant.currentCota < 1982.0) {
+          colorClass = 'val-warning';
+        } else {
+          colorClass = 'val-good';
+        }
+      } else if (plant.id === 'minasSanFrancisco') {
+        baseCota = 783;
+        if (plant.currentCota < 784.0) {
+          colorClass = 'val-danger';
+        } else if (plant.currentCota < 786.0) {
+          colorClass = 'val-warning';
+        } else {
+          colorClass = 'val-good';
+        }
+      } else if (plant.id === 'agoyan') {
+        baseCota = 1645;
+        if (plant.currentCota < 1646.0) {
+          colorClass = 'val-danger';
+        } else if (plant.currentCota < 1648.0) {
+          colorClass = 'val-warning';
+        } else {
+          colorClass = 'val-good';
+        }
+      }
+
+      const trendHtml = getTrendArrowHtml(plant.cotaTrend || 'up');
+      const valStr = plant.currentCota.toFixed(1);
+      return {
+        html: `<span class="cota-val-text ${colorClass}">${valStr}${trendHtml}</span><span class="cota-base-ref">/ ${baseCota}</span>`
+      };
+    }
+
+    // Dynamic Flow styling
+    function getFlowDisplay(plant) {
+      const flow = plant.currentFlow;
+      const th = plant.flowThresholds;
+      let colorClass = 'val-good';
+
+      if (flow < th.low) {
+        colorClass = 'val-danger';
+      } else if (flow < th.normal) {
+        colorClass = 'val-warning';
+      } else {
+        colorClass = 'val-good';
+      }
+
+      const trendHtml = getTrendArrowHtml(plant.flowTrend || 'up');
+      return {
+        text: `${Math.round(flow)} m³/s`,
+        colorClass,
+        trendHtml
+      };
+    }
+
+    // Render the 6 plants in the card table
+    function renderCard() {
+      const container = document.getElementById('plants-rows-list');
+      container.innerHTML = '';
+
+      let totalMW = 0;
+      let totalCapacity = 0;
+      let activeCount = 0;
+
+      // Ordered list of the 6 plants
+      const plantKeys = ['cocaCodoSinclair', 'molino', 'sopladora', 'mazar', 'minasSanFrancisco', 'agoyan'];
+
+      plantKeys.forEach(key => {
+        const p = PLANTS_CONFIG[key];
+        totalCapacity += p.maxMW;
+        if (p.currentStatus === 'online') {
+          totalMW += p.currentMW;
+          activeCount++;
+        }
+
+        const pctGen = Math.min(100, Math.round((p.currentMW / p.maxMW) * 100));
+        const cotaInfo = getCotaDisplay(p);
+        const flowInfo = getFlowDisplay(p);
+
+        // Turbines display
+        const turbText = `${p.activeTurbines}/${p.maxTurbines}`;
+        const turbColorClass = p.activeTurbines === 0 ? 'val-danger' : '';
+
+        // Battery fill color
+        let batteryColor = '#00e676';
+        if (p.currentStatus === 'offline' || pctGen === 0) {
+          batteryColor = '#f43f5e';
+        } else if (pctGen < 40) {
+          batteryColor = '#fbbf24';
+        }
+
+        const row = document.createElement('div');
+        row.className = 'plant-matrix-row';
+        row.innerHTML = `
+          <!-- Col 1: Drawing Thumbnail + Name -->
+          <div class="plant-info-cell">
+            <img src="${p.drawing}" class="plant-thumb-img" alt="${p.shortName}">
+            <div class="plant-names">
+              <span class="plant-name-text">${p.shortName}</span>
+              <span class="plant-cap-text">MAX: ${p.maxMW} MW</span>
+            </div>
+          </div>
+
+          <!-- Col 2: Turbinas (x/x) -->
+          <div class="turbines-cell">
+            <span class="turbines-val ${turbColorClass}">${turbText}</span>
+          </div>
+
+          <!-- Col 3: Generación (MW + Battery) -->
+          <div class="gen-cell">
+            <span class="gen-val-text">${p.currentStatus === 'online' ? p.currentMW.toFixed(0) : '0'} MW</span>
+            <div class="battery-icon-wrap">
+              <div class="battery-icon-body">
+                <div class="battery-icon-fill" style="width: ${p.currentStatus === 'online' ? pctGen : 0}%; background-color: ${batteryColor};"></div>
+              </div>
+              <div class="battery-icon-cap"></div>
+            </div>
+          </div>
+
+          <!-- Col 4: Cota (XX/XX) -->
+          <div class="cota-cell">
+            ${cotaInfo.html}
+          </div>
+
+          <!-- Col 5: Caudal -->
+          <div class="flow-cell">
+            <span class="flow-val-text ${flowInfo.colorClass}">${flowInfo.text}${flowInfo.trendHtml}</span>
+          </div>
+        `;
+
+        container.appendChild(row);
+      });
+
+      // Update KPI Blocks
+      document.getElementById('kpi-total-mw').innerText = `${Math.round(totalMW).toLocaleString()} MW`;
+      document.getElementById('kpi-total-cap').innerText = `De ${totalCapacity.toLocaleString()} MW instalados`;
+
+      const pctTotal = ((totalMW / totalCapacity) * 100).toFixed(1);
+      const pctEl = document.getElementById('kpi-total-pct');
+      pctEl.innerText = `${pctTotal}%`;
+
+      if (pctTotal >= 70) {
+        pctEl.style.color = '#00e676';
+      } else if (pctTotal >= 50) {
+        pctEl.style.color = '#fbbf24';
+      } else {
+        pctEl.style.color = '#f43f5e';
+      }
+    }
+
+    // Sync plant editor form controls with active selected plant
+    function updateEditorControls() {
+      const p = PLANTS_CONFIG[activePlantKey];
+      document.getElementById('edit-plant-name').innerText = p.name;
+      document.getElementById('edit-plant-status').value = p.currentStatus;
+
+      // Turbines slider
+      const turbSlider = document.getElementById('edit-plant-turbines-slider');
+      turbSlider.max = p.maxTurbines;
+      turbSlider.value = p.activeTurbines;
+      document.getElementById('edit-plant-turbines-val').innerText = `${p.activeTurbines}/${p.maxTurbines}`;
+
+      // Gen slider
+      const genSlider = document.getElementById('edit-plant-gen-slider');
+      genSlider.max = p.maxMW;
+      genSlider.value = p.currentMW;
+      document.getElementById('edit-plant-gen-val').innerText = `${p.currentMW.toFixed(0)} MW (${Math.round((p.currentMW/p.maxMW)*100)}%)`;
+
+      // Cota controls
+      const cotaGroup = document.getElementById('cota-control-group');
+      if (p.hasReservoir) {
+        cotaGroup.style.display = 'flex';
+        const cotaSlider = document.getElementById('edit-plant-cota-slider');
+        cotaSlider.min = p.minCota;
+        cotaSlider.max = p.maxCota;
+        cotaSlider.value = p.currentCota;
+        document.getElementById('edit-plant-cota-val').innerText = `${p.currentCota.toFixed(1)} m`;
+        document.getElementById('edit-cota-label').innerText = `Cota Embalse (Mín: ${p.minCota}m)`;
+      } else {
+        cotaGroup.style.display = 'none';
+      }
+
+      // Flow controls
+      const flowGroup = document.getElementById('flow-control-group');
+      if (p.currentFlow !== undefined) {
+        flowGroup.style.display = 'flex';
+        const flowSlider = document.getElementById('edit-plant-flow-slider');
+        flowSlider.value = p.currentFlow;
+        document.getElementById('edit-plant-flow-val').innerText = `${Math.round(p.currentFlow)} m³/s`;
+      } else {
+        flowGroup.style.display = 'none';
+      }
+
+      // Trend buttons state
+      if (p.hasReservoir) {
+        document.getElementById('btn-cota-trend-up').classList.toggle('active', (p.cotaTrend || 'up') === 'up');
+        document.getElementById('btn-cota-trend-down').classList.toggle('active', p.cotaTrend === 'down');
+      }
+      document.getElementById('btn-flow-trend-up').classList.toggle('active', (p.flowTrend || 'up') === 'up');
+      document.getElementById('btn-flow-trend-down').classList.toggle('active', p.flowTrend === 'down');
+    }
+
+    // Set up interactive listeners
+    function setupEventListeners() {
+      // Plant Tabs
+      document.querySelectorAll('.plant-tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.plant-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activePlantKey = btn.getAttribute('data-plant');
+          updateEditorControls();
+        });
+      });
+
+      // Status selector
+      document.getElementById('edit-plant-status').addEventListener('change', (e) => {
+        const val = e.target.value;
+        const p = PLANTS_CONFIG[activePlantKey];
+        p.currentStatus = val;
+        if (val === 'offline') {
+          p.activeTurbines = 0;
+          p.currentMW = 0;
+        } else if (val === 'online' && p.activeTurbines === 0) {
+          p.activeTurbines = p.maxTurbines;
+          p.currentMW = Math.round(p.maxMW * 0.8);
+        }
+        updateEditorControls();
+        renderCard();
+      });
+
+      // Turbines slider
+      document.getElementById('edit-plant-turbines-slider').addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        const p = PLANTS_CONFIG[activePlantKey];
+        p.activeTurbines = val;
+        if (val === 0) {
+          p.currentStatus = 'offline';
+          p.currentMW = 0;
+        } else {
+          p.currentStatus = 'online';
+          p.currentMW = Math.round((val / p.maxTurbines) * p.maxMW * 0.95);
+        }
+        document.getElementById('edit-plant-turbines-val').innerText = `${val}/${p.maxTurbines}`;
+        updateEditorControls();
+        renderCard();
+      });
+
+      // Gen slider
+      document.getElementById('edit-plant-gen-slider').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        const p = PLANTS_CONFIG[activePlantKey];
+        p.currentMW = val;
+        if (val > 0 && p.currentStatus === 'offline') {
+          p.currentStatus = 'online';
+          p.activeTurbines = Math.max(1, Math.round((val / p.maxMW) * p.maxTurbines));
+        } else if (val === 0) {
+          p.activeTurbines = 0;
+        }
+        document.getElementById('edit-plant-gen-val').innerText = `${val.toFixed(0)} MW (${Math.round((val/p.maxMW)*100)}%)`;
+        renderCard();
+      });
+
+      // Cota slider
+      document.getElementById('edit-plant-cota-slider').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        PLANTS_CONFIG[activePlantKey].currentCota = val;
+        document.getElementById('edit-plant-cota-val').innerText = `${val.toFixed(1)} m`;
+        renderCard();
+      });
+
+      // Flow slider
+      document.getElementById('edit-plant-flow-slider').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        PLANTS_CONFIG[activePlantKey].currentFlow = val;
+        document.getElementById('edit-plant-flow-val').innerText = `${Math.round(val)} m³/s`;
+        renderCard();
+      });
+
+      // Trend buttons listeners
+      document.getElementById('btn-cota-trend-up').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].cotaTrend = 'up';
+        updateEditorControls();
+        renderCard();
+      });
+      document.getElementById('btn-cota-trend-down').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].cotaTrend = 'down';
+        updateEditorControls();
+        renderCard();
+      });
+      document.getElementById('btn-flow-trend-up').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].flowTrend = 'up';
+        updateEditorControls();
+        renderCard();
+      });
+      document.getElementById('btn-flow-trend-down').addEventListener('click', () => {
+        PLANTS_CONFIG[activePlantKey].flowTrend = 'down';
+        updateEditorControls();
+        renderCard();
+      });
+
+      // Main Title input
+      document.getElementById('input-main-title').addEventListener('input', (e) => {
+        document.getElementById('card-main-title').innerText = e.target.value.toUpperCase();
+      });
+
+
+      // Time Sync button
+      document.getElementById('btn-sync-time').addEventListener('click', () => {
+        const parts = getEcuadorDateParts();
+        updateCardDateTime(parts.dateStr, parts.timeStr);
+      });
+
+      // Aspect Ratio Toggle
+      document.getElementById('btn-toggle-aspect').addEventListener('click', () => {
+        isPortrait45 = !isPortrait45;
+        const card = document.getElementById('cover-card');
+        const aspectLabel = document.getElementById('aspect-label');
+        const toggleBtn = document.getElementById('btn-toggle-aspect');
+
+        if (isPortrait45) {
+          card.classList.add('aspect-4-5');
+          aspectLabel.innerText = '1080 x 1350 px (4:5)';
+          toggleBtn.innerText = 'Cambiar a 1:1';
+        } else {
+          card.classList.remove('aspect-4-5');
+          aspectLabel.innerText = '1080 x 1080 px (1:1)';
+          toggleBtn.innerText = 'Cambiar a 4:5';
+        }
+      });
+
+      // Preset helper to update badge
+      function markPresetActive(presetName) {
+        const badgeEl = document.getElementById('live-indicator-badge');
+        if (badgeEl) {
+          badgeEl.style.background = '#1e293b';
+          badgeEl.style.color = '#94a3b8';
+          badgeEl.textContent = `Preset: ${presetName}`;
+        }
+        const statusEl = document.getElementById('live-fetch-status');
+        if (statusEl) statusEl.textContent = '';
+      }
+
+      // Live Telemetry Query Button (Official Endpoints: CELEC & CENACE)
+      const fetchLiveBtn = document.getElementById('btn-fetch-live-data');
+      if (fetchLiveBtn) {
+        fetchLiveBtn.addEventListener('click', async () => {
+          const statusEl = document.getElementById('live-fetch-status');
+          const badgeEl = document.getElementById('live-indicator-badge');
+          const btnText = document.getElementById('btn-fetch-live-data-text');
+
+          fetchLiveBtn.disabled = true;
+          if (btnText) btnText.textContent = 'Consultando endpoints oficiales...';
+          statusEl.style.color = '#38bdf8';
+          statusEl.textContent = 'Obteniendo telemetría en tiempo real de 6 centrales...';
+
+          try {
+            const res = await fetch('/api/cover-live-data');
+            const data = await res.json();
+
+            if (!data.success) {
+              throw new Error(data.error || 'Error al obtener datos en vivo');
+            }
+
+            // Update each plant in PLANTS_CONFIG
+            for (const [key, plantMetrics] of Object.entries(data.plants)) {
+              if (PLANTS_CONFIG[key]) {
+                PLANTS_CONFIG[key].currentMW = plantMetrics.currentMW;
+                PLANTS_CONFIG[key].activeTurbines = plantMetrics.activeTurbines;
+                PLANTS_CONFIG[key].currentStatus = plantMetrics.currentStatus;
+                if (PLANTS_CONFIG[key].hasReservoir) {
+                  PLANTS_CONFIG[key].currentCota = plantMetrics.currentCota;
+                  PLANTS_CONFIG[key].cotaTrend = plantMetrics.cotaTrend;
+                }
+                PLANTS_CONFIG[key].currentFlow = plantMetrics.currentFlow;
+                PLANTS_CONFIG[key].flowTrend = plantMetrics.flowTrend;
+              }
+            }
+
+            // Update date subtitle with official ECT time
+            if (data.formattedDateEcuador) {
+              const parts = data.formattedDateEcuador.split(' • ');
+              if (parts.length === 2) {
+                updateCardDateTime(parts[0], parts[1]);
+              } else {
+                updateCardDateTime(data.formattedDateEcuador, `${data.hourEcuador}:00 ECT`);
+              }
+            }
+
+            // Update badge & status message
+            if (badgeEl) {
+              badgeEl.style.background = 'rgba(0, 230, 118, 0.15)';
+              badgeEl.style.color = '#00e676';
+              badgeEl.textContent = `En vivo • ${data.hourEcuador}:00 ECT`;
+            }
+
+            statusEl.style.color = '#00e676';
+            statusEl.textContent = `✓ Datos reales actualizados (${data.totalMW.toLocaleString()} MW • ${data.capacityPercent}%)`;
+
+            // Update active plant controls and re-render card
+            updateEditorControls();
+            renderCard();
+          } catch (err) {
+            console.error('Error fetching live data:', err);
+            statusEl.style.color = '#f43f5e';
+            statusEl.textContent = `Error: ${err.message}`;
+          } finally {
+            fetchLiveBtn.disabled = false;
+            if (btnText) btnText.textContent = 'Consultar Endpoints (CELEC & CENACE)';
+          }
+        });
+      }
+
+      // Presets
+      document.getElementById('preset-normal').addEventListener('click', () => {
+        markPresetActive('Normal');
+        PLANTS_CONFIG.cocaCodoSinclair.currentStatus = 'online';
+        PLANTS_CONFIG.cocaCodoSinclair.activeTurbines = 8;
+        PLANTS_CONFIG.cocaCodoSinclair.currentMW = 1120;
+        PLANTS_CONFIG.cocaCodoSinclair.currentFlow = 480;
+        PLANTS_CONFIG.cocaCodoSinclair.flowTrend = 'up';
+
+        PLANTS_CONFIG.molino.currentStatus = 'online';
+        PLANTS_CONFIG.molino.activeTurbines = 8;
+        PLANTS_CONFIG.molino.currentMW = 890;
+        PLANTS_CONFIG.molino.currentCota = 1987.4;
+        PLANTS_CONFIG.molino.currentFlow = 154;
+        PLANTS_CONFIG.molino.cotaTrend = 'up';
+        PLANTS_CONFIG.molino.flowTrend = 'up';
+
+        PLANTS_CONFIG.sopladora.currentStatus = 'online';
+        PLANTS_CONFIG.sopladora.activeTurbines = 3;
+        PLANTS_CONFIG.sopladora.currentMW = 380;
+        PLANTS_CONFIG.sopladora.currentFlow = 145;
+        PLANTS_CONFIG.sopladora.flowTrend = 'up';
+
+        PLANTS_CONFIG.mazar.currentStatus = 'online';
+        PLANTS_CONFIG.mazar.activeTurbines = 2;
+        PLANTS_CONFIG.mazar.currentMW = 136;
+        PLANTS_CONFIG.mazar.currentCota = 2135.2;
+        PLANTS_CONFIG.mazar.currentFlow = 85;
+        PLANTS_CONFIG.mazar.cotaTrend = 'up';
+        PLANTS_CONFIG.mazar.flowTrend = 'up';
+
+        PLANTS_CONFIG.minasSanFrancisco.currentStatus = 'online';
+        PLANTS_CONFIG.minasSanFrancisco.activeTurbines = 2;
+        PLANTS_CONFIG.minasSanFrancisco.currentMW = 180;
+        PLANTS_CONFIG.minasSanFrancisco.currentCota = 788.5;
+        PLANTS_CONFIG.minasSanFrancisco.currentFlow = 45;
+        PLANTS_CONFIG.minasSanFrancisco.cotaTrend = 'up';
+        PLANTS_CONFIG.minasSanFrancisco.flowTrend = 'up';
+
+        PLANTS_CONFIG.agoyan.currentStatus = 'online';
+        PLANTS_CONFIG.agoyan.activeTurbines = 2;
+        PLANTS_CONFIG.agoyan.currentMW = 95;
+        PLANTS_CONFIG.agoyan.currentCota = 1649.0;
+        PLANTS_CONFIG.agoyan.currentFlow = 80;
+        PLANTS_CONFIG.agoyan.cotaTrend = 'up';
+        PLANTS_CONFIG.agoyan.flowTrend = 'up';
+
+        updateEditorControls();
+        renderCard();
+      });
+
+      document.getElementById('preset-alert').addEventListener('click', () => {
+        markPresetActive('Alerta Mazar');
+        PLANTS_CONFIG.mazar.currentStatus = 'online';
+        PLANTS_CONFIG.mazar.activeTurbines = 1;
+        PLANTS_CONFIG.mazar.currentMW = 75;
+        PLANTS_CONFIG.mazar.currentCota = 2124.0; // Alerta 2124m (previo al límite rojo de 2120m)
+        PLANTS_CONFIG.mazar.currentFlow = 40;
+        PLANTS_CONFIG.mazar.cotaTrend = 'down';
+        PLANTS_CONFIG.mazar.flowTrend = 'down';
+
+        PLANTS_CONFIG.molino.currentStatus = 'online';
+        PLANTS_CONFIG.molino.activeTurbines = 6;
+        PLANTS_CONFIG.molino.currentMW = 650;
+        PLANTS_CONFIG.molino.currentCota = 1978.5;
+        PLANTS_CONFIG.molino.cotaTrend = 'down';
+        PLANTS_CONFIG.molino.flowTrend = 'down';
+
+        updateEditorControls();
+        renderCard();
+      });
+
+      document.getElementById('preset-critical').addEventListener('click', () => {
+        markPresetActive('Estiaje Crítico');
+        PLANTS_CONFIG.mazar.currentStatus = 'offline';
+        PLANTS_CONFIG.mazar.activeTurbines = 0;
+        PLANTS_CONFIG.mazar.currentMW = 0;
+        PLANTS_CONFIG.mazar.currentCota = 2113.2; // BAJO COTA CRÍTICA 2115m (-1.8m)
+        PLANTS_CONFIG.mazar.currentFlow = 25;
+        PLANTS_CONFIG.mazar.cotaTrend = 'down';
+        PLANTS_CONFIG.mazar.flowTrend = 'down';
+
+        PLANTS_CONFIG.molino.currentStatus = 'online';
+        PLANTS_CONFIG.molino.activeTurbines = 4;
+        PLANTS_CONFIG.molino.currentMW = 450;
+        PLANTS_CONFIG.molino.currentCota = 1975.4; // Muy cerca al mínimo 1975m
+        PLANTS_CONFIG.molino.currentFlow = 68;
+        PLANTS_CONFIG.molino.cotaTrend = 'down';
+        PLANTS_CONFIG.molino.flowTrend = 'down';
+
+        PLANTS_CONFIG.cocaCodoSinclair.currentStatus = 'online';
+        PLANTS_CONFIG.cocaCodoSinclair.activeTurbines = 6;
+        PLANTS_CONFIG.cocaCodoSinclair.currentMW = 980;
+        PLANTS_CONFIG.cocaCodoSinclair.currentFlow = 175; // Caudal bajo
+        PLANTS_CONFIG.cocaCodoSinclair.flowTrend = 'down';
+
+        PLANTS_CONFIG.sopladora.flowTrend = 'down';
+        PLANTS_CONFIG.minasSanFrancisco.cotaTrend = 'down';
+        PLANTS_CONFIG.minasSanFrancisco.flowTrend = 'down';
+        PLANTS_CONFIG.agoyan.cotaTrend = 'down';
+        PLANTS_CONFIG.agoyan.flowTrend = 'down';
+
+        updateEditorControls();
+        renderCard();
+      });
+
+      document.getElementById('preset-partial').addEventListener('click', () => {
+        markPresetActive('Operación Parcial');
+        PLANTS_CONFIG.mazar.currentStatus = 'standby';
+        PLANTS_CONFIG.mazar.activeTurbines = 0;
+        PLANTS_CONFIG.mazar.currentMW = 0;
+        PLANTS_CONFIG.mazar.cotaTrend = 'down';
+        PLANTS_CONFIG.molino.activeTurbines = 5;
+        PLANTS_CONFIG.molino.currentMW = 550;
+        PLANTS_CONFIG.molino.cotaTrend = 'down';
+        PLANTS_CONFIG.sopladora.activeTurbines = 2;
+        PLANTS_CONFIG.sopladora.currentMW = 240;
+        PLANTS_CONFIG.sopladora.flowTrend = 'down';
+        updateEditorControls();
+        renderCard();
+      });
+
+      // Reset Defaults
+      document.getElementById('btn-reset-defaults').addEventListener('click', () => {
+        document.getElementById('preset-normal').click();
+      });
+
+      // High-Res Export to PNG (scale: 2 => 1200x1200px)
+      document.getElementById('btn-export-png').addEventListener('click', async () => {
+        const cardEl = document.getElementById('cover-card');
+        const statusEl = document.getElementById('export-status');
+        statusEl.innerText = 'Generando imagen en alta resolución...';
+
+        try {
+          const canvas = await html2canvas(cardEl, {
+            scale: 2,
+            backgroundColor: '#080c14',
+            useCORS: true
+          });
+
+          const imageData = canvas.toDataURL('image/png');
+          const nowStr = new Date().toISOString().replace(/[:.]/g, '-');
+          const filename = `portada_instagram_${nowStr}.png`;
+
+          // Send to visualizer server to save to /generated/
+          const res = await fetch('/generate-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, imageData })
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            statusEl.innerText = `Portada guardada: generated/${filename}`;
+            // Trigger browser download
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = imageData;
+            link.click();
+          } else {
+            statusEl.innerText = `Error del servidor: ${data.error}`;
+          }
+        } catch (err) {
+          statusEl.innerText = `Error: ${err.message}`;
+        }
+      });
+    }
+
+    // Global exports for Puppeteer programmatic screenshot generation
+    window.PLANTS_CONFIG = PLANTS_CONFIG;
+    window.updateCardDateTime = updateCardDateTime;
+    window.renderCard = renderCard;
+
+    window.fixDrawingPaths = function(drawingsPath) {
+      for (const [key, p] of Object.entries(PLANTS_CONFIG)) {
+        if (p.drawing && p.drawing.startsWith('/hydroelectric-drawings/')) {
+          const imgName = p.drawing.replace('/hydroelectric-drawings/', '');
+          p.drawing = `file://${drawingsPath}/${imgName}`;
+        }
+      }
+    };
+
+    window.applyCoverData = function(data) {
+      if (!data) return;
+      if (data.plants) {
+        for (const [key, plantMetrics] of Object.entries(data.plants)) {
+          if (PLANTS_CONFIG[key]) {
+            PLANTS_CONFIG[key].currentMW = plantMetrics.currentMW;
+            PLANTS_CONFIG[key].activeTurbines = plantMetrics.activeTurbines;
+            PLANTS_CONFIG[key].currentStatus = plantMetrics.currentStatus;
+            if (PLANTS_CONFIG[key].hasReservoir) {
+              PLANTS_CONFIG[key].currentCota = plantMetrics.currentCota;
+              PLANTS_CONFIG[key].cotaTrend = plantMetrics.cotaTrend;
+            }
+            PLANTS_CONFIG[key].currentFlow = plantMetrics.currentFlow;
+            PLANTS_CONFIG[key].flowTrend = plantMetrics.flowTrend;
+          }
+        }
+      }
+      if (data.formattedDateEcuador) {
+        const parts = data.formattedDateEcuador.split(' • ');
+        if (parts.length === 2) {
+          updateCardDateTime(parts[0], parts[1]);
+        } else {
+          updateCardDateTime(data.formattedDateEcuador, `${data.hourEcuador}:00 ECT`);
+        }
+      }
+      renderCard();
+    };
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      const initialParts = getEcuadorDateParts();
+      updateCardDateTime(initialParts.dateStr, initialParts.timeStr);
+      updateEditorControls();
+      renderCard();
+      setupEventListeners();
+    });
+
+    // SSE auto-reload
+    try {
+      const evtSource = new EventSource('/sse');
+      evtSource.onmessage = function(e) {
+        if (e.data === 'reload') {
+          location.reload();
+        }
+      };
+    } catch (e) {}
+  </script>
+</body>
+</html>
