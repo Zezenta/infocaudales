@@ -25,6 +25,7 @@ async function getBrowser(): Promise<Browser> {
     const execPath = process.env.PUPPETEER_EXECUTABLE_PATH || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
     browserInstance = await puppeteer.launch({
       headless: true,
+      timeout: 60000,
       ...(execPath ? { executablePath: execPath } : {}),
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--allow-file-access-from-files', '--enable-local-file-accesses']
     });
