@@ -175,7 +175,8 @@ describe('post-formatter', () => {
       });
 
       expect(text).toContain('• Registro: 2026-10-16 de 01:10 a 01:55 ECT');
-      expect(text).toContain('Evento de Lluvia');
+      expect(text).toContain('🌧️ Evento de Lluvia en Complejo Hidroeléctrico Paute');
+      expect(text).not.toContain('Monitoreo Satelital GOES-16');
       expect(text.toLowerCase()).not.toContain('tormenta');
     });
   });

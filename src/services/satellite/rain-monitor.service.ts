@@ -547,22 +547,6 @@ export class RainMonitorService {
 
     // 4. An ACTIVE storm event is in progress
     const elapsedMinutes = Math.round((now - existingEvent.detected_at) / 60000);
-
-    // Guardrail: verify event duration is realistic for a convective rain storm (max 360 min / 6 hours)
-    if (elapsedMinutes > 360) {
-      systemLogger.warn(
-        `[RainMonitor] Rain event #${existingEvent.id} for ${plantKey} duration (${elapsedMinutes} min) exceeds maximum plausible window (360 min). Discarding corrupted event without publishing.`
-      );
-      db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
-      existingEvent.status = 'CLOSED';
-      return {
-        plantKey,
-        action: 'NO_STORM',
-        coveragePct: 0,
-        message: `Evento descartado por duración anómala (${elapsedMinutes} min > 360 min).`
-      };
-    }
-
     const newPeak = Math.max(existingEvent.peak_coverage_pct, coveragePct);
 
     db.prepare(`
@@ -656,6 +640,7 @@ export class RainMonitorService {
         createGif: false,
         showAllPins: true,
         showDetectionBoxes: true,
+        showProvinces: true,
         highlightBasinKey: plantKey,
         activeBasinKeys: [plantKey],
         stormWindow: {
@@ -678,6 +663,7 @@ export class RainMonitorService {
         createGif: false,
         showAllPins: true,
         showDetectionBoxes: true,
+        showProvinces: true,
         highlightBasinKey: plantKey,
         activeBasinKeys: [plantKey],
         stormWindow: {
@@ -1543,7 +1529,7 @@ export class RainMonitorService {
       showCityPins: true,
       showDetectionBoxes: true,
       showThermalScale: true,
-      showProvinces: selectedSource === 'nasa_gibs',
+      showProvinces: true,
       createMp4: true,
       createGif: false,
       activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set(),

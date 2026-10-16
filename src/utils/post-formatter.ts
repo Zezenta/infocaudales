@@ -242,7 +242,7 @@ export function buildStormAlertPostText(options: StormAlertPostOptions): string 
     hashtag = '#Agoyan #Pastaza';
   }
 
-  let text = `🌧️ Monitoreo Satelital GOES-16: Evento de Lluvia en ${basinName}\n\n` +
+  let text = `🌧️ Evento de Lluvia en ${basinName}\n\n` +
     `Se registró actividad convectiva relevante sobre la cuenca de recarga hídrica:\n` +
     `• Pico de cobertura: ${peakPct}%\n`;
 
