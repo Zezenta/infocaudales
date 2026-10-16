@@ -1004,10 +1004,11 @@ if (FORCE_TEST_FB_IG) {
         }
       }
 
-      // 2. Video Satelital 24h (Reel en Instagram y Video en Facebook)
-      console.log('\n[FORCE FB/IG TEST] [2/2] 🛰️ Generando video resumen satelital de 24 horas...');
+      // 2. Video Satelital 24h (Reel en Instagram y Video en Facebook con NASA GIBS)
+      console.log('\n[FORCE FB/IG TEST] [2/2] 🛰️ Generando video resumen satelital de 24 horas usando NASA GIBS...');
       try {
         await rainMonitorService.generateDailySummaryVideo({
+          source: 'nasa_gibs',
           autoPublishToX: false,
           autoPublishToSocial: true
         });

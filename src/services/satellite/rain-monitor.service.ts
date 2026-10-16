@@ -1263,6 +1263,7 @@ export class RainMonitorService {
     dateEcuador?: string;
     autoPublishToX?: boolean;
     autoPublishToSocial?: boolean;
+    source?: 'geoserver' | 'nasa_gibs';
     framerate?: number;
   } = {}): Promise<{
     compilation: CompiledAnimationResult;
@@ -1279,26 +1280,54 @@ export class RainMonitorService {
 
     systemLogger.info(`[RainMonitor] Generating 24h satellite daily summary video for ${targetDate}...`);
 
-    let rows = db.prepare(`
-      SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
-      FROM satellite_archive
-      WHERE date_ecuador = ? AND source = 'geoserver'
-      ORDER BY timestamp_iso ASC
-    `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+    const requestedSource = options.source;
+    let selectedSource: 'geoserver' | 'nasa_gibs' = requestedSource || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
 
-    if (!rows || rows.length < 6) {
-      // Fallback to any available source if geoserver had fewer than 6 frames
+    let rows: Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string; source: string }> = [];
+
+    if (requestedSource) {
       rows = db.prepare(`
-        SELECT file_path, date_ecuador, time_ecuador, timestamp_iso
+        SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
         FROM satellite_archive
-        WHERE date_ecuador = ?
+        WHERE date_ecuador = ? AND source = ?
         ORDER BY timestamp_iso ASC
-      `).all(targetDate) as Array<{ file_path: string; date_ecuador: string; time_ecuador: string; timestamp_iso: string }>;
+      `).all(targetDate, requestedSource) as any[];
+      selectedSource = requestedSource;
+    } else {
+      // Auto: count frames from both sources and pick the one with more available frames
+      const geoCount = (db.prepare(`
+        SELECT COUNT(*) as c FROM satellite_archive WHERE date_ecuador = ? AND source = 'geoserver'
+      `).get(targetDate) as any)?.c || 0;
+
+      const nasaCount = (db.prepare(`
+        SELECT COUNT(*) as c FROM satellite_archive WHERE date_ecuador = ? AND source = 'nasa_gibs'
+      `).get(targetDate) as any)?.c || 0;
+
+      selectedSource = (nasaCount > geoCount && nasaCount >= 6) ? 'nasa_gibs' : 'geoserver';
+
+      rows = db.prepare(`
+        SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
+        FROM satellite_archive
+        WHERE date_ecuador = ? AND source = ?
+        ORDER BY timestamp_iso ASC
+      `).all(targetDate, selectedSource) as any[];
+
+      if ((!rows || rows.length < 6) && (nasaCount >= 6 || geoCount >= 6)) {
+        selectedSource = nasaCount >= 6 ? 'nasa_gibs' : 'geoserver';
+        rows = db.prepare(`
+          SELECT file_path, date_ecuador, time_ecuador, timestamp_iso, source
+          FROM satellite_archive
+          WHERE date_ecuador = ? AND source = ?
+          ORDER BY timestamp_iso ASC
+        `).all(targetDate, selectedSource) as any[];
+      }
     }
 
     if (!rows || rows.length < 6) {
       throw new Error(`[RainMonitor] Not enough archived satellite frames for date ${targetDate} (found: ${rows?.length || 0})`);
     }
+
+    systemLogger.info(`[RainMonitor] Using ${rows.length} frames from source '${selectedSource}' for ${targetDate} daily summary.`);
 
     const targetBasins = ['cocaCodoSinclair', 'paute'];
     const activePerFrame = new Map<number, Set<string>>();
@@ -1333,7 +1362,7 @@ export class RainMonitorService {
         buffer,
         bbox: ecuadorBbox,
         plantKey: 'ecuador',
-        source: 'geoserver'
+        source: selectedSource
       });
 
       const activeBasins = new Set<string>();
@@ -1347,7 +1376,7 @@ export class RainMonitorService {
 
         for (const bKey of targetBasins) {
           const threshold = DEFAULT_STORM_THRESHOLDS[bKey] ?? 10.0;
-          const cov = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES[bKey].bbox);
+          const cov = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES[bKey].bbox, selectedSource);
           const stats = basinStats.get(bKey)!;
           if (cov > stats.maxCoverage) stats.maxCoverage = cov;
 
@@ -1360,7 +1389,7 @@ export class RainMonitorService {
           if (bKey === 'paute') framePaute = cov;
         }
 
-        frameRegions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox);
+        frameRegions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox, selectedSource);
         if (frameRegions.costa > regionPeaks.costa) regionPeaks.costa = frameRegions.costa;
         if (frameRegions.sierra > regionPeaks.sierra) regionPeaks.sierra = frameRegions.sierra;
         if (frameRegions.amazonia > regionPeaks.amazonia) regionPeaks.amazonia = frameRegions.amazonia;
@@ -1401,6 +1430,7 @@ export class RainMonitorService {
       showCityPins: true,
       showDetectionBoxes: true,
       showThermalScale: true,
+      showProvinces: selectedSource === 'nasa_gibs',
       createMp4: true,
       createGif: false,
       activeBasinResolver: (frame, idx) => activePerFrame.get(idx) || new Set(),
