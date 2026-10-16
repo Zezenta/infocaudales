@@ -23,7 +23,7 @@ import { CelecService, CelecPointValue } from './services/telemetry/celec.servic
 import { CenaceService } from './services/telemetry/cenace.service.js';
 import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
 import { PredictionService } from './services/prediction.service.js';
-import { XService } from './services/x.service.js';
+import { XService } from './services/social/x.service.js';
 import { SatelliteTelemetryService, SatelliteMapService } from './services/telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './services/satellite/video-compiler.service.js';
 import { RainMonitorService } from './services/satellite/rain-monitor.service.js';

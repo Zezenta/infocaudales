@@ -6,7 +6,7 @@ import { BASIN_GEOMETRIES, COSTA_SIERRA_DIVIDE, SIERRA_AMAZONIA_DIVIDE, interpol
 import { SatelliteTelemetryService, SatelliteMapService, SatelliteFrame, SatelliteSource } from '../telemetry/satellite-telemetry.service.js';
 import { SatelliteArchiverService } from './satellite-archiver.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
-import { XService } from '../x.service.js';
+import { XService } from '../social/x.service.js';
 import { buildStormAlertPostText, buildDailySatelliteSummaryPostText } from '../../utils/post-formatter.js';
 import { systemLogger } from '../../utils/logger.js';
 

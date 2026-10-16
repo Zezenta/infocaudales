@@ -4,7 +4,7 @@ dotenv.config();
 import { SatelliteArchiverService } from '../../services/satellite/satellite-archiver.service.js';
 import { SatelliteMapService } from '../../services/telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from '../../services/satellite/video-compiler.service.js';
-import { XService } from '../../services/x.service.js';
+import { XService } from '../../services/social/x.service.js';
 
 async function run() {
   console.log('🎬 1. Obteniendo 6 fotogramas recientes del archivo satelital...');
