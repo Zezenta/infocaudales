@@ -261,6 +261,8 @@ describe('RainMonitorService', () => {
 
       let publishedMessage = '';
       let publishedVideoPath = '';
+      let fbVideoCalled = false;
+      let igReelCalled = false;
       const mockXService = {
         postVideo: async (msg: string, vidPath: string) => {
           publishedMessage = msg;
@@ -268,8 +270,27 @@ describe('RainMonitorService', () => {
           return { data: { id: 'tweet_storm_999' } };
         }
       } as any;
+      const mockFbService = {
+        postVideo: async () => {
+          fbVideoCalled = true;
+          return { id: 'fb_vid_123', postId: 'fb_vid_123' };
+        }
+      } as any;
+      const mockIgService = {
+        postReel: async () => {
+          igReelCalled = true;
+          return { mediaId: 'ig_reel_123' };
+        }
+      } as any;
 
-      const rainMonitor = new RainMonitorService(mockSat, mockVideo, mockXService);
+      const rainMonitor = new RainMonitorService(
+        mockSat,
+        mockVideo,
+        mockXService,
+        undefined as any,
+        mockFbService,
+        mockIgService
+      );
 
       const now = Date.now();
       const detectedAt = now - 90 * 60 * 1000;
@@ -290,6 +311,8 @@ describe('RainMonitorService', () => {
       expect(publishedVideoPath).toBe('/tmp/test_rain_autopublish.mp4');
       expect(publishedMessage).toContain('Coca Codo Sinclair');
       expect(publishedMessage).toContain('#CocaCodoSinclair');
+      expect(fbVideoCalled).toBe(true);
+      expect(igReelCalled).toBe(true);
 
       const savedEvent = rainMonitor.getActiveOrCooldownEvent('cocaCodoSinclair');
       expect(savedEvent?.tweet_id).toBe('tweet_storm_999');

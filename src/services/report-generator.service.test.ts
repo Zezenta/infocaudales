@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, it, expect, afterAll } from 'vitest';
-import { generateReportCard, generateDailyReport, generateForecastCard, closeBrowser, TelemetryData } from './report-generator.service.js';
+import { generateReportCard, generateDailyReport, generateForecastCard, generateSocialCover, closeBrowser, TelemetryData } from './report-generator.service.js';
 import { CelecService } from './telemetry/celec.service.js';
 import { CenaceService } from './telemetry/cenace.service.js';
 import { hydroelectricPlants } from '../data/hydroelectric-plants.js';
@@ -363,4 +363,17 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
       console.log(`[Test Forecast Card] 💾 Saved forecast card to: ${filePath} (${pngBuffer.length} bytes)`);
     }
   }, 120000);
+
+  it('should generate a 1200x1200px social cover card using real or mock live telemetry', async () => {
+    const pngBuffer = await generateSocialCover();
+    expect(pngBuffer).toBeInstanceOf(Buffer);
+    expect(pngBuffer.length).toBeGreaterThan(5000);
+
+    const generatedDir = path.join(__dirname, '..', '..', 'generated');
+    const filename = `service_test_social_cover.png`;
+    const filePath = path.join(generatedDir, filename);
+    fs.writeFileSync(filePath, pngBuffer);
+    expect(fs.existsSync(filePath)).toBe(true);
+  }, 60000);
 });
+

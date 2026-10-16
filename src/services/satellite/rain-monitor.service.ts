@@ -7,6 +7,8 @@ import { SatelliteTelemetryService, SatelliteMapService, SatelliteFrame, Satelli
 import { SatelliteArchiverService } from './satellite-archiver.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
 import { XService } from '../social/x.service.js';
+import { FacebookService } from '../social/facebook.service.js';
+import { InstagramService } from '../social/instagram.service.js';
 import { buildStormAlertPostText, buildDailySatelliteSummaryPostText } from '../../utils/post-formatter.js';
 import { systemLogger } from '../../utils/logger.js';
 
@@ -322,7 +324,9 @@ export class RainMonitorService {
     private readonly satelliteService: SatelliteTelemetryService = new SatelliteTelemetryService(),
     private readonly videoCompilerService: VideoCompilerService = new VideoCompilerService(satelliteService),
     private readonly xService?: XService,
-    private readonly archiverService: SatelliteArchiverService = new SatelliteArchiverService(satelliteService)
+    private readonly archiverService: SatelliteArchiverService = new SatelliteArchiverService(satelliteService),
+    private readonly facebookService?: FacebookService,
+    private readonly instagramService?: InstagramService
   ) {}
 
   /**
@@ -712,6 +716,30 @@ export class RainMonitorService {
 
         existingEvent.published_at = Date.now();
         existingEvent.tweet_id = publishedTweetId;
+
+        // Also publish to Facebook Video and Instagram Reel
+        if (this.facebookService) {
+          try {
+            await this.facebookService.postVideo(archivedPath, {
+              title: `Alerta de Lluvias - Cuenca ${plantKey}`,
+              description: postText
+            });
+            systemLogger.info(`[RainMonitor] 📘 Successfully published storm alert video to Facebook`);
+          } catch (fbErr: any) {
+            systemLogger.error(`[RainMonitor] Failed to auto-publish storm video to Facebook: ${fbErr?.message || fbErr}`);
+          }
+        }
+
+        if (this.instagramService) {
+          try {
+            await this.instagramService.postReel(archivedPath, {
+              caption: postText
+            });
+            systemLogger.info(`[RainMonitor] 📸 Successfully published storm alert Reel to Instagram`);
+          } catch (igErr: any) {
+            systemLogger.error(`[RainMonitor] Failed to auto-publish storm Reel to Instagram: ${igErr?.message || igErr}`);
+          }
+        }
       } catch (pubErr: any) {
         systemLogger.error(`[RainMonitor] Failed to auto-publish storm video to X: ${pubErr?.message || pubErr}`);
       }
@@ -1432,6 +1460,30 @@ export class RainMonitorService {
 
         const archivedPath = this.archivePublishedVideo(compilation.mp4Path);
         compilation.mp4Path = archivedPath;
+
+        // Also publish to Facebook Video and Instagram Reel
+        if (this.facebookService) {
+          try {
+            await this.facebookService.postVideo(archivedPath, {
+              title: `Resumen Satelital 24h • ${dateFormatted}`,
+              description: postText
+            });
+            systemLogger.info(`[RainMonitor] 📘 Successfully published 24h daily summary to Facebook`);
+          } catch (fbErr: any) {
+            systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary video to Facebook: ${fbErr?.message || fbErr}`);
+          }
+        }
+
+        if (this.instagramService) {
+          try {
+            await this.instagramService.postReel(archivedPath, {
+              caption: postText
+            });
+            systemLogger.info(`[RainMonitor] 📸 Successfully published 24h daily summary Reel to Instagram`);
+          } catch (igErr: any) {
+            systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary Reel to Instagram: ${igErr?.message || igErr}`);
+          }
+        }
       } catch (pubErr: any) {
         systemLogger.error(`[RainMonitor] Failed to auto-publish 24h summary video to X: ${pubErr?.message || pubErr}`);
       }

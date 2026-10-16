@@ -21,14 +21,16 @@ import { CronJob } from 'cron';
 import { hydroelectricPlants } from './data/hydroelectric-plants.js';
 import { CelecService, CelecPointValue } from './services/telemetry/celec.service.js';
 import { CenaceService } from './services/telemetry/cenace.service.js';
-import { generateReportCard, generateDailyReport, generateForecastCard, TelemetryData } from './services/report-generator.service.js';
+import { generateReportCard, generateDailyReport, generateForecastCard, generateSocialCover, TelemetryData } from './services/report-generator.service.js';
 import { PredictionService } from './services/prediction.service.js';
 import { XService } from './services/social/x.service.js';
+import { FacebookService } from './services/social/facebook.service.js';
+import { InstagramService } from './services/social/instagram.service.js';
 import { SatelliteTelemetryService, SatelliteMapService } from './services/telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './services/satellite/video-compiler.service.js';
 import { RainMonitorService } from './services/satellite/rain-monitor.service.js';
 import { SatelliteArchiverService } from './services/satellite/satellite-archiver.service.js';
-import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText } from './utils/post-formatter.js';
+import { buildMessageText, buildForecastPostText, buildWeeklyAccuracyReportText, buildCompactWeeklyAccuracyReportText, buildSocialRoundupCaption } from './utils/post-formatter.js';
 import {
   recordForecastBatch,
   reconcileForecastsWithCelec,
@@ -61,11 +63,20 @@ console.error = (message?: any, ...optionalParams: any[]) => {
 const celecService = new CelecService();
 const cenaceService = new CenaceService();
 const xService = new XService();
+const facebookService = new FacebookService();
+const instagramService = new InstagramService();
 const predictionService = new PredictionService();
 const satelliteService = new SatelliteMapService();
 const videoCompilerService = new VideoCompilerService(satelliteService);
-const rainMonitorService = new RainMonitorService(satelliteService, videoCompilerService, xService);
 const satelliteArchiverService = new SatelliteArchiverService(satelliteService);
+const rainMonitorService = new RainMonitorService(
+  satelliteService,
+  videoCompilerService,
+  xService,
+  satelliteArchiverService,
+  facebookService,
+  instagramService
+);
 
 // Target basins monitored continuously for convective rain
 export const MONITORED_RAIN_BASINS = ['cocaCodoSinclair', 'paute'];
@@ -118,6 +129,8 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     console.warn('[Index] Could not fetch national demand from CENACE, using fallback.');
   }
 
+  const igPlantCards: Buffer[] = [];
+
   for (let i = 0; i < targetPlantKeys.length; i++) {
     const plantKey = targetPlantKeys[i];
     const plant = hydroelectricPlants[plantKey];
@@ -148,12 +161,20 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     if (telemetry) {
       try {
         const messageText = buildMessageText(plant, plantKey, telemetry, nationalDemandMW);
-        const imageBuffer = await generateReportCard(plantKey, telemetry);
+        const imageBuffer = await generateReportCard(plantKey, telemetry, { brand: 'x' });
 
         const timeStr = (telemetry.timestamp ?? new Date()).toLocaleTimeString();
         console.log(`[Bot] Publishing report card for ${plant.name} to X (Data Timestamp: ${timeStr})...`);
         await xService.postTweet(messageText, imageBuffer);
-        console.log(`[Bot] Successfully published ${plant.name}!`);
+        console.log(`[Bot] Successfully published ${plant.name} to X!`);
+
+        // Also generate card with Instagram brand for carousel/album
+        try {
+          const igCardBuffer = await generateReportCard(plantKey, telemetry, { brand: 'instagram' });
+          igPlantCards.push(igCardBuffer);
+        } catch (igGenErr) {
+          console.warn(`[Bot] Could not generate Instagram card for ${plant.name}:`, igGenErr);
+        }
       } catch (error) {
         console.error(`[Bot] Error publishing ${plant.name}:`, error);
       }
@@ -164,6 +185,46 @@ async function runPublishingCycle(targetPlantKeys: string[] = TARGET_PLANT_KEYS,
     if (i < targetPlantKeys.length - 1) {
       console.log(`[Bot] Waiting 20 seconds before next post...`);
       await new Promise(resolve => setTimeout(resolve, 20000));
+    }
+  }
+
+  // Publish consolidated Carousel to Instagram and Multi-Photo Album to Facebook
+  if (igPlantCards.length > 0) {
+    try {
+      console.log(`\n[Bot] [Social Roundup] Preparing Carousel for Instagram & Album for Facebook...`);
+      const coverBuffer = await generateSocialCover();
+      const allSocialItems = [coverBuffer, ...igPlantCards];
+
+      const now = new Date();
+      const dateFormatted = getFormattedEcuadorDate(now);
+      const ecParts = new Date(now.getTime() - 5 * 3600 * 1000);
+      const hourStr = `${String(ecParts.getUTCHours()).padStart(2, '0')}:${String(ecParts.getUTCMinutes()).padStart(2, '0')} ECT`;
+
+      const caption = buildSocialRoundupCaption({
+        dateStr: dateFormatted,
+        hourStr,
+        plantCount: igPlantCards.length
+      });
+
+      // 1. Post to Instagram Carousel
+      try {
+        console.log(`[Bot] [Instagram] Publishing ${allSocialItems.length}-slide carousel...`);
+        const igRes = await instagramService.postCarousel(allSocialItems, caption);
+        console.log(`[Bot] [Instagram] Carousel published successfully! (Media ID: ${igRes.mediaId}, URL: ${igRes.permalink || 'N/A'})`);
+      } catch (igErr: any) {
+        console.error(`[Bot] [Instagram] Error publishing carousel:`, igErr?.message || igErr);
+      }
+
+      // 2. Post to Facebook Multi-Photo Album
+      try {
+        console.log(`[Bot] [Facebook] Publishing ${allSocialItems.length}-photo album...`);
+        const fbRes = await facebookService.postPhotos(allSocialItems, caption);
+        console.log(`[Bot] [Facebook] Album published successfully! (Post ID: ${fbRes.postId}, URL: ${fbRes.permalink || 'N/A'})`);
+      } catch (fbErr: any) {
+        console.error(`[Bot] [Facebook] Error publishing album:`, fbErr?.message || fbErr);
+      }
+    } catch (socialErr: any) {
+      console.error(`[Bot] [Social Roundup] Error creating social media package:`, socialErr?.message || socialErr);
     }
   }
 
@@ -412,7 +473,25 @@ async function publishDailyConsolidatedReport() {
 
     console.log(`[CronJob] [Daily Report] Posting daily report to X...`);
     await xService.postTweet(postMessage, imageBuffer);
-    console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully!');
+    console.log('[CronJob] [Daily Report] Daily Consolidated Report published successfully to X!');
+
+    // 7. Post to Facebook Page
+    console.log(`[CronJob] [Daily Report] Posting daily report to Facebook...`);
+    try {
+      const fbRes = await facebookService.postPhoto(imageBuffer, postMessage);
+      console.log(`[CronJob] [Daily Report] Daily Consolidated Report published successfully to Facebook (Post ID: ${fbRes.postId})!`);
+    } catch (fbErr: any) {
+      console.error(`[CronJob] [Daily Report] Error posting to Facebook:`, fbErr?.message || fbErr);
+    }
+
+    // 8. Post to Instagram Feed
+    console.log(`[CronJob] [Daily Report] Posting daily report to Instagram...`);
+    try {
+      const igRes = await instagramService.postPhoto(imageBuffer, postMessage);
+      console.log(`[CronJob] [Daily Report] Daily Consolidated Report published successfully to Instagram (Media ID: ${igRes.mediaId})!`);
+    } catch (igErr: any) {
+      console.error(`[CronJob] [Daily Report] Error posting to Instagram:`, igErr?.message || igErr);
+    }
 
     // Cleanup temp file
     try { fs.unlinkSync(tempPath); } catch {}
@@ -586,6 +665,15 @@ export async function publishWeeklyAccuracyReport(): Promise<void> {
     } catch (fallbackErr: any) {
       console.error('[CronJob] [Weekly Accuracy Report] Error posting compact fallback report to X:', fallbackErr?.message || fallbackErr);
     }
+  }
+
+  // 5. Post text report to Facebook Page
+  try {
+    console.log('[CronJob] [Weekly Accuracy Report] Posting report to Facebook...');
+    const fbRes = await facebookService.postMessage(reportText);
+    console.log(`[CronJob] [Weekly Accuracy Report] Published successfully to Facebook (Post ID: ${fbRes.postId})!`);
+  } catch (fbErr: any) {
+    console.error('[CronJob] [Weekly Accuracy Report] Error posting report to Facebook:', fbErr?.message || fbErr);
   }
 }
 

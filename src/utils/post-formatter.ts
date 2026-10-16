@@ -311,3 +311,29 @@ export function buildDailySatelliteSummaryPostText(options: DailySatelliteSummar
   return text;
 }
 
+export interface SocialRoundupCaptionOptions {
+  dateStr: string;
+  hourStr?: string;
+  totalMW?: number;
+  capacityPct?: number;
+  plantCount?: number;
+}
+
+/**
+ * Builds the caption for multi-photo album / carousel posts on Instagram and Facebook.
+ */
+export function buildSocialRoundupCaption(options: SocialRoundupCaptionOptions): string {
+  let caption = `⚡ Reporte del Sistema Hidroeléctrico en Vivo\n` +
+    `📅 ${options.dateStr}${options.hourStr ? ` • ${options.hourStr}` : ''}\n\n`;
+
+  if (options.totalMW !== undefined && options.capacityPct !== undefined) {
+    caption += `📊 Generación actual: ${Math.round(options.totalMW).toLocaleString()} MW (${options.capacityPct}% de capacidad instalada).\n\n`;
+  }
+
+  caption += `Desliza ➔ para revisar el reporte detallado de caudal, generación y cotas de embalse de cada central.\n\n` +
+    `#Ecuador #Energía #Hidroeléctricas #SectorEléctrico #CENACE #CELEC`;
+
+  return caption;
+}
+
+

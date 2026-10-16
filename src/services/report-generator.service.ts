@@ -458,3 +458,80 @@ export async function generateForecastCard(
     await page.close();
   }
 }
+
+export async function generateSocialCover(coverData?: any): Promise<Buffer> {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+
+  try {
+    await page.setViewport({
+      width: 1200,
+      height: 1200,
+      deviceScaleFactor: 2
+    });
+
+    const projectRoot = getProjectRoot();
+    const htmlPath = path.join(projectRoot, 'src', 'templates', 'social-cover.html');
+    const fileUrl = `file://${htmlPath}`;
+    const drawingsDir = path.join(projectRoot, 'src', 'hydroelectric-drawings');
+
+    let data = coverData;
+    if (!data) {
+      try {
+        const { fetchCoverLiveData } = await import('./telemetry/live-telemetry.service.js');
+        data = await fetchCoverLiveData();
+      } catch (err) {
+        console.warn('[ReportGenerator] Could not fetch live cover data, rendering template defaults:', err);
+      }
+    }
+
+    await page.goto(fileUrl, { waitUntil: 'domcontentloaded' });
+
+    await page.evaluate(async (drawingsPath, liveData) => {
+      // @ts-ignore
+      if (typeof window.fixDrawingPaths === 'function') {
+        // @ts-ignore
+        window.fixDrawingPaths(drawingsPath);
+      }
+      // @ts-ignore
+      if (liveData && typeof window.applyCoverData === 'function') {
+        // @ts-ignore
+        window.applyCoverData(liveData);
+      }
+
+      // Wait for images to load cleanly
+      const images = Array.from(document.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(res => {
+          img.addEventListener('load', res);
+          img.addEventListener('error', res);
+          setTimeout(res, 300);
+        });
+      }));
+
+      // @ts-ignore
+      if (typeof window.renderCard === 'function') {
+        // @ts-ignore
+        window.renderCard();
+      }
+    }, drawingsDir, data);
+
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 150)));
+
+    const cardElement = await page.$('#cover-card');
+    if (!cardElement) {
+      throw new Error('Element #cover-card not found on social-cover template');
+    }
+
+    const imageBuffer = await cardElement.screenshot({
+      type: 'png',
+      omitBackground: true
+    });
+
+    return Buffer.from(imageBuffer);
+  } finally {
+    await page.close();
+  }
+}
+

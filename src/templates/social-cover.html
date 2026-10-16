@@ -1829,6 +1829,48 @@
       });
     }
 
+    // Global exports for Puppeteer programmatic screenshot generation
+    window.PLANTS_CONFIG = PLANTS_CONFIG;
+    window.updateCardDateTime = updateCardDateTime;
+    window.renderCard = renderCard;
+
+    window.fixDrawingPaths = function(drawingsPath) {
+      for (const [key, p] of Object.entries(PLANTS_CONFIG)) {
+        if (p.drawing && p.drawing.startsWith('/hydroelectric-drawings/')) {
+          const imgName = p.drawing.replace('/hydroelectric-drawings/', '');
+          p.drawing = `file://${drawingsPath}/${imgName}`;
+        }
+      }
+    };
+
+    window.applyCoverData = function(data) {
+      if (!data) return;
+      if (data.plants) {
+        for (const [key, plantMetrics] of Object.entries(data.plants)) {
+          if (PLANTS_CONFIG[key]) {
+            PLANTS_CONFIG[key].currentMW = plantMetrics.currentMW;
+            PLANTS_CONFIG[key].activeTurbines = plantMetrics.activeTurbines;
+            PLANTS_CONFIG[key].currentStatus = plantMetrics.currentStatus;
+            if (PLANTS_CONFIG[key].hasReservoir) {
+              PLANTS_CONFIG[key].currentCota = plantMetrics.currentCota;
+              PLANTS_CONFIG[key].cotaTrend = plantMetrics.cotaTrend;
+            }
+            PLANTS_CONFIG[key].currentFlow = plantMetrics.currentFlow;
+            PLANTS_CONFIG[key].flowTrend = plantMetrics.flowTrend;
+          }
+        }
+      }
+      if (data.formattedDateEcuador) {
+        const parts = data.formattedDateEcuador.split(' • ');
+        if (parts.length === 2) {
+          updateCardDateTime(parts[0], parts[1]);
+        } else {
+          updateCardDateTime(data.formattedDateEcuador, `${data.hourEcuador}:00 ECT`);
+        }
+      }
+      renderCard();
+    };
+
     // Initialize
     window.addEventListener('DOMContentLoaded', () => {
       const initialParts = getEcuadorDateParts();
