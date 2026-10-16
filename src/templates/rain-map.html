@@ -227,8 +227,8 @@
         <div class="form-group">
           <label class="form-label" for="layerSelect">Capa Meteorológica / Satelital</label>
           <select id="layerSelect" class="form-select">
-            <option value="nasa_gibs" selected>NASA GIBS • GOES-East Banda 13 IR (CDN Alta Disponibilidad)</option>
-            <option value="goes16_inamhi">GEOGLOWS / INAMHI • GOES-16 IR (Banda 13 - Nubes/Tormentas)</option>
+            <option value="goes16_inamhi" selected>GEOGLOWS / INAMHI • GOES-16 IR (Banda 13 - Nubes/Tormentas)</option>
+            <option value="nasa_gibs">NASA GIBS • GOES-East Banda 13 IR (CDN Alta Disponibilidad)</option>
           </select>
         </div>
 
@@ -236,20 +236,20 @@
         <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
           <select id="presetSelect" class="form-select">
-            <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
-              <option value="live_nasa_12h" selected>NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
-              <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
-              <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
-              <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
-            </optgroup>
             <optgroup label="── GEOGLOWS / INAMHI (GeoServer Local) ──">
-              <option value="live_geoserver">GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
+              <option value="live_geoserver" selected>GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
               <option value="today">GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)</option>
               <option value="yesterday_24h">GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
               <option value="storm_paute_oct7">GEOGLOWS: Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
               <option value="storm_ccs_oct7">GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
               <option value="recent_50">GEOGLOWS: Últimos 50 fotogramas archivados</option>
               <option value="all_frames">GEOGLOWS: Archivo Histórico Completo</option>
+            </optgroup>
+            <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
+              <option value="live_nasa_12h">NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
+              <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
+              <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
+              <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
             </optgroup>
           </select>
         </div>
@@ -313,7 +313,7 @@
           </div>
 
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
-            <input type="checkbox" id="showProvincesCheckbox" checked>
+            <input type="checkbox" id="showProvincesCheckbox">
             Mostrar Delineación de Provincias
           </label>
 
@@ -1151,8 +1151,8 @@
     // Fetch Timestamps & Geometries
     async function loadData() {
       try {
-        const preset = (presetSelect && presetSelect.value) ? presetSelect.value : 'live_nasa_12h';
-        const layer = (layerSelect && layerSelect.value) ? layerSelect.value : 'nasa_gibs';
+        const preset = (presetSelect && presetSelect.value) ? presetSelect.value : 'live_geoserver';
+        const layer = (layerSelect && layerSelect.value) ? layerSelect.value : 'goes16_inamhi';
         const [geoRes, timeRes, pinsRes, citiesRes] = await Promise.all([
           fetch('/api/basin-geometries').then(r => r.json()),
           fetch(`/api/archive-timestamps?preset=${encodeURIComponent(preset)}&layer=${encodeURIComponent(layer)}`).then(r => r.json()),
@@ -1393,6 +1393,7 @@
           provincesLayer.innerHTML = gElem.innerHTML;
           provincesVectorLoaded = true;
           updateProvinceStyle();
+          updateProvinceVisibility();
         }
       } catch (err) {
         console.error('Error loading provinces vector overlay:', err);
@@ -1480,7 +1481,7 @@
 
     function updateProvinceVisibility() {
       const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
-      const isChecked = showProvincesCheckbox ? showProvincesCheckbox.checked : true;
+      const isChecked = showProvincesCheckbox ? showProvincesCheckbox.checked : false;
 
       if (provinceBasinNotice) {
         provinceBasinNotice.style.display = isEcuador ? 'none' : 'inline';
@@ -1620,7 +1621,7 @@
           showCityPins: showCityPinsCheckbox ? showCityPinsCheckbox.checked : true,
           showSummaryCards: showSummaryCardsCheckbox ? showSummaryCardsCheckbox.checked : true,
           showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
-          showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : true,
+          showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,
           provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
           provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
           provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,

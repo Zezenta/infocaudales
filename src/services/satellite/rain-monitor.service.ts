@@ -100,7 +100,7 @@ export function isConvectivePixel(
   b: number,
   source?: 'geoserver' | 'nasa_gibs'
 ): { isSevere: boolean; isConvective: boolean } {
-  const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+  const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
   if (effectiveSource === 'nasa_gibs') {
     // In NASA GIBS: background land, ocean and warm low clouds are pure grayscale: |r-g| <= 18 && |g-b| <= 18
     if (Math.abs(r - g) <= 18 && Math.abs(g - b) <= 18 && Math.abs(r - b) <= 18) {
@@ -356,7 +356,7 @@ export class RainMonitorService {
     tileResolution: number = 80,
     source?: 'geoserver' | 'nasa_gibs'
   ): Promise<{ coveragePct: number; timestampIso: string }> {
-    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
     const basin = BASIN_GEOMETRIES[plantKey];
     if (!basin) {
       throw new Error(`[RainMonitor] Basin geometry not found for "${plantKey}"`);
@@ -461,7 +461,7 @@ export class RainMonitorService {
     const { coveragePct, timestampIso } = await this.getBasinCurrentStormCoverage(plantKey, tileResolution, options.source);
 
     // Guardrail: check if satellite feed is stale / interrupted
-    const effectiveSource = options.source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const effectiveSource = options.source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
     const maxStaleMinutes = effectiveSource === 'nasa_gibs' ? 90 : 45;
     const frameAgeMinutes = Math.round((now - new Date(timestampIso).getTime()) / 60000);
     if (frameAgeMinutes > maxStaleMinutes && existingEvent && existingEvent.status === 'ACTIVE') {
@@ -1089,7 +1089,7 @@ export class RainMonitorService {
     sierra: number;
     amazonia: number;
   } {
-    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
     try {
       const img = this.decodePng(buffer);
       const px = this.unfilterScanlines(img.raw, img.width, img.height);
@@ -1115,7 +1115,7 @@ export class RainMonitorService {
     basinBbox: [number, number, number, number],
     source?: 'geoserver' | 'nasa_gibs'
   ): number {
-    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
     const [minLon, minLat, maxLon, maxLat] = ecuadorBbox;
     const projectX = (lon: number) => Math.max(0, Math.min(imgWidth - 1, Math.round(((lon - minLon) / (maxLon - minLon)) * imgWidth)));
     const projectY = (lat: number) => Math.max(0, Math.min(imgHeight - 1, Math.round(((maxLat - lat) / (maxLat - minLat)) * imgHeight)));
@@ -1162,7 +1162,7 @@ export class RainMonitorService {
     nationalBbox: [number, number, number, number],
     source?: 'geoserver' | 'nasa_gibs'
   ): { costa: number; sierra: number; amazonia: number } {
-    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'geoserver' ? 'geoserver' : 'nasa_gibs');
+    const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
     const [minLon, minLat, maxLon, maxLat] = nationalBbox;
     let tc = 0, cc = 0, ts = 0, cs = 0, ta = 0, ca = 0;
 

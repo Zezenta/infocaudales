@@ -10,6 +10,7 @@ import {
 } from './rain-monitor.service.js';
 import { SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './video-compiler.service.js';
+import { SatelliteArchiverService } from './satellite-archiver.service.js';
 
 function createMockPng(
   width: number,
@@ -80,6 +81,8 @@ function createMockPng(
 describe('RainMonitorService', () => {
   beforeEach(() => {
     db.prepare('DELETE FROM rain_events').run();
+    vi.spyOn(SatelliteArchiverService.prototype, 'archiveSingleFrame').mockResolvedValue(true as any);
+    vi.spyOn(SatelliteArchiverService.prototype, 'archiveLatestFrames').mockResolvedValue({ archived: 0, skipped: 0, errors: [] } as any);
   });
 
   describe('analyzeStormCloudCoverage', () => {
@@ -330,7 +333,8 @@ describe('RainMonitorService', () => {
       expect(frames[0].timestampIso).toBe(t1);
       expect(frames[0].buffer.length).toBe(25000);
 
-      // Clean up test files
+      // Clean up test files and DB records
+      db.prepare('DELETE FROM satellite_archive WHERE file_path LIKE ?').run(`%${testDir}%`);
       fs.rmSync(testDir, { recursive: true, force: true });
     });
 

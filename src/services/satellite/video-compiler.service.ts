@@ -205,7 +205,7 @@ export class VideoCompilerService {
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
 
     // Provincial Delineation Vector Overlay (Ecuador Continental)
-    const showProvinces = options.showProvinces !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    const showProvinces = options.showProvinces === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     const provincesColor = options.provincesColor || '#38bdf8';
     const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
     const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;

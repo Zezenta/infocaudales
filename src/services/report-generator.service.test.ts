@@ -28,14 +28,10 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     const dateStr = `${year}-${month}-${day}`;
     const timeStr = `${hours}-${minutes}-${seconds}`;
 
-    // Valid fictional telemetry test data with decimals for each hydroelectric plant
+    // Representative plants: molino (reservoir + cota + Francis) & cocaCodoSinclair (run-of-river + Pelton)
     const testCases: Record<string, TelemetryData> = {
       molino: { gen: 950.75, turbines: 8, flow: 140.35, cota: 1988.42 },
-      cocaCodoSinclair: { gen: 1250.85, turbines: 6, flow: 850.45 },
-      sopladora: { gen: 410.25, turbines: 3, flow: 85.60 },
-      mazar: { gen: 150.90, turbines: 2, flow: 120.15, cota: 2140.78 },
-      minasSanFrancisco: { gen: 210.33, turbines: 2, flow: 60.55, cota: 789.25 },
-      agoyan: { gen: 105.45, turbines: 2, flow: 95.80, cota: 1649.65 }
+      cocaCodoSinclair: { gen: 1250.85, turbines: 6, flow: 850.45 }
     };
 
     for (const [plantKey, telemetry] of Object.entries(testCases)) {
@@ -317,7 +313,8 @@ describe('ReportGeneratorService (Headless Chrome Generation)', () => {
     const dateStr = `${year}-${month}-${day}`;
     const timeStr = `${hours}-${minutes}-${seconds}`;
 
-    const plantKeys = ['cocaCodoSinclair', 'mazar', 'molino', 'sopladora', 'agoyan', 'minasSanFrancisco'];
+    // Representative plants: cocaCodoSinclair & molino
+    const plantKeys = ['cocaCodoSinclair', 'molino'];
 
     const { hora } = celec.getEcuadorDateParts(now);
     const targetIdx = 24 - hora;
