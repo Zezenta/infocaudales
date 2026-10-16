@@ -463,8 +463,9 @@
     /* Trend Arrows (con colita) */
     .trend-arrow-svg {
       display: inline-block;
-      vertical-align: -1px;
+      vertical-align: -1.5px;
       margin-left: 4px;
+      overflow: visible;
       flex-shrink: 0;
     }
 
@@ -1108,12 +1109,12 @@
     let activePlantKey = 'cocaCodoSinclair';
     let isPortrait45 = false;
 
-    // Helper for delta / trend arrow (con colita)
+    // Helper for delta / trend arrow (con colita y margen seguro en viewBox)
     function getTrendArrowHtml(trend) {
       if (trend === 'up') {
-        return `<svg class="trend-arrow-svg trend-up" viewBox="0 0 10 13" width="9" height="12" fill="none" stroke="#00e676" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="5" y2="1.5"></line><polyline points="1.5,5 5,1.5 8.5,5"></polyline></svg>`;
+        return `<svg class="trend-arrow-svg trend-up" viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="#00e676" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="14" x2="8" y2="2"></line><polyline points="3.5,6.5 8,2 12.5,6.5"></polyline></svg>`;
       } else if (trend === 'down') {
-        return `<svg class="trend-arrow-svg trend-down" viewBox="0 0 10 13" width="9" height="12" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="1" x2="5" y2="11.5"></line><polyline points="1.5,8 5,11.5 8.5,8"></polyline></svg>`;
+        return `<svg class="trend-arrow-svg trend-down" viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2" x2="8" y2="14"></line><polyline points="3.5,9.5 8,14 12.5,9.5"></polyline></svg>`;
       }
       return '';
     }
