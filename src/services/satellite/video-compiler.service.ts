@@ -62,6 +62,7 @@ export interface OverlayCustomizationOptions {
   layer?: string;
   layers?: string | string[];
   watermarkBrand?: 'x' | 'instagram';
+  showWfsBasins?: boolean;
 }
 
 export interface DynamicSummaryCards {
@@ -83,6 +84,7 @@ export interface CompileOptions extends OverlayCustomizationOptions {
   framerate?: number;
   width?: number;
   height?: number;
+  aspectRatio?: '1:1' | '4:5' | '9:16';
   createMp4?: boolean;
   createGif?: boolean;
   gifScale?: number;
@@ -148,6 +150,33 @@ export class VideoCompilerService {
           }
         } catch (e) {
           console.warn('[VideoCompilerService] Failed to read provinces vector overlay:', e);
+        }
+      }
+    }
+    return null;
+  }
+
+  private basinSvgPathsCache: Record<string, string> | null = null;
+
+  /**
+   * Helper to retrieve clean vector SVG paths of real INAMHI/GEOGLOWS catchment basins.
+   */
+  public getBasinSvgPaths(): Record<string, string> | null {
+    if (this.basinSvgPathsCache) {
+      return this.basinSvgPathsCache;
+    }
+    const candidates = [
+      path.join(__dirname, '..', '..', 'data', 'basin-svg-paths.json'),
+      path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json')
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        try {
+          const raw = fs.readFileSync(c, 'utf8');
+          this.basinSvgPathsCache = JSON.parse(raw);
+          return this.basinSvgPathsCache;
+        } catch (e) {
+          console.warn('[VideoCompilerService] Failed to read basin svg paths:', e);
         }
       }
     }
@@ -226,6 +255,30 @@ export class VideoCompilerService {
         <!-- Provincial Delineation Vector Layer -->
         <g id="provincesLayer" fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
           ${paths}
+        </g>
+        `;
+      }
+    }
+
+    // Real INAMHI / GeoServer WFS Catchment Polygons Layer
+    let wfsBasinsSvg = '';
+    if (options.showWfsBasins === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador')) {
+      const basinPaths = this.getBasinSvgPaths();
+      if (basinPaths) {
+        const colors: Record<string, string> = { coca: '#38bdf8', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b' };
+        let pathsSvg = '';
+        for (const [k, d] of Object.entries(basinPaths)) {
+          const col = colors[k] || '#38bdf8';
+          pathsSvg += `
+            <path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="none" stroke="#000000" stroke-width="4.5" stroke-opacity="0.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          `;
+        }
+        wfsBasinsSvg = `
+        <!-- Real Catchment Polygons Layer (GeoServer WFS) -->
+        <g id="wfsBasinPolygonsLayer">
+          ${pathsSvg}
         </g>
         `;
       }
@@ -682,6 +735,9 @@ export class VideoCompilerService {
 
       <!-- Provincial Delineation Layer -->
       ${provincesOverlaySvg}
+
+      <!-- Real Catchment Polygons Layer (GeoServer WFS) -->
+      ${wfsBasinsSvg}
 
       <!-- Basin Storm Detection Boundary Boxes -->
       ${detectionBoxesSvg}

@@ -130,6 +130,28 @@
     <path d="M354.9328 468.7406 L355.8348 468.8775 L356.7057 469.1904 L357.2726 470.0193 L358.155 470.0177 L358.7148 470.8207 L359.2424 471.6224 L360.0531 471.7156 L360.8542 471.6225 L361.6622 471.5573 L362.4033 472.3666 L363.211 472.6218 L364.0124 472.8499 L364.8257 473.3928 L365.5845 474.2043 L366.3911 474.8852 L366.8683 475.709 L367.6713 476.378 L368.4735 477.0953 L369.2318 477.8967 L370.043 477.1746 L370.8457 476.9066 L370.8829 477.7112 L370.8646 478.5145 L371.0146 479.3259 L371.1458 480.138 L371.2973 480.9423 L371.7224 481.747 L372.5249 481.8506 L373.3315 481.786 L373.7353 482.6167 L372.9292 482.9532 L372.1222 483.2987 L371.3203 483.9659 L371.0366 484.7666 L370.9944 485.5706 L371.3905 486.3723 L371.1418 487.1801 L370.7586 487.9827 L370.6523 488.7864 L370.366 489.6183 L370.2722 490.4659 L369.7996 491.269 L369.5186 492.0809 L368.9398 492.8917 L368.8438 493.728 L368.5452 494.5716 L368.3099 495.4231 L367.6672 496.2442 L366.8396 496.8327 L366.2849 497.652 L365.7368 498.4638 L364.9107 498.9126 L364.3302 499.7259 L363.9582 500.5475 L363.6531 501.4143 L363.3995 502.2667 L363.6575 503.1369 L364.0477 503.9792 L364.6916 504.7912 L365.1557 505.9314 L364.3518 505.652 L363.5478 505.3392 L362.7366 504.8022 L361.933 504.2845 L361.4056 503.4535 L361.2576 502.6163 L360.9303 501.7878 L361.3022 500.9553 L361.6591 500.1404 L361.748 499.3067 L362.1516 498.5045 L361.3644 497.6912 L360.509 497.7788 L359.6983 496.9471 L358.885 496.6634 L358.0272 496.7141 L357.1627 496.4783 L356.353 496.2299 L356.3373 495.2245 L355.7896 494.3681 L354.9087 493.6251 L354.1051 492.978 L353.2965 492.4174 L352.4522 491.9626 L351.5367 491.9257 L350.7738 491.0864 L350.0109 490.1606 L350.0658 489.2767 L349.2577 488.9178 L348.5425 488.0759 L348.5947 487.2635 L349.188 486.4629 L348.3848 485.8682 L347.5656 485.74 L346.7327 485.8305 L345.9206 485.5351 L345.082 485.6522 L344.2501 485.0856 L343.7116 484.278 L342.6256 483.0851 L341.7447 483.1402 L340.9337 483.2664 L340.0813 483.5997 L339.2405 483.7284 L338.3302 482.9112 L337.5073 483.385 L336.6419 483.4762 L335.8223 483.497 L334.9997 483.9594 L334.1709 483.6167 L333.4753 482.8093 L332.6334 481.9748 L332.5107 481.1744 L332.9316 480.3575 L333.2604 479.4587 L333.3217 478.6424 L332.8186 477.7124 L333.6251 476.9959 L333.7073 476.0849 L334.4477 475.2176 L335.3749 475.11 L336.3434 474.7342 L336.9105 473.9286 L337.4354 473.0338 L337.2219 472.1809 L338.1566 471.4177 L339.0005 471.6679 L339.8859 471.6219 L340.8065 471.1735 L341.6235 470.3745 L342.4715 470.3313 L342.298 471.2451 L342.7752 472.1329 L343.579 472.5173 L344.4225 472.4364 L345.3465 472.3051 L346.2133 472.7899 L347.0663 473.0568 L347.9913 473.4409 L348.8182 474.1772 L349.6917 473.3628 L350.5428 472.5862 L351.4356 472.5722 L352.2648 472.1016 L352.492 471.2127 L352.6744 470.3324 L353.1125 469.481 L353.9608 469.6599 L354.7176 468.8457 L354.9328 468.7406" />
           </g>
 
+          <!-- Official Catchment Polygons from INAMHI / GeoServer WFS Layer -->
+          <g id="wfsBasinPolygonsLayer" style="display: none;"></g>
+
+          <!-- Safe Zones Guide Overlay for Reels/Stories 9:16 (Based on video-areas-guide.png) -->
+          <g id="safeZonesGuideGroup" style="display: none; pointer-events: none;">
+            <!-- Top Danger Zone (Header, "Following/For You", status bar: Y 0 to 63.3) -->
+            <rect x="0" y="0" width="800" height="63.3" fill="#ef4444" fill-opacity="0.25" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <text x="24" y="38" fill="#fca5a5" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">ZONA NO SEGURA SUPERIOR (HEADER / PERFIL / HISTORIAS)</text>
+
+            <!-- Bottom Danger Zone (Caption, audio pill, share buttons: Y 679.2 to 800) -->
+            <rect x="0" y="679.2" width="800" height="120.8" fill="#22c55e" fill-opacity="0.22" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <text x="24" y="704" fill="#86efac" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">ZONA DE INTERACCIÓN INFERIOR (DESCRIPCIÓN / AUDIO / CTA)</text>
+
+            <!-- Right Danger Zone (Interaction action column: like, comment, share: X 653.3 to 800, between Y 63.3 and 679.2) -->
+            <rect x="653.3" y="63.3" width="146.7" height="615.9" fill="#ef4444" fill-opacity="0.25" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <text x="660" y="340" fill="#fca5a5" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="10.5" transform="rotate(90, 660, 340)">COLUMNA DE ACCIONES</text>
+
+            <!-- Center Safe Focus Zone boundary (Main content safe zone: X 0 to 653.3, Y 63.3 to 679.2) -->
+            <rect x="10" y="63.3" width="643.3" height="615.9" fill="#38bdf8" fill-opacity="0.06" stroke="#38bdf8" stroke-width="2.0" stroke-dasharray="6,4"/>
+            <text x="24" y="86" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">✓ ÁREA SEGURA PRINCIPAL (CONTENIDO VISUAL Y TEXTOS CLAVE)</text>
+          </g>
+
           <!-- Layer for Basin Storm Detection Boundary Boxes -->
           <g id="detectionBoxesLayer"></g>
 
@@ -219,28 +241,33 @@
     <!-- Right: Configuration & Styling Panel -->
     <aside class="control-sidebar">
 
-      <!-- Basin & Geometry Selector -->
+      <!-- Basin & Geometry Selector (Preserved in code for future use, hidden from UI) -->
+      <!-- Delimitadores de cuencas/hidroeléctricas individuales conservados por si se reactivan a futuro (actualmente no en uso):
+      <option value="cocaCodoSinclair">Coca Codo Sinclair (Quijos/Salado)</option>
+      <option value="paute">Complejo Paute (Mazar / Molino / Sopladora)</option>
+      <option value="agoyan">cuenca hídrica Pastaza / Agoyán</option>
+      <option value="minasSanFrancisco">cuenca hídrica Jubones / Minas San Francisco</option>
+      -->
+      <select id="basinSelect" class="form-select" style="display: none;">
+        <option value="ecuador" selected>Ecuador Continental (Nacional)</option>
+      </select>
+
+      <!-- Panel de Detección Meteorológica & Capa -->
       <div class="control-panel">
-        <h3 class="panel-title">Cuenca / Región</h3>
-        
+        <h3 class="panel-title">Detección Meteorológica</h3>
+
         <div class="form-group">
-          <label class="form-label" for="basinSelect">Seleccionar Región o Hidroeléctrica</label>
-          <select id="basinSelect" class="form-select">
-            <option value="ecuador">Ecuador Continental (Nacional)</option>
-            <option value="cocaCodoSinclair">Coca Codo Sinclair (Quijos/Salado)</option>
-            <option value="paute">Complejo Paute (Mazar / Molino / Sopladora)</option>
-            <option value="agoyan">cuenca hídrica Pastaza / Agoyán</option>
-            <option value="minasSanFrancisco">cuenca hídrica Jubones / Minas San Francisco</option>
+          <label class="form-label" for="layerSelect">Sensor / Modo de Análisis</label>
+          <select id="layerSelect" class="form-select">
+            <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Actual • Infrarrojo Térmico)</option>
+            <option value="persiann_24h">PERSIANN-PDIR / WRF (Estimación de Lluvia y Precipitación)</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="layerSelect">Capa Meteorológica / Satelital</label>
-          <select id="layerSelect" class="form-select">
-            <option value="goes16_inamhi" selected>GEOGLOWS / INAMHI • GOES-16 IR (Banda 13 - Nubes/Tormentas)</option>
-            <option value="nasa_gibs">NASA GIBS • GOES-East Banda 13 IR (CDN Alta Disponibilidad)</option>
-          </select>
+        <!-- Tarjeta explicativa con descripción corta de qué es, qué hace y cómo funciona -->
+        <div id="detectionModeDesc" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 11.5px; line-height: 1.45; color: #cbd5e1; margin-top: 8px;">
         </div>
+      </div>
 
         <!-- Timeline Preset Selector -->
         <div class="form-group" style="margin-top: 10px;">
@@ -313,6 +340,18 @@
               Forzar Tormenta Paute
             </label>
           </div>
+
+          <!-- Official INAMHI GeoServer WFS Catchment Polygons Overlay -->
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #a855f7; cursor: pointer; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+            <input type="checkbox" id="showWfsBasinsCheckbox">
+            <span>Mostrar Polígonos de Cuenca Reales (GeoServer WFS)</span>
+          </label>
+
+          <!-- Safe Zones Guide Overlay for Reels/Stories (9:16) -->
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f43f5e; cursor: pointer;">
+            <input type="checkbox" id="showSafeZonesCheckbox">
+            <span>Guía de Zonas Seguras Reels / Stories (9:16)</span>
+          </label>
         </div>
 
         <!-- Provincial Delineation Layer Controls -->
@@ -426,6 +465,16 @@
           Compila los fotogramas cargados en un video MP4 optimizado para Twitter (H.264) o un GIF animado.
         </p>
 
+        <!-- Aspect Ratio Selector for Twitter Feed, Instagram Feed & Reels/Stories -->
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" for="aspectRatioSelect">Relación de Aspecto (Formato de Video)</label>
+          <select id="aspectRatioSelect" class="form-select">
+            <option value="1:1" selected>1:1 Cuadrado (800x800 • Twitter / Web Feed)</option>
+            <option value="4:5">4:5 Retrato (800x1000 • Instagram Feed / Facebook Feed)</option>
+            <option value="9:16">9:16 Vertical (1080x1920 • Instagram Reels / Stories)</option>
+          </select>
+        </div>
+
         <div class="grid-2col">
           <button id="compileMp4Btn" class="btn btn-success">Compilar MP4</button>
           <button id="compileGifBtn" class="btn">Compilar GIF</button>
@@ -518,6 +567,13 @@
     const presetSelect = document.getElementById('presetSelect');
     const videoCardWrapper = document.getElementById('videoCard');
     const playerControls = document.querySelector('.player-controls');
+
+    // WFS Real Catchments & 9:16 Safe Zones Guide DOM Elements
+    const showWfsBasinsCheckbox = document.getElementById('showWfsBasinsCheckbox');
+    const showSafeZonesCheckbox = document.getElementById('showSafeZonesCheckbox');
+    const aspectRatioSelect = document.getElementById('aspectRatioSelect');
+    const wfsBasinPolygonsLayer = document.getElementById('wfsBasinPolygonsLayer');
+    const safeZonesGuideGroup = document.getElementById('safeZonesGuideGroup');
 
     // Calibrated Monitored Basins matching BASIN_GEOMETRIES & VideoCompilerService
     const MONITORED_BASINS = [
@@ -1189,10 +1245,42 @@
         currentFrameIdx = maxIdx;
 
         onBasinChange();
+        updateDetectionModeDescription();
         loadProvincesVector();
         setTimeout(preloadAllViewsInBackground, 600);
       } catch (err) {
         console.error('Error loading initial data:', err);
+      }
+    }
+
+    const detectionModeDesc = document.getElementById('detectionModeDesc');
+    function updateDetectionModeDescription() {
+      if (!detectionModeDesc || !layerSelect) return;
+      const layer = layerSelect.value;
+      if (layer === 'persiann_24h') {
+        detectionModeDesc.innerHTML = `
+          <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>🌧️</span> <span>PERSIANN-PDIR / WRF • Lluvia en Superficie</span>
+          </div>
+          <p style="margin: 0; color: #94a3b8;">
+            <strong style="color: #f1f5f9;">¿Qué es y qué hace?</strong> Estima la lluvia acumulada en milímetros (<strong style="color: #f1f5f9;">mm</strong>) caída efectivamente sobre el terreno durante las últimas 24 horas.
+          </p>
+          <p style="margin: 5px 0 0; color: #94a3b8;">
+            <strong style="color: #f1f5f9;">¿Cómo funciona?</strong> Integra el algoritmo satelital PERSIANN-PDIR (CHRS Universidad de California / NOAA) con el modelo físico WRF del INAMHI. Traduce la reflectividad y topes fríos en precipitación real en tierra, confirmando si la nubosidad descargó agua útil en las cuencas.
+          </p>
+        `;
+      } else {
+        detectionModeDesc.innerHTML = `
+          <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>📡</span> <span>GOES-16 Banda 13 • Infrarrojo Térmico (10.3 µm)</span>
+          </div>
+          <p style="margin: 0; color: #94a3b8;">
+            <strong style="color: #f1f5f9;">¿Qué es y qué hace?</strong> Monitorea en tiempo real (cada 10-15 min) la temperatura del tope superior de las nubes en todo el Ecuador continental.
+          </p>
+          <p style="margin: 5px 0 0; color: #94a3b8;">
+            <strong style="color: #f1f5f9;">¿Cómo funciona?</strong> Detecta núcleos convectivos profundos: nubes con cimas muy frías (&lt; -50°C, resaltadas en rojo y morado) asociadas a tormentas eléctricas activas, permitiendo anticipar crecidas de caudales horas antes de que el agua ingrese a los ríos.
+          </p>
+        `;
       }
     }
 
@@ -1210,8 +1298,8 @@
         customTitleInput.value = isEcuador ? 'Vista Satelital • Ecuador' : `${basinName} • Vista Satelital`;
         customBadgeInput.value = 'NASA EarthData';
       } else if (layerKey === 'persiann_24h') {
-        customTitleInput.value = isEcuador ? 'Lluvia de las Últimas 24 Horas' : `${basinName} • Lluvia 24h`;
-        customBadgeInput.value = 'Lluvia 24h';
+        customTitleInput.value = isEcuador ? 'Lluvia Acumulada 24h • Ecuador Continental' : `${basinName} • Lluvia 24h`;
+        customBadgeInput.value = 'PERSIANN-PDIR • Lluvia 24h';
       } else if (layerKey === 'wrf_daily') {
         customTitleInput.value = isEcuador ? 'Pronóstico de Lluvias de Hoy' : `${basinName} • Pronóstico de Lluvias`;
         customBadgeInput.value = 'Pronóstico INAMHI';
@@ -1250,10 +1338,12 @@
       const layer = layerSelect.value;
       const currentPreset = presetSelect ? presetSelect.value : '';
 
+      updateDetectionModeDescription();
+
       // Immediately purge cache and canvas so frames from the other provider never linger
       frameImageCache.clear();
       ctx.clearRect(0, 0, 800, 800);
-      preloadStatusText.textContent = `Cambiando a ${layer === 'nasa_gibs' ? 'NASA GIBS' : 'GEOGLOWS'}...`;
+      preloadStatusText.textContent = `Cargando ${layer === 'persiann_24h' ? 'Precipitación PERSIANN' : 'GOES-16 Banda 13'}...`;
       preloadBar.style.width = '0%';
 
       // Auto-switch preset if it's currently tied to the opposing source
@@ -1396,6 +1486,75 @@
     if (customDateSubtitleInput) customDateSubtitleInput.addEventListener('input', updateOverlay);
     if (showSummaryCardsCheckbox) showSummaryCardsCheckbox.addEventListener('change', updateOverlay);
     if (showCityPinsCheckbox) showCityPinsCheckbox.addEventListener('change', updateOverlay);
+
+    // Official WFS Basin Polygons Layer Handlers (GeoServer WFS)
+    let wfsBasinsLoaded = false;
+    async function loadWfsBasinPolygons() {
+      if (wfsBasinsLoaded || !wfsBasinPolygonsLayer) return;
+      try {
+        const res = await fetch('/api/basin-polygons');
+        const pathsData = await res.json();
+        
+        // Colors corresponding to each monitored hydroelectric basin
+        const colors = {
+          coca: '#38bdf8',
+          paute: '#a855f7',
+          agoyan: '#22c55e',
+          jubones: '#f59e0b'
+        };
+
+        const labels = {
+          coca: 'Cuenca Coca Codo Sinclair (GeoServer WFS)',
+          paute: 'Cuenca Complejo Paute (GeoServer WFS)',
+          agoyan: 'Cuenca Pastaza / Agoyán (GeoServer WFS)',
+          jubones: 'Cuenca Jubones / Minas San Francisco (GeoServer WFS)'
+        };
+
+        let svgHtml = '';
+        for (const [key, d] of Object.entries(pathsData)) {
+          const col = colors[key] || '#38bdf8';
+          const label = labels[key] || key;
+          svgHtml += `
+            <g id="wfs_basin_${key}">
+              <!-- Basin real contour path with translucent fill -->
+              <path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <title>${label}</title>
+              </path>
+              <!-- Outer glowing stroke underlay for crisp map contrast -->
+              <path d="${d}" fill="none" stroke="#000000" stroke-width="4.5" stroke-opacity="0.75" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"/>
+              <path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          `;
+        }
+
+        wfsBasinPolygonsLayer.innerHTML = svgHtml;
+        wfsBasinsLoaded = true;
+      } catch (err) {
+        console.error('Error loading WFS basin polygons:', err);
+      }
+    }
+
+    function updateWfsBasinsVisibility() {
+      if (!wfsBasinPolygonsLayer) return;
+      const isChecked = showWfsBasinsCheckbox && showWfsBasinsCheckbox.checked;
+      wfsBasinPolygonsLayer.style.display = isChecked ? 'block' : 'none';
+      if (isChecked && !wfsBasinsLoaded) {
+        loadWfsBasinPolygons();
+      }
+    }
+    if (showWfsBasinsCheckbox) {
+      showWfsBasinsCheckbox.addEventListener('change', updateWfsBasinsVisibility);
+    }
+
+    // Reels / Stories 9:16 Safe Zones Guide Toggle
+    function updateSafeZonesVisibility() {
+      if (!safeZonesGuideGroup) return;
+      const isChecked = showSafeZonesCheckbox && showSafeZonesCheckbox.checked;
+      safeZonesGuideGroup.style.display = isChecked ? 'block' : 'none';
+    }
+    if (showSafeZonesCheckbox) {
+      showSafeZonesCheckbox.addEventListener('change', updateSafeZonesVisibility);
+    }
 
     // Provincial Boundary Layer State Handlers (Vector SVG)
     let provincesVectorLoaded = false;
@@ -1639,12 +1798,14 @@
           showCityPins: showCityPinsCheckbox ? showCityPinsCheckbox.checked : true,
           showSummaryCards: showSummaryCardsCheckbox ? showSummaryCardsCheckbox.checked : true,
           showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
+          showWfsBasins: showWfsBasinsCheckbox ? showWfsBasinsCheckbox.checked : false,
           showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,
           provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
           provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
           provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,
           activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
           watermarkBrand: watermarkBrandSelect ? watermarkBrandSelect.value : 'x',
+          aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '1:1',
           createMp4: format === 'mp4',
           createGif: format === 'gif',
           framerate: fps

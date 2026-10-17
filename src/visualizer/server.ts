@@ -590,6 +590,19 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Hydroelectric Basin Polygons Vector API (From INAMHI/GEOGLOWS GeoServer WFS)
+  if (req.method === 'GET' && req.url === '/api/basin-polygons') {
+    const jsonPath = path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json');
+    if (fs.existsSync(jsonPath)) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' });
+      fs.createReadStream(jsonPath).pipe(res);
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Basin polygons not found' }));
+    return;
+  }
+
   // Provincial Boundaries Vector Overlay API (Clean SVG vector paths)
   if (req.method === 'GET' && (req.url === '/api/provincias-vector' || req.url === '/assets/overlays/ecuador_provincias.svg')) {
     const candidates = [
@@ -840,7 +853,11 @@ const server = http.createServer(async (req, res) => {
           activeBasinKeys: payload.activeBasinKeys,
           highlightBasinKey: payload.activeBasinKeys?.[0],
           showThermalScale,
+          showWfsBasins: payload.showWfsBasins === true,
           layer,
+          aspectRatio: payload.aspectRatio || '1:1',
+          width: payload.aspectRatio === '9:16' ? 1080 : 800,
+          height: payload.aspectRatio === '9:16' ? 1920 : (payload.aspectRatio === '4:5' ? 1000 : 800),
           minDurationSeconds: payload.minDurationSeconds !== undefined ? payload.minDurationSeconds : 10,
           summaryCardsResolver: showSummaryCards ? (frame: any, idx: number) => {
             let m: any = null;
