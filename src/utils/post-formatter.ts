@@ -242,7 +242,14 @@ export function buildStormAlertPostText(options: StormAlertPostOptions): string 
     hashtag = '#Agoyan #Pastaza';
   }
 
-  let text = `🌧️ Evento de Lluvia en ${basinName}\n\n` +
+  let locationStr = basinName;
+  if (basinName.startsWith('cuenca hídrica')) {
+    locationStr = `la ${basinName}`;
+  } else if (basinName.startsWith('Complejo')) {
+    locationStr = `el ${basinName}`;
+  }
+
+  let text = `🌧️ Evento de Lluvia en ${locationStr}\n\n` +
     `Se registró actividad convectiva relevante sobre la cuenca de recarga hídrica:\n` +
     `• Pico de cobertura: ${peakPct}%\n`;
 

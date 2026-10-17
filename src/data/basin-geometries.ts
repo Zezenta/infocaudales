@@ -22,7 +22,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   },
   cocaCodoSinclair: {
     key: 'cocaCodoSinclair',
-    name: 'Cuenca Coca Codo Sinclair',
+    name: 'cuenca hídrica de Coca Codo Sinclair',
     subtitle: 'Ríos Quijos • Salado • Cosanga (Aguas arriba)',
     bbox: [-78.30, -0.75, -77.60, 0.20],
     plantLocation: {
@@ -45,7 +45,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   mazar: {
     key: 'mazar',
     name: 'Complejo Paute / Mazar',
-    subtitle: 'Cuenca Río Paute y Mazar',
+    subtitle: 'cuenca hídrica ríos Paute y Mazar',
     bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.54,
@@ -56,7 +56,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   molino: {
     key: 'molino',
     name: 'Complejo Paute / Molino',
-    subtitle: 'Cuenca Río Paute',
+    subtitle: 'cuenca hídrica río Paute',
     bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.58,
@@ -67,7 +67,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   sopladora: {
     key: 'sopladora',
     name: 'Complejo Paute / Sopladora',
-    subtitle: 'Cuenca Río Paute',
+    subtitle: 'cuenca hídrica río Paute',
     bbox: [-79.38, -3.30, -78.40, -2.25],
     plantLocation: {
       lat: -2.61,
@@ -77,7 +77,7 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   },
   agoyan: {
     key: 'agoyan',
-    name: 'Cuenca Pastaza / Agoyán',
+    name: 'cuenca hídrica de Pastaza / Agoyán',
     subtitle: 'Ríos Chambo y Patate (Aguas arriba)',
     bbox: [-78.98, -2.35, -78.30, -0.58],
     plantLocation: {
@@ -88,8 +88,8 @@ export const BASIN_GEOMETRIES: Record<string, BasinGeometry> = {
   },
   minasSanFrancisco: {
     key: 'minasSanFrancisco',
-    name: 'Cuenca Jubones / MSF',
-    subtitle: 'Cuenca Alta Río Jubones',
+    name: 'cuenca hídrica de Jubones / MSF',
+    subtitle: 'cuenca hídrica alta río Jubones',
     bbox: [-79.60, -3.75, -78.90, -3.00],
     plantLocation: {
       lat: -3.34,

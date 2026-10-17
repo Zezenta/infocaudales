@@ -236,7 +236,7 @@ export class VideoCompilerService {
     const showDetectionBoxes = options.showDetectionBoxes !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     if (showDetectionBoxes) {
       const monitoredBasins = options.customMonitoredBasins || [
-        { key: 'cocaCodoSinclair', label: 'Cuenca Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#38bdf8' },
+        { key: 'cocaCodoSinclair', label: 'cuenca hídrica Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#38bdf8' },
         { key: 'paute', label: 'Complejo Hidroeléctrico Paute', bbox: BASIN_GEOMETRIES.paute.bbox, defaultColor: '#a855f7' }
       ];
 

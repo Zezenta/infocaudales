@@ -809,8 +809,12 @@ export class RainMonitorService {
       if (autoPublishSocial) {
         if (this.facebookService) {
           try {
+            const fbTitle = basinName.toLowerCase().startsWith('complejo')
+              ? `Evento de Lluvia • ${basinName}`
+              : `Evento de Lluvia • ${basinName.startsWith('cuenca') ? basinName : `cuenca hídrica de ${basinName}`}`;
+
             await this.facebookService.postVideo(archivedPath, {
-              title: `Evento de Lluvia - Cuenca ${basinName}`,
+              title: fbTitle,
               description: postText
             });
             systemLogger.info(`[RainMonitor] 📘 Successfully published rain alert video to Facebook`);

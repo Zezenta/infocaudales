@@ -146,7 +146,7 @@ describe('post-formatter', () => {
         durationMinutes: 120
       });
 
-      expect(text).toContain('Cuenca Coca Codo Sinclair');
+      expect(text).toContain('la cuenca hídrica de Coca Codo Sinclair');
       expect(text).toContain('Pico de cobertura: 65%');
       expect(text).toContain('Duración aproximada: 120 min');
       expect(text).toContain('#CocaCodoSinclair #CCS');
@@ -175,7 +175,7 @@ describe('post-formatter', () => {
       });
 
       expect(text).toContain('• Registro: 2026-10-16 de 01:10 a 01:55 ECT');
-      expect(text).toContain('🌧️ Evento de Lluvia en Complejo Hidroeléctrico Paute');
+      expect(text).toContain('🌧️ Evento de Lluvia en el Complejo Hidroeléctrico Paute');
       expect(text).not.toContain('Monitoreo Satelital GOES-16');
       expect(text.toLowerCase()).not.toContain('tormenta');
     });
