@@ -186,7 +186,12 @@ input[type="text"], input[type="number"], textarea, .selectable-text {
   overflow: hidden;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
   user-select: none;
-  transition: width 0.2s ease, height 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.video-card-wrapper.aspect-9-16 {
+  width: 450px;
+  height: 800px;
 }
 
 .video-card-wrapper.fit-screen {
@@ -194,8 +199,18 @@ input[type="text"], input[type="number"], textarea, .selectable-text {
   height: min(800px, 60vh);
 }
 
+.video-card-wrapper.aspect-9-16.fit-screen {
+  width: calc(min(800px, 60vh) * 9 / 16);
+  height: min(800px, 60vh);
+}
+
 .player-controls.fit-screen {
   width: min(800px, 60vh);
+}
+
+.player-controls.aspect-9-16 {
+  width: 650px;
+  max-width: 100%;
 }
 
 .satellite-image-layer {
