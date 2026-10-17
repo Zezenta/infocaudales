@@ -687,9 +687,9 @@ const server = http.createServer(async (req, res) => {
       source = 'nasa_gibs';
       layers = 'GOES-East_ABI_Band13_Clean_Infrared';
     } else if (layer === 'persiann_24h') {
-      layers = 'satellite_based_precipitation:persiann_pdir_24h';
+      layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
     } else if (layer === 'wrf_daily') {
-      layers = 'wrf:wrf_precipitation_daily';
+      layers = 'wrf:wrf_precipitation_daily,ecuador:provincias';
     } else {
       layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
     }
@@ -846,7 +846,7 @@ const server = http.createServer(async (req, res) => {
           showAllPins,
           showCityPins: payload.showCityPins !== false && plantKey === 'ecuador',
           showDetectionBoxes: payload.showDetectionBoxes !== undefined ? payload.showDetectionBoxes : true,
-          showProvinces: payload.showProvinces !== undefined ? payload.showProvinces : true,
+          showProvinces: payload.showProvinces !== undefined ? payload.showProvinces : false,
           provincesColor: payload.provincesColor || '#38bdf8',
           provincesOpacity: typeof payload.provincesOpacity === 'number' ? payload.provincesOpacity : 0.85,
           provincesWidth: typeof payload.provincesWidth === 'number' ? payload.provincesWidth : 1.2,
@@ -855,9 +855,9 @@ const server = http.createServer(async (req, res) => {
           showThermalScale,
           showWfsBasins: payload.showWfsBasins === true,
           layer,
-          aspectRatio: payload.aspectRatio || '1:1',
-          width: payload.aspectRatio === '9:16' ? 1080 : 800,
-          height: payload.aspectRatio === '9:16' ? 1920 : (payload.aspectRatio === '4:5' ? 1000 : 800),
+          aspectRatio: '9:16',
+          width: 1080,
+          height: 1920,
           minDurationSeconds: payload.minDurationSeconds !== undefined ? payload.minDurationSeconds : 10,
           summaryCardsResolver: showSummaryCards ? (frame: any, idx: number) => {
             let m: any = null;

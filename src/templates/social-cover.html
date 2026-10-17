@@ -850,10 +850,8 @@
     <!-- LEFT COLUMN: The Visualizer Card -->
     <div class="cards-column">
       <div class="card-meta-bar">
-        <span>Vista previa renderizada (4:5 Retrato • Instagram / Facebook)</span>
         <div style="display: flex; gap: 8px; align-items: center;">
           <span class="aspect-badge" id="aspect-label">1080 x 1350 px (4:5)</span>
-          <button class="btn-secondary" id="btn-toggle-aspect">Cambiar a 1:1</button>
         </div>
       </div>
 
@@ -1572,21 +1570,28 @@
         updateCardDateTime(parts.dateStr, parts.timeStr);
       });
 
-      // Aspect Ratio Toggle
-      document.getElementById('btn-toggle-aspect').addEventListener('click', () => {
-        isPortrait45 = !isPortrait45;
-        const card = document.getElementById('cover-card');
-        const aspectLabel = document.getElementById('aspect-label');
-        const toggleBtn = document.getElementById('btn-toggle-aspect');
+      // Aspect Ratio is fixed to 4:5 Portrait for Instagram
+      const toggleAspectBtn = document.getElementById('btn-toggle-aspect');
+      if (toggleAspectBtn) {
+        toggleAspectBtn.addEventListener('click', () => {
+          isPortrait45 = !isPortrait45;
+          const card = document.getElementById('cover-card');
+          const aspectLabel = document.getElementById('aspect-label');
+          if (isPortrait45) {
+            card.classList.add('aspect-4-5');
+            if (aspectLabel) aspectLabel.innerText = '1080 x 1350 px (4:5)';
+          } else {
+            card.classList.remove('aspect-4-5');
+            if (aspectLabel) aspectLabel.innerText = '1080 x 1080 px (1:1)';
+          }
+        });
+      }
 
-        if (isPortrait45) {
-          card.classList.add('aspect-4-5');
-          aspectLabel.innerText = '1080 x 1350 px (4:5)';
-          toggleBtn.innerText = 'Cambiar a 1:1';
-        } else {
-          card.classList.remove('aspect-4-5');
-          aspectLabel.innerText = '1080 x 1080 px (1:1)';
-          toggleBtn.innerText = 'Cambiar a 4:5';
+      // Prevent mouse text selection and double-click highlights across UI
+      window.addEventListener('selectstart', (e) => {
+        const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
         }
       });
 
