@@ -465,13 +465,11 @@
           Compila los fotogramas cargados en un video MP4 optimizado para Twitter (H.264) o un GIF animado.
         </p>
 
-        <!-- Aspect Ratio Selector for Twitter Feed, Instagram Feed & Reels/Stories -->
+        <!-- Video Aspect Ratio: Strict 9:16 Vertical for Reels/Stories -->
         <div class="form-group" style="margin-bottom: 12px;">
-          <label class="form-label" for="aspectRatioSelect">Relación de Aspecto (Formato de Video)</label>
+          <label class="form-label" for="aspectRatioSelect">Formato de Video</label>
           <select id="aspectRatioSelect" class="form-select">
-            <option value="1:1" selected>1:1 Cuadrado (800x800 • Twitter / Web Feed)</option>
-            <option value="4:5">4:5 Retrato (800x1000 • Instagram Feed / Facebook Feed)</option>
-            <option value="9:16">9:16 Vertical (1080x1920 • Instagram Reels / Stories)</option>
+            <option value="9:16" selected>9:16 Vertical (1080x1920 • Instagram Reels / Stories / TikTok)</option>
           </select>
         </div>
 
@@ -1497,16 +1495,20 @@
         
         // Colors corresponding to each monitored hydroelectric basin
         const colors = {
-          coca: '#38bdf8',
+          cocaCodoSinclair: '#38bdf8',
           paute: '#a855f7',
           agoyan: '#22c55e',
+          minasSanFrancisco: '#f59e0b',
+          coca: '#38bdf8',
           jubones: '#f59e0b'
         };
 
         const labels = {
-          coca: 'Cuenca Coca Codo Sinclair (GeoServer WFS)',
+          cocaCodoSinclair: 'Cuenca Coca Codo Sinclair (GeoServer WFS)',
           paute: 'Cuenca Complejo Paute (GeoServer WFS)',
           agoyan: 'Cuenca Pastaza / Agoyán (GeoServer WFS)',
+          minasSanFrancisco: 'Cuenca Jubones / Minas San Francisco (GeoServer WFS)',
+          coca: 'Cuenca Coca Codo Sinclair (GeoServer WFS)',
           jubones: 'Cuenca Jubones / Minas San Francisco (GeoServer WFS)'
         };
 
@@ -1805,7 +1807,7 @@
           provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,
           activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
           watermarkBrand: watermarkBrandSelect ? watermarkBrandSelect.value : 'x',
-          aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '1:1',
+          aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',
           createMp4: format === 'mp4',
           createGif: format === 'gif',
           framerate: fps

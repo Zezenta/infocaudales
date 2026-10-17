@@ -691,7 +691,7 @@ const server = http.createServer(async (req, res) => {
     } else if (layer === 'wrf_daily') {
       layers = 'wrf:wrf_precipitation_daily';
     } else {
-      layers = 'goes:goes_abi_l2_cmipf_13';
+      layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
     }
 
     satelliteMapService.fetchMapTile({

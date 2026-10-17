@@ -40,6 +40,17 @@
       align-items: center;
       gap: 20px;
       min-height: 100vh;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input[type="text"], input[type="number"], textarea, .selectable-text {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
     }
 
     /* Top Navigation Switcher */
@@ -839,15 +850,15 @@
     <!-- LEFT COLUMN: The Visualizer Card -->
     <div class="cards-column">
       <div class="card-meta-bar">
-        <span>Vista previa renderizada (1:1 Cuadrado)</span>
+        <span>Vista previa renderizada (4:5 Retrato • Instagram / Facebook)</span>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <span class="aspect-badge" id="aspect-label">1080 x 1080 px</span>
-          <button class="btn-secondary" id="btn-toggle-aspect">Cambiar a 4:5</button>
+          <span class="aspect-badge" id="aspect-label">1080 x 1350 px (4:5)</span>
+          <button class="btn-secondary" id="btn-toggle-aspect">Cambiar a 1:1</button>
         </div>
       </div>
 
       <!-- THE COVER CARD CONTAINER (ID: cover-card) -->
-      <div class="cover-card-container" id="cover-card">
+      <div class="cover-card-container aspect-4-5" id="cover-card">
         
         <!-- HEADER (Exact hydro-card telemetry aesthetic) -->
         <div class="cover-header">
@@ -1185,7 +1196,7 @@
     };
 
     let activePlantKey = 'cocaCodoSinclair';
-    let isPortrait45 = false;
+    let isPortrait45 = true;
 
     // Helper for delta / trend arrow (con colita y margen seguro en viewBox)
     function getTrendArrowHtml(trend) {
