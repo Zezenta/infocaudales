@@ -210,6 +210,132 @@ describe('RainMonitorService', () => {
       expect(event?.cooldown_until).toBeGreaterThan(now);
     });
 
+    it('waits for post-storm calm frames when archive has fewer than 3 post-storm frames', async () => {
+      const mockSat = new SatelliteMapService();
+      const now = Date.now();
+      const stormStartIso = new Date(now - 70 * 60000).toISOString();
+      const stormEndIso = new Date(now - 10 * 60000).toISOString();
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([stormEndIso]);
+      vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 5)); // 5% coverage (dissipated)
+
+      db.prepare("DELETE FROM satellite_archive WHERE file_path = '/tmp/fake.png'").run();
+      // Seed 6 frames in satellite_archive (4 pre-storm + 2 active storm)
+      for (let i = 0; i < 6; i++) {
+        const tIso = new Date(new Date(stormStartIso).getTime() - (4 - i) * 10 * 60000).toISOString();
+        db.prepare(`
+          INSERT INTO satellite_archive (timestamp_iso, source, date_ecuador, time_ecuador, plant_key, file_path, file_size_bytes, recorded_at)
+          VALUES (?, 'geoserver', '2026-10-19', '11:00', 'ecuador', '/tmp/fake.png', 50000, 1)
+        `).run(tIso);
+      }
+
+      const detectedAt = now - 70 * 60 * 1000;
+      db.prepare(`
+        INSERT INTO rain_events (
+          plant_key, status, detected_at, last_checked_at,
+          peak_coverage_pct, last_coverage_pct, cooldown_until,
+          start_frame_iso
+        ) VALUES ('cocaCodoSinclair', 'ACTIVE', ?, ?, 35, 20, 0, ?)
+      `).run(detectedAt, now - 10 * 60 * 1000, stormStartIso);
+
+      const rainMonitor = new RainMonitorService(mockSat);
+      const result = await rainMonitor.checkBasin('cocaCodoSinclair', {
+        minRainDurationMinutes: 60,
+        dissipationRatio: 0.50
+      });
+
+      expect(result.action).toBe('STORM_MONITORING');
+      expect(result.message).toContain('Esperando fotogramas posteriores de calma');
+
+      const saved = rainMonitor.getActiveOrCooldownEvent('cocaCodoSinclair');
+      expect(saved?.status).toBe('COMPILING');
+      expect(saved?.end_frame_iso).toBe(stormEndIso);
+    });
+
+    it('compiles video once 3 post-storm frames arrive in archive and passes exact stormWindow', async () => {
+      const mockSat = new SatelliteMapService();
+      const now = Date.now();
+      const stormStartIso = new Date(now - 70 * 60000).toISOString();
+      const stormEndIso = new Date(now - 30 * 60000).toISOString();
+      const postFrame1 = new Date(now - 20 * 60000).toISOString();
+      const postFrame2 = new Date(now - 10 * 60000).toISOString();
+      const postFrame3 = new Date(now).toISOString();
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([postFrame3]);
+      vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 2));
+
+      db.prepare("DELETE FROM satellite_archive WHERE file_path = '/tmp/fake.png'").run();
+      // Seed 3 post-storm frames in satellite_archive
+      for (const tIso of [postFrame1, postFrame2, postFrame3]) {
+        db.prepare(`
+          INSERT INTO satellite_archive (timestamp_iso, source, date_ecuador, time_ecuador, plant_key, file_path, file_size_bytes, recorded_at)
+          VALUES (?, 'geoserver', '2026-10-19', '12:30', 'ecuador', '/tmp/fake.png', 50000, 1)
+        `).run(tIso);
+      }
+
+      const mockVideo = new VideoCompilerService();
+      let capturedStormWindow: any = null;
+      vi.spyOn(mockVideo, 'generateBasinAnimation').mockImplementation(async (opts: any) => {
+        capturedStormWindow = opts.stormWindow;
+        return {
+          plantKey: 'cocaCodoSinclair',
+          mp4Path: '/tmp/test_full_rain.mp4',
+          frameCount: 14,
+          durationSeconds: 10,
+          timestamps: {
+            start: new Date(now - 100 * 60000).toISOString(),
+            end: postFrame3,
+            startEcuador: '2026-10-19 05:40',
+            endEcuador: '2026-10-19 07:50'
+          }
+        };
+      });
+
+      db.prepare(`
+        INSERT INTO rain_events (
+          plant_key, status, detected_at, last_checked_at,
+          peak_coverage_pct, last_coverage_pct, cooldown_until,
+          start_frame_iso, end_frame_iso
+        ) VALUES ('cocaCodoSinclair', 'COMPILING', ?, ?, 35, 5, 0, ?, ?)
+      `).run(now - 70 * 60 * 1000, now - 10 * 60 * 1000, stormStartIso, stormEndIso);
+
+      const rainMonitor = new RainMonitorService(mockSat, mockVideo);
+      const result = await rainMonitor.checkBasin('cocaCodoSinclair');
+
+      expect(result.action).toBe('VIDEO_COMPILED');
+      const saved = rainMonitor.getActiveOrCooldownEvent('cocaCodoSinclair');
+      expect(saved?.status).toBe('COOLDOWN');
+
+      // Verify that stormWindow has startTime and endTime without endFrameIndex cutoff
+      expect(capturedStormWindow.endFrameIndex).toBeUndefined();
+      expect(capturedStormWindow.startTime).toBeLessThan(new Date(stormStartIso).getTime());
+      expect(capturedStormWindow.endTime).toBeGreaterThan(new Date(stormEndIso).getTime());
+    });
+
+    it('resumes ACTIVE monitoring if rain reignites while in COMPILING status', async () => {
+      const mockSat = new SatelliteMapService();
+      const now = Date.now();
+      const currentFrameIso = new Date(now).toISOString();
+      vi.spyOn(mockSat, 'fetchGoesTimestamps').mockResolvedValue([currentFrameIso]);
+      vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(createMockPng(10, 10, 25)); // 25% (reignited)
+
+      db.prepare(`
+        INSERT INTO rain_events (
+          plant_key, status, detected_at, last_checked_at,
+          peak_coverage_pct, last_coverage_pct, cooldown_until,
+          start_frame_iso, end_frame_iso
+        ) VALUES ('cocaCodoSinclair', 'COMPILING', ?, ?, 30, 8, 0, ?, ?)
+      `).run(now - 70 * 60 * 1000, now - 5 * 60 * 1000, new Date(now - 70 * 60000).toISOString(), new Date(now - 10 * 60000).toISOString());
+
+      const rainMonitor = new RainMonitorService(mockSat);
+      const result = await rainMonitor.checkBasin('cocaCodoSinclair', { stormThresholdPct: 10 });
+
+      expect(result.action).toBe('STORM_MONITORING');
+      expect(result.message).toContain('Tormenta reactivada');
+
+      const saved = rainMonitor.getActiveOrCooldownEvent('cocaCodoSinclair');
+      expect(saved?.status).toBe('ACTIVE');
+      expect(saved?.end_frame_iso).toBeNull();
+    });
+
     it('enforces cooldown period and ignores new checks while in cooldown', async () => {
       const mockSat = new SatelliteMapService();
       const rainMonitor = new RainMonitorService(mockSat);
