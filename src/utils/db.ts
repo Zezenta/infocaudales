@@ -63,7 +63,9 @@ db.exec(`
     video_duration_seconds REAL,
     cooldown_until INTEGER NOT NULL,
     published_at INTEGER,
-    tweet_id TEXT
+    tweet_id TEXT,
+    start_frame_iso TEXT,
+    end_frame_iso TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_rain_events_plant_status 
@@ -152,6 +154,12 @@ try {
 } catch {}
 try {
   db.exec(`ALTER TABLE rain_events ADD COLUMN tweet_id TEXT;`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE rain_events ADD COLUMN start_frame_iso TEXT;`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE rain_events ADD COLUMN end_frame_iso TEXT;`);
 } catch {}
 
 console.log('[SQLite] Database initialized at:', DB_PATH);

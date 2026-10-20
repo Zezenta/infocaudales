@@ -26,6 +26,8 @@ export interface RainEventRecord {
   cooldown_until: number;
   published_at?: number;
   tweet_id?: string;
+  start_frame_iso?: string;
+  end_frame_iso?: string;
 }
 
 export interface RainCheckOptions {
@@ -473,9 +475,9 @@ export class RainMonitorService {
     const maxStaleMinutes = effectiveSource === 'nasa_gibs' ? 90 : 45;
     const frameAgeMinutes = Math.round((now - new Date(timestampIso).getTime()) / 60000);
     if (frameAgeMinutes > maxStaleMinutes) {
-      if (existingEvent && existingEvent.status === 'ACTIVE') {
+      if (existingEvent && (existingEvent.status === 'ACTIVE' || existingEvent.status === 'COMPILING')) {
         systemLogger.warn(
-          `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old, max allowed is ${maxStaleMinutes} min). Aborting stale storm event to prevent false compilation.`
+          `[RainMonitor] Satellite feed stalled for ${plantKey} (Latest frame is ${frameAgeMinutes} min old, max allowed is ${maxStaleMinutes} min). Aborting stale storm event #${existingEvent.id} to prevent false compilation.`
         );
         db.prepare(`UPDATE rain_events SET status = 'CLOSED' WHERE id = ?`).run(existingEvent.id);
         existingEvent.status = 'CLOSED';
@@ -493,7 +495,7 @@ export class RainMonitorService {
     }
 
     // Guardrail: Inactivity heartbeat check - if bot was paused/offline and no check occurred in > 35 minutes, close stale event
-    if (existingEvent && existingEvent.status === 'ACTIVE') {
+    if (existingEvent && (existingEvent.status === 'ACTIVE' || existingEvent.status === 'COMPILING')) {
       const timeSinceLastCheckMinutes = (now - existingEvent.last_checked_at) / 60000;
       if (timeSinceLastCheckMinutes > 35) {
         systemLogger.warn(
@@ -504,17 +506,94 @@ export class RainMonitorService {
       }
     }
 
-    // 3. No active event currently running
+    // 3. An event in COMPILING status is awaiting post-storm calm frames
+    if (existingEvent && existingEvent.status === 'COMPILING') {
+      const stormThreshold = options.stormThresholdPct ?? (DEFAULT_STORM_THRESHOLDS[plantKey] ?? 10.0);
+
+      // Check if rain reignited/intensified again before post-frames arrived
+      if (coveragePct >= stormThreshold) {
+        systemLogger.info(
+          `[RainMonitor] ⛈️ Storm in ${plantKey} reignited while awaiting post-frames (Coverage: ${coveragePct}% >= ${stormThreshold}%). Resuming ACTIVE monitoring.`
+        );
+        const resumedPeak = Math.max(existingEvent.peak_coverage_pct, coveragePct);
+        db.prepare(`
+          UPDATE rain_events
+          SET status = 'ACTIVE',
+              end_frame_iso = NULL,
+              last_coverage_pct = ?,
+              last_checked_at = ?,
+              peak_coverage_pct = ?
+          WHERE id = ?
+        `).run(coveragePct, now, resumedPeak, existingEvent.id);
+
+        existingEvent.status = 'ACTIVE';
+        existingEvent.end_frame_iso = undefined;
+        existingEvent.last_coverage_pct = coveragePct;
+        existingEvent.last_checked_at = now;
+        existingEvent.peak_coverage_pct = resumedPeak;
+
+        return {
+          plantKey,
+          action: 'STORM_MONITORING',
+          coveragePct,
+          peakCoveragePct: resumedPeak,
+          elapsedMinutes: Math.round((now - existingEvent.detected_at) / 60000),
+          event: existingEvent,
+          message: `Tormenta reactivada (${coveragePct}% cobertura). Continuando monitoreo activo.`
+        };
+      }
+
+      const dissipationIso = existingEvent.end_frame_iso || timestampIso;
+      const targetPostFrames = 3;
+
+      // Count post-storm frames archived strictly after dissipationIso
+      const postStormFrames = db.prepare(`
+        SELECT COUNT(DISTINCT timestamp_iso) as count
+        FROM satellite_archive
+        WHERE plant_key = 'ecuador'
+          AND timestamp_iso > ?
+          AND file_size_bytes > 20000
+      `).get(dissipationIso) as { count: number } | undefined;
+
+      const postCount = postStormFrames?.count || 0;
+      const dissipationEpoch = new Date(dissipationIso).getTime();
+      const minutesSinceDissipation = (now - dissipationEpoch) / 60000;
+      const maxWaitTimeoutMinutes = 55; // Safety fallback timeout (55 min since dissipation frame)
+
+      if (postCount < targetPostFrames && minutesSinceDissipation < maxWaitTimeoutMinutes) {
+        db.prepare(`UPDATE rain_events SET last_checked_at = ? WHERE id = ?`).run(now, existingEvent.id);
+        existingEvent.last_checked_at = now;
+
+        systemLogger.info(
+          `[RainMonitor] Rain event #${existingEvent.id} in ${plantKey} is waiting for post-storm calm frames (${postCount}/${targetPostFrames} archived, ${Math.round(minutesSinceDissipation)} min since dissipation frame)...`
+        );
+        return {
+          plantKey,
+          action: 'STORM_MONITORING',
+          coveragePct: existingEvent.last_coverage_pct,
+          peakCoveragePct: existingEvent.peak_coverage_pct,
+          elapsedMinutes: Math.round((now - existingEvent.detected_at) / 60000),
+          event: existingEvent,
+          message: `Tormenta finalizada. Esperando fotogramas satelitales de calma post-tormenta (${postCount}/${targetPostFrames} disponibles)...`
+        };
+      }
+
+      // Target post-storm frames reached (or timeout reached): proceed to compilation
+      return await this.compileAndPublishRainEvent(existingEvent, options, 'disipación confirmada con fotogramas posteriores');
+    }
+
+    // 4. No active event currently running
     if (!existingEvent || existingEvent.status === 'CLOSED') {
       if (coveragePct >= stormThreshold) {
         // Start new rain storm tracking event
         const insertStmt = db.prepare(`
           INSERT INTO rain_events (
             plant_key, status, detected_at, last_checked_at,
-            peak_coverage_pct, last_coverage_pct, cooldown_until
-          ) VALUES (?, 'ACTIVE', ?, ?, ?, ?, 0)
+            peak_coverage_pct, last_coverage_pct, cooldown_until,
+            start_frame_iso
+          ) VALUES (?, 'ACTIVE', ?, ?, ?, ?, 0, ?)
         `);
-        const result = insertStmt.run(plantKey, now, now, coveragePct, coveragePct);
+        const result = insertStmt.run(plantKey, now, now, coveragePct, coveragePct, timestampIso);
         const eventId = Number(result.lastInsertRowid);
 
         const newEvent: RainEventRecord = {
@@ -525,7 +604,8 @@ export class RainMonitorService {
           last_checked_at: now,
           peak_coverage_pct: coveragePct,
           last_coverage_pct: coveragePct,
-          cooldown_until: 0
+          cooldown_until: 0,
+          start_frame_iso: timestampIso
         };
 
         // Pre-seed storm frame cache with recent Ecuador frames
@@ -554,7 +634,7 @@ export class RainMonitorService {
       };
     }
 
-    // 4. An ACTIVE storm event is in progress
+    // 5. An ACTIVE storm event is in progress
     const elapsedMinutes = Math.round((now - existingEvent.detected_at) / 60000);
     const newPeak = Math.max(existingEvent.peak_coverage_pct, coveragePct);
 
@@ -592,21 +672,90 @@ export class RainMonitorService {
       };
     }
 
-    // Trigger condition reached! Prepare for video compilation
+    // Trigger condition reached!
     const reason = isPassing ? 'disipación/salida de la nube' : 'ventana temporal máxima alcanzada (2.5h)';
     systemLogger.info(
-      `[RainMonitor] 🎬 Triggering video compilation for ${plantKey} due to: ${reason} (Elapsed: ${elapsedMinutes} min)`
+      `[RainMonitor] 🎬 Rain event completed active phase for ${plantKey} due to: ${reason} (Elapsed: ${elapsedMinutes} min)`
     );
 
-    db.prepare(`UPDATE rain_events SET status = 'COMPILING' WHERE id = ?`).run(existingEvent.id);
+    const endFrameIso = timestampIso;
+    db.prepare(`
+      UPDATE rain_events
+      SET status = 'COMPILING',
+          peak_coverage_pct = ?,
+          last_coverage_pct = ?,
+          last_checked_at = ?,
+          end_frame_iso = ?
+      WHERE id = ?
+    `).run(newPeak, coveragePct, now, endFrameIso, existingEvent.id);
+
     existingEvent.status = 'COMPILING';
+    existingEvent.peak_coverage_pct = newPeak;
+    existingEvent.last_coverage_pct = coveragePct;
+    existingEvent.last_checked_at = now;
+    existingEvent.end_frame_iso = endFrameIso;
+
+    // Check how many post-storm frames are already in satellite_archive
+    const postStormFrames = db.prepare(`
+      SELECT COUNT(DISTINCT timestamp_iso) as count
+      FROM satellite_archive
+      WHERE plant_key = 'ecuador'
+        AND timestamp_iso > ?
+        AND file_size_bytes > 20000
+    `).get(endFrameIso) as { count: number } | undefined;
+
+    const postCount = postStormFrames?.count || 0;
+    const targetPostFrames = 3;
+
+    // Check if local archive is active for this event (has continuous frames from pre-storm context)
+    const startEpoch = existingEvent.start_frame_iso
+      ? new Date(existingEvent.start_frame_iso).getTime()
+      : existingEvent.detected_at;
+    const preStormIso = new Date(startEpoch - 45 * 60000).toISOString();
+    const totalArchived = (db.prepare(`
+      SELECT COUNT(*) as count FROM satellite_archive
+      WHERE plant_key = 'ecuador' AND timestamp_iso >= ? AND file_size_bytes > 20000
+    `).get(preStormIso) as { count: number })?.count || 0;
+
+    // In a live system with satellite frames arriving, wait for the 3 post-storm calm frames
+    if (totalArchived >= 4 && postCount < targetPostFrames) {
+      systemLogger.info(
+        `[RainMonitor] Rain event #${existingEvent.id} in ${plantKey} marked as COMPILING. Waiting for ${targetPostFrames - postCount} post-storm calm frame(s) to arrive before compiling...`
+      );
+      return {
+        plantKey,
+        action: 'STORM_MONITORING',
+        coveragePct,
+        peakCoveragePct: newPeak,
+        elapsedMinutes,
+        event: existingEvent,
+        message: `Tormenta completó su ciclo de lluvia (${reason}). Esperando fotogramas posteriores de calma (${postCount}/${targetPostFrames} disponibles)...`
+      };
+    }
+
+    return await this.compileAndPublishRainEvent(existingEvent, options, reason);
+  }
+
+  /**
+   * Compiles and publishes the animation video for a completed rain event.
+   */
+  private async compileAndPublishRainEvent(
+    existingEvent: RainEventRecord,
+    options: RainCheckOptions,
+    reason: string
+  ): Promise<RainCheckResult> {
+    const autoCompileVideo = options.autoCompileVideo ?? true;
+    const cooldownHours = options.cooldownHours ?? 6;
+    const plantKey = existingEvent.plant_key;
+    const now = Date.now();
+    const elapsedMinutes = Math.round((now - existingEvent.detected_at) / 60000);
 
     if (!autoCompileVideo) {
       return {
         plantKey,
         action: 'TRIGGER_COMPILATION',
-        coveragePct,
-        peakCoveragePct: newPeak,
+        coveragePct: existingEvent.last_coverage_pct,
+        peakCoveragePct: existingEvent.peak_coverage_pct,
         elapsedMinutes,
         event: existingEvent,
         message: `Lluvia completó su ciclo (${reason}). Listo para compilar video.`
@@ -617,12 +766,17 @@ export class RainMonitorService {
     const basin = BASIN_GEOMETRIES[plantKey];
     const basinName = basin?.name || plantKey;
 
-    // 1. Primary source: Load archived frames from SQLite satellite_archive (45 min prior, 35 min / 3 frames post)
+    const startIso = existingEvent.start_frame_iso || new Date(existingEvent.detected_at).toISOString();
+    const endIso = existingEvent.end_frame_iso || new Date(existingEvent.last_checked_at).toISOString();
+    const startEpoch = new Date(startIso).getTime();
+    const endEpoch = new Date(endIso).getTime();
+
+    // 1. Primary source: Load archived frames from SQLite satellite_archive (45 min prior, 45 min / 3+ frames post)
     let framesToCompile = this.loadArchivedStormFrames(
-      existingEvent.detected_at,
-      existingEvent.last_checked_at,
+      startEpoch,
+      endEpoch,
       45,
-      35
+      45
     );
 
     // 2. Legacy fallback: check if frames were cached in legacy temp folder
@@ -677,11 +831,19 @@ export class RainMonitorService {
       };
     }
 
-    const postStormFramesCount = 3;
+    // Exact Storm Window:
+    // Provide a 5-minute margin around startEpoch and endEpoch so:
+    // 1) The triggering start frame is guaranteed 100% in red (never dropped by subsecond server clock offset).
+    // 2) The final dissipation frame is guaranteed 100% in red.
+    // 3) All post-storm frames (> endEpoch + 5m) automatically display in calm cyan.
+    // 4) Arbitrary endFrameIndex cutoff is completely eliminated.
+    const stormWindow = {
+      startTime: startEpoch - (5 * 60 * 1000),
+      endTime: endEpoch + (5 * 60 * 1000)
+    };
+
     let compilationResult: CompiledAnimationResult;
     if (framesToCompile.length >= 4) {
-      // Keep the final 3 frames without alert to show calm/dissipation before loop repeats
-      const stormEndFrameIndex = Math.max(0, framesToCompile.length - 1 - postStormFramesCount);
       compilationResult = await this.videoCompilerService.compileFramesToVideo(framesToCompile, {
         plantKey: 'ecuador',
         customTitle: 'Vista Satelital GOES-16 • Ecuador Continental',
@@ -695,15 +857,12 @@ export class RainMonitorService {
         showProvinces: true,
         highlightBasinKey: plantKey,
         activeBasinKeys: [plantKey],
-        stormWindow: {
-          startTime: existingEvent.detected_at,
-          endFrameIndex: stormEndFrameIndex,
-          endTime: existingEvent.last_checked_at - 60000 // Last checked was dissipation; storm ended before it
-        }
+        stormWindow
       });
     } else {
       // Fallback: fetch historical window frames via generateBasinAnimation
-      const hoursBack = Math.min(4, Math.max(2, Math.round(elapsedMinutes / 60) + 1));
+      const stormMinutes = Math.max(1, Math.round((endEpoch - startEpoch) / 60000));
+      const hoursBack = Math.min(4, Math.max(2, Math.round(stormMinutes / 60) + 1));
       compilationResult = await this.videoCompilerService.generateBasinAnimation({
         plantKey: 'ecuador',
         hoursBack,
@@ -718,10 +877,7 @@ export class RainMonitorService {
         showProvinces: true,
         highlightBasinKey: plantKey,
         activeBasinKeys: [plantKey],
-        stormWindow: {
-          startTime: existingEvent.detected_at,
-          endTime: existingEvent.last_checked_at - 60000
-        }
+        stormWindow
       });
     }
 
@@ -782,10 +938,14 @@ export class RainMonitorService {
       const startTime = compilationResult.timestamps?.startTimeEcuador || compilationResult.timestamps?.startEcuador?.split(' ')[1];
       const endDate = compilationResult.timestamps?.endDateEcuador || compilationResult.timestamps?.endEcuador?.split(' ')[0];
       const endTime = compilationResult.timestamps?.endTimeEcuador || compilationResult.timestamps?.endEcuador?.split(' ')[1];
+
+      // Observed meteorological rain event duration (from start frame to end frame)
+      const stormDurationMinutes = Math.max(1, Math.round((endEpoch - startEpoch) / (60 * 1000)));
+
       const postText = buildStormAlertPostText({
         plantKey,
-        peakCoveragePct: newPeak,
-        durationMinutes: elapsedMinutes,
+        peakCoveragePct: existingEvent.peak_coverage_pct,
+        durationMinutes: stormDurationMinutes,
         dateEcuador: endDate || startDate,
         startTimeEcuador: startTime,
         endTimeEcuador: endTime,
@@ -848,9 +1008,9 @@ export class RainMonitorService {
     return {
       plantKey,
       action: 'VIDEO_COMPILED',
-      coveragePct,
-      peakCoveragePct: newPeak,
-      elapsedMinutes,
+      coveragePct: existingEvent.last_coverage_pct,
+      peakCoveragePct: existingEvent.peak_coverage_pct,
+      elapsedMinutes: Math.round((endEpoch - startEpoch) / (60 * 1000)),
       event: existingEvent,
       compilationResult,
       publishedTweetId,
