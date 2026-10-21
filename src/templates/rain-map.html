@@ -262,65 +262,75 @@
         <option value="ecuador" selected>Ecuador Continental (Nacional)</option>
       </select>
 
-      <!-- Panel de Detección Meteorológica & Capa -->
-      <div class="control-panel">
-        <h3 class="panel-title">Detección Meteorológica</h3>
-
-        <div class="form-group">
-          <label class="form-label" for="layerSelect">Sensor / Modo de Análisis</label>
-          <select id="layerSelect" class="form-select">
-            <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Actual • Infrarrojo Térmico)</option>
-            <option value="persiann_24h">PERSIANN-PDIR / WRF (Estimación de Lluvia y Precipitación)</option>
-          </select>
-        </div>
-
-        <!-- Tarjeta explicativa con descripción corta de qué es, qué hace y cómo funciona -->
-        <div id="detectionModeDesc" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 11.5px; line-height: 1.45; color: #cbd5e1; margin-top: 8px;">
+      <!-- Sidebar Header (Sticky top) -->
+      <div class="sidebar-header">
+        <div>
+          <div class="sidebar-header-title">Filtros & Configuración</div>
+          <div class="sidebar-header-subtitle">Capas satelitales, overlays y compilación</div>
         </div>
       </div>
 
-        <!-- Timeline Preset Selector -->
-        <div class="form-group" style="margin-top: 10px;">
-          <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
-          <select id="presetSelect" class="form-select">
-            <optgroup label="── GEOGLOWS / INAMHI (GeoServer Local) ──">
-              <option value="live_geoserver" selected>GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
-              <option value="today">GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)</option>
-              <option value="yesterday_24h">GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
-              <option value="storm_paute_oct7">GEOGLOWS: Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
-              <option value="storm_ccs_oct7">GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
-              <option value="recent_50">GEOGLOWS: Últimos 50 fotogramas archivados</option>
-              <option value="all_frames">GEOGLOWS: Archivo Histórico Completo</option>
-            </optgroup>
-            <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
-              <option value="live_nasa_12h">NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
-              <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
-              <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
-              <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
-            </optgroup>
-          </select>
-        </div>
+      <!-- Scrollable Sidebar Body -->
+      <div class="sidebar-body">
 
-        <!-- Pins & Cards Toggles -->
-        <div class="form-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #38bdf8; cursor: pointer;">
-            <input type="checkbox" id="showSummaryCardsCheckbox" checked>
-            Mostrar Tarjetas de Cobertura (Cuencas & Regiones)
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
-            <input type="checkbox" id="showCityPinsCheckbox" checked>
-            Mostrar Ciudades de Referencia (Quito, GYE, etc.)
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
-            <input type="checkbox" id="showAllPinsCheckbox" checked>
-            Mostrar Pines de Todas las Centrales
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
-            <input type="checkbox" id="fitScreenCheckbox">
-            Ajustar video a pantalla (visibilidad compacta sin scroll)
-          </label>
+        <!-- Panel de Detección Meteorológica & Capa -->
+        <div class="control-panel">
+          <h3 class="panel-title">Detección Meteorológica</h3>
+
+          <div class="form-group">
+            <label class="form-label" for="layerSelect">Sensor / Modo de Análisis</label>
+            <select id="layerSelect" class="form-select">
+              <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Actual • Infrarrojo Térmico)</option>
+              <option value="persiann_24h">PERSIANN-PDIR / WRF (Estimación de Lluvia y Precipitación)</option>
+            </select>
+          </div>
+
+          <!-- Tarjeta explicativa con descripción corta de qué es, qué hace y cómo funciona -->
+          <div id="detectionModeDesc" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 11.5px; line-height: 1.45; color: #cbd5e1; margin-top: 8px;">
+          </div>
+
+          <!-- Timeline Preset Selector -->
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
+            <select id="presetSelect" class="form-select">
+              <optgroup label="── GEOGLOWS / INAMHI (GeoServer Local) ──">
+                <option value="live_geoserver" selected>GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
+                <option value="today">GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)</option>
+                <option value="yesterday_24h">GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
+                <option value="storm_paute_oct7">GEOGLOWS: Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
+                <option value="storm_ccs_oct7">GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
+                <option value="recent_50">GEOGLOWS: Últimos 50 fotogramas archivados</option>
+                <option value="all_frames">GEOGLOWS: Archivo Histórico Completo</option>
+              </optgroup>
+              <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
+                <option value="live_nasa_12h">NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
+                <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
+                <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
+                <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Pins & Cards Toggles -->
+          <div class="form-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #38bdf8; cursor: pointer;">
+              <input type="checkbox" id="showSummaryCardsCheckbox" checked>
+              Mostrar Tarjetas de Cobertura (Cuencas & Regiones)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+              <input type="checkbox" id="showCityPinsCheckbox" checked>
+              Mostrar Ciudades de Referencia (Quito, GYE, etc.)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
+              <input type="checkbox" id="showAllPinsCheckbox" checked>
+              Mostrar Pines de Todas las Centrales
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+              <input type="checkbox" id="fitScreenCheckbox">
+              Ajustar video a pantalla (visibilidad compacta sin scroll)
+            </label>
+          </div>
         </div>
-      </div>
 
       <!-- Styling & Overlay Editor -->
       <div class="control-panel">
@@ -552,6 +562,7 @@
         <div id="exportStatus" class="status-box"></div>
       </div>
 
+      </div> <!-- /sidebar-body -->
     </aside>
 
   </main>
