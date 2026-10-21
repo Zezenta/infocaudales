@@ -165,7 +165,7 @@
           <div id="alignmentGrid" class="alignment-grid"></div>
 
           <!-- Reference Layer 1: GeoServer Provincial Lines (Clean White Lines or Normal Satellite Frame) -->
-          <img id="refLayerImg" class="ref-layer-img" src="/api/geoserver-provinces-clean" alt="GeoServer Reference Delineation">
+          <img id="refLayerImg" class="ref-layer-img" src="/api/geoserver-provinces-clean?v=continental" alt="GeoServer Reference Delineation">
 
           <!-- Layer 2: Vector SVG Overlay Layer -->
           <svg id="vectorOverlaySvg" class="vector-svg-overlay" viewBox="0 0 1080 1920" preserveAspectRatio="none">
@@ -415,7 +415,7 @@
     // 1. Load Provinces SVG Vector Overlay
     async function loadProvincesVector() {
       try {
-        const res = await fetch('/api/provincias-vector');
+        const res = await fetch('/api/provincias-vector?t=' + Date.now());
         const svgText = await res.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgText, 'image/svg+xml');
@@ -539,13 +539,13 @@
       const val = refSourceSelect.value;
       if (val === 'clean') {
         refLayerImg.style.display = 'block';
-        refLayerImg.src = '/api/geoserver-provinces-clean';
+        refLayerImg.src = '/api/geoserver-provinces-clean?t=' + Date.now();
       } else if (val === 'normal') {
         refLayerImg.style.display = 'block';
-        refLayerImg.src = '/api/geoserver-normal-frame';
+        refLayerImg.src = '/api/geoserver-normal-frame?t=' + Date.now();
       } else if (val === 'direct') {
         refLayerImg.style.display = 'block';
-        refLayerImg.src = '/api/geoserver-provinces-direct';
+        refLayerImg.src = '/api/geoserver-provinces-direct?t=' + Date.now();
       } else {
         refLayerImg.style.display = 'none';
       }

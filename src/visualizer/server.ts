@@ -626,7 +626,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Provincial Boundaries Vector Overlay API (Clean SVG vector paths)
-  if (req.method === 'GET' && (req.url === '/api/provincias-vector' || req.url === '/assets/overlays/ecuador_provincias.svg')) {
+  if (req.method === 'GET' && (req.url?.startsWith('/api/provincias-vector') || req.url?.startsWith('/assets/overlays/ecuador_provincias.svg'))) {
     const candidates = [
       path.join(__dirname, '..', 'assets', 'overlays', 'ecuador_provincias.svg'),
       path.join(process.cwd(), 'src', 'assets', 'overlays', 'ecuador_provincias.svg')
@@ -653,7 +653,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'image/svg+xml',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       });
       res.end(data);
     });
@@ -661,7 +661,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GeoServer Provincial Delineation Differential Reference PNG API
-  if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-diff' || req.url === '/assets/overlays/geoserver_provinces_differential.png')) {
+  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-provinces-diff') || req.url === '/assets/overlays/geoserver_provinces_differential.png')) {
     const candidates = [
       path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provinces_differential.png'),
       path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provinces_differential.png')
@@ -686,7 +686,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       });
       res.end(data);
     });
@@ -694,7 +694,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GeoServer Provincial Delineation Clean White PNG API
-  if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-clean' || req.url === '/assets/overlays/geoserver_provincias_clean_white.png')) {
+  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-provinces-clean') || req.url === '/assets/overlays/geoserver_provincias_clean_white.png')) {
     const candidates = [
       path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provincias_clean_white.png'),
       path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provincias_clean_white.png')
@@ -719,7 +719,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       });
       res.end(data);
     });
@@ -727,7 +727,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GeoServer Normal Satellite Frame with Provincial Delineation
-  if (req.method === 'GET' && (req.url === '/api/geoserver-normal-frame' || req.url === '/assets/overlays/geoserver_provinces_normal_frame.png')) {
+  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-normal-frame') || req.url === '/assets/overlays/geoserver_provinces_normal_frame.png')) {
     const candidates = [
       path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provinces_normal_frame.png'),
       path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provinces_normal_frame.png')
@@ -752,7 +752,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       });
       res.end(data);
     });
@@ -760,7 +760,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GeoServer Provincial Direct Transparent WMS PNG API
-  if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-direct' || req.url === '/assets/overlays/geoserver_provincias_direct.png')) {
+  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-provinces-direct') || req.url === '/assets/overlays/geoserver_provincias_direct.png')) {
     const candidates = [
       path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provincias_direct.png'),
       path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provincias_direct.png')
@@ -785,7 +785,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       });
       res.end(data);
     });
