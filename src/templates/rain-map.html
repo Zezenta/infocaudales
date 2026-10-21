@@ -420,6 +420,69 @@
               </div>
               <input type="range" id="provincesWidthSlider" min="0.5" max="3.0" step="0.1" value="1.2" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
             </div>
+
+            <!-- Manual SVG Calibration / Nudge -->
+            <div style="border-top: 1px dashed rgba(255, 255, 255, 0.12); padding-top: 10px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em;">Calibración Manual SVG</span>
+                <button type="button" id="resetSvgCalibBtn" class="calib-step-btn" style="padding: 2px 7px; font-size: 10px;" title="Restablecer desplazamiento a 0, 0">Reset (0,0)</button>
+              </div>
+
+              <!-- Offset X -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                  <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Mover Eje X (Horizontal)</label>
+                  <span id="svgOffsetXVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">0.0 px</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="-2" title="Mover 2px a la izquierda" style="padding: 3px 6px; font-size: 10.5px;">-2</button>
+                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="-0.5" title="Mover 0.5px a la izquierda" style="padding: 3px 6px; font-size: 10.5px;">-0.5</button>
+                  <input type="range" id="svgOffsetXSlider" min="-30" max="30" step="0.2" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="0.5" title="Mover 0.5px a la derecha" style="padding: 3px 6px; font-size: 10.5px;">+0.5</button>
+                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="2" title="Mover 2px a la derecha" style="padding: 3px 6px; font-size: 10.5px;">+2</button>
+                </div>
+              </div>
+
+              <!-- Offset Y -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                  <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Mover Eje Y (Vertical)</label>
+                  <span id="svgOffsetYVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">0.0 px</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="-2" title="Mover 2px hacia arriba" style="padding: 3px 6px; font-size: 10.5px;">-2</button>
+                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="-0.5" title="Mover 0.5px hacia arriba" style="padding: 3px 6px; font-size: 10.5px;">-0.5</button>
+                  <input type="range" id="svgOffsetYSlider" min="-30" max="30" step="0.2" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="0.5" title="Mover 0.5px hacia abajo" style="padding: 3px 6px; font-size: 10.5px;">+0.5</button>
+                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="2" title="Mover 2px hacia abajo" style="padding: 3px 6px; font-size: 10.5px;">+2</button>
+                </div>
+              </div>
+
+              <!-- Scale Factor -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                  <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Factor de Escala (%)</label>
+                  <span id="svgScaleVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">100.0%</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-1" title="Reducir escala 1%" style="padding: 3px 6px; font-size: 10.5px;">-1%</button>
+                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-0.2" title="Reducir escala 0.2%" style="padding: 3px 6px; font-size: 10.5px;">-0.2%</button>
+                  <input type="range" id="svgScaleSlider" min="94" max="106" step="0.1" value="100" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="0.2" title="Aumentar escala 0.2%" style="padding: 3px 6px; font-size: 10.5px;">+0.2%</button>
+                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="1" title="Aumentar escala 1%" style="padding: 3px 6px; font-size: 10.5px;">+1%</button>
+                </div>
+              </div>
+
+              <!-- Live Transform Display & Copy Box -->
+              <div style="background: rgba(2, 6, 23, 0.7); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 10.5px; color: #94a3b8; font-weight: 600;">Coordenadas para hardcodear:</span>
+                  <button type="button" id="copySvgTransformBtn" class="btn btn-primary" style="padding: 2px 8px; font-size: 10.5px;">Copiar</button>
+                </div>
+                <div id="svgCalibSummary" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">X: +0.0px | Y: +0.0px | Escala: 100.0%</div>
+                <code id="svgTransformCode" style="font-family: var(--font-mono); font-size: 10.5px; color: #cbd5e1; word-break: break-all; background: rgba(0,0,0,0.3); padding: 3px 5px; border-radius: 4px;">transform="translate(0, 290) scale(1.35)"</code>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -564,6 +627,60 @@
     const provinceBasinNotice = document.getElementById('provinceBasinNotice');
     const provincesLayer = document.getElementById('provincesLayer');
     const swatchBtns = document.querySelectorAll('.swatch-btn');
+
+    // SVG Provincial Calibration Controls
+    let svgCalibOffsetX = 0.0;
+    let svgCalibOffsetY = 0.0;
+    let svgCalibScalePct = 100.0;
+    const svgOffsetXSlider = document.getElementById('svgOffsetXSlider');
+    const svgOffsetYSlider = document.getElementById('svgOffsetYSlider');
+    const svgScaleSlider = document.getElementById('svgScaleSlider');
+    const svgOffsetXVal = document.getElementById('svgOffsetXVal');
+    const svgOffsetYVal = document.getElementById('svgOffsetYVal');
+    const svgScaleVal = document.getElementById('svgScaleVal');
+    const svgCalibSummary = document.getElementById('svgCalibSummary');
+    const svgTransformCode = document.getElementById('svgTransformCode');
+    const resetSvgCalibBtn = document.getElementById('resetSvgCalibBtn');
+    const copySvgTransformBtn = document.getElementById('copySvgTransformBtn');
+
+    function updateProvinceTransform() {
+      const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
+      const baseX = 0;
+      const baseY = is916 ? 290 : 0;
+      const baseScale = is916 ? 1.35 : 1.0;
+
+      const curX = +(baseX + svgCalibOffsetX).toFixed(2);
+      const curY = +(baseY + svgCalibOffsetY).toFixed(2);
+      const curScale = +(baseScale * (svgCalibScalePct / 100.0)).toFixed(4);
+
+      const transformStr = (curX === 0 && curY === 0 && curScale === 1.0)
+        ? ''
+        : `translate(${curX}, ${curY}) scale(${curScale})`;
+
+      if (provincesLayer) {
+        provincesLayer.setAttribute('transform', transformStr);
+      }
+
+      if (svgOffsetXVal) svgOffsetXVal.textContent = `${svgCalibOffsetX >= 0 ? '+' : ''}${svgCalibOffsetX.toFixed(1)} px`;
+      if (svgOffsetYVal) svgOffsetYVal.textContent = `${svgCalibOffsetY >= 0 ? '+' : ''}${svgCalibOffsetY.toFixed(1)} px`;
+      if (svgScaleVal) svgScaleVal.textContent = `${svgCalibScalePct.toFixed(1)}%`;
+      if (svgOffsetXSlider && parseFloat(svgOffsetXSlider.value) !== svgCalibOffsetX) {
+        svgOffsetXSlider.value = svgCalibOffsetX.toString();
+      }
+      if (svgOffsetYSlider && parseFloat(svgOffsetYSlider.value) !== svgCalibOffsetY) {
+        svgOffsetYSlider.value = svgCalibOffsetY.toString();
+      }
+      if (svgScaleSlider && parseFloat(svgScaleSlider.value) !== svgCalibScalePct) {
+        svgScaleSlider.value = svgCalibScalePct.toString();
+      }
+
+      if (svgCalibSummary) {
+        svgCalibSummary.textContent = `X: ${svgCalibOffsetX >= 0 ? '+' : ''}${svgCalibOffsetX.toFixed(1)}px | Y: ${svgCalibOffsetY >= 0 ? '+' : ''}${svgCalibOffsetY.toFixed(1)}px | Escala: ${svgCalibScalePct.toFixed(1)}%`;
+      }
+      if (svgTransformCode) {
+        svgTransformCode.textContent = `transform="translate(${curX}, ${curY}) scale(${curScale})"`;
+      }
+    }
 
     // New Detection & Preset DOM Elements
     const showDetectionBoxesCheckbox = document.getElementById('showDetectionBoxesCheckbox');
@@ -1238,7 +1355,7 @@
 
       // Scale vector overlays (provinces & WFS basins) to map area in 9:16
       if (provincesLayer) {
-        provincesLayer.setAttribute('transform', is916 ? 'translate(0, 290) scale(1.35)' : '');
+        updateProvinceTransform();
       }
       if (wfsBasinPolygonsLayer) {
         wfsBasinPolygonsLayer.setAttribute('transform', is916 ? 'translate(0, 290) scale(1.35)' : '');
@@ -1999,6 +2116,71 @@
       showProvincesCheckbox.addEventListener('change', updateProvinceVisibility);
     }
 
+    // Provincial SVG Calibration Event Listeners
+    document.querySelectorAll('.calib-step-btn[data-axis]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const axis = btn.getAttribute('data-axis');
+        const delta = parseFloat(btn.getAttribute('data-delta') || '0');
+        if (axis === 'x') {
+          svgCalibOffsetX = Math.max(-30, Math.min(30, +(svgCalibOffsetX + delta).toFixed(2)));
+        } else if (axis === 'y') {
+          svgCalibOffsetY = Math.max(-30, Math.min(30, +(svgCalibOffsetY + delta).toFixed(2)));
+        } else if (axis === 'scale') {
+          svgCalibScalePct = Math.max(90, Math.min(115, +(svgCalibScalePct + delta).toFixed(2)));
+        }
+        updateProvinceTransform();
+      });
+    });
+
+    if (svgOffsetXSlider) {
+      svgOffsetXSlider.addEventListener('input', (e) => {
+        svgCalibOffsetX = parseFloat(e.target.value) || 0;
+        updateProvinceTransform();
+      });
+    }
+    if (svgOffsetYSlider) {
+      svgOffsetYSlider.addEventListener('input', (e) => {
+        svgCalibOffsetY = parseFloat(e.target.value) || 0;
+        updateProvinceTransform();
+      });
+    }
+    if (svgScaleSlider) {
+      svgScaleSlider.addEventListener('input', (e) => {
+        svgCalibScalePct = parseFloat(e.target.value) || 100;
+        updateProvinceTransform();
+      });
+    }
+
+    if (resetSvgCalibBtn) {
+      resetSvgCalibBtn.addEventListener('click', () => {
+        svgCalibOffsetX = 0.0;
+        svgCalibOffsetY = 0.0;
+        svgCalibScalePct = 100.0;
+        updateProvinceTransform();
+      });
+    }
+
+    if (copySvgTransformBtn) {
+      copySvgTransformBtn.addEventListener('click', async () => {
+        const textToCopy = svgTransformCode ? svgTransformCode.textContent : '';
+        if (!textToCopy) return;
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          const orig = copySvgTransformBtn.textContent;
+          copySvgTransformBtn.textContent = '¡Copiado!';
+          copySvgTransformBtn.classList.remove('btn-primary');
+          copySvgTransformBtn.classList.add('btn-success');
+          setTimeout(() => {
+            copySvgTransformBtn.textContent = orig;
+            copySvgTransformBtn.classList.remove('btn-success');
+            copySvgTransformBtn.classList.add('btn-primary');
+          }, 1800);
+        } catch (e) {
+          console.warn('Clipboard write failed:', e);
+        }
+      });
+    }
+
     function applyFitScreen() {
       if (!fitScreenCheckbox) return;
       if (fitScreenCheckbox.checked) {
@@ -2096,6 +2278,9 @@
           provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
           provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
           provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,
+          svgOffsetX: svgCalibOffsetX,
+          svgOffsetY: svgCalibOffsetY,
+          svgScale: svgCalibScalePct / 100.0,
           activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
           watermarkBrand: (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '1:1' ? 'x' : 'instagram',
           aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',

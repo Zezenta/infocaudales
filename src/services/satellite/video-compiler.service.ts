@@ -59,6 +59,9 @@ export interface OverlayCustomizationOptions {
   provincesColor?: string;
   provincesWidth?: number;
   provincesOpacity?: number;
+  svgOffsetX?: number;
+  svgOffsetY?: number;
+  svgScale?: number;
   summaryCardItems?: BasinSummaryCardItem[];
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
@@ -261,7 +264,18 @@ export class VideoCompilerService {
     if (showProvinces) {
       const paths = this.getProvincesVectorSvg();
       if (paths) {
-        const transformAttr = is916 ? ' transform="translate(0, 290) scale(1.35)"' : '';
+        const baseX = 0;
+        const baseY = is916 ? 290 : 0;
+        const baseScale = is916 ? 1.35 : 1.0;
+        const offsetX = typeof options.svgOffsetX === 'number' ? options.svgOffsetX : 0;
+        const offsetY = typeof options.svgOffsetY === 'number' ? options.svgOffsetY : 0;
+        const scaleMult = typeof options.svgScale === 'number' ? options.svgScale : 1.0;
+        const finalX = +(baseX + offsetX).toFixed(2);
+        const finalY = +(baseY + offsetY).toFixed(2);
+        const finalScale = +(baseScale * scaleMult).toFixed(4);
+        const transformAttr = (finalX === 0 && finalY === 0 && finalScale === 1.0)
+          ? ''
+          : ` transform="translate(${finalX}, ${finalY}) scale(${finalScale})"`;
         provincesOverlaySvg = `
         <!-- Provincial Delineation Vector Layer -->
         <g id="provincesLayer"${transformAttr} fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
