@@ -660,6 +660,72 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GeoServer Provincial Delineation Differential Reference PNG API
+  if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-diff' || req.url === '/assets/overlays/geoserver_provinces_differential.png')) {
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provinces_differential.png'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provinces_differential.png')
+    ];
+    let diffPath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        diffPath = c;
+        break;
+      }
+    }
+    if (!diffPath) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Differential PNG not found');
+      return;
+    }
+    fs.readFile(diffPath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error reading differential PNG');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
+  // GeoServer Provincial Direct Transparent WMS PNG API
+  if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-direct' || req.url === '/assets/overlays/geoserver_provincias_direct.png')) {
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provincias_direct.png'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provincias_direct.png')
+    ];
+    let directPath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        directPath = c;
+        break;
+      }
+    }
+    if (!directPath) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Direct provincias PNG not found');
+      return;
+    }
+    fs.readFile(directPath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error reading direct provincias PNG');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
   // Satellite Single Frame Proxy API (handles CORS, local archive & layers)
   if (req.method === 'GET' && req.url && req.url.startsWith('/api/satellite-frame')) {
     const urlObj = new URL(req.url, `http://localhost:${PORT}`);
@@ -1079,6 +1145,24 @@ const server = http.createServer(async (req, res) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('Error loading social cover HTML');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
+  // Serve Temporary SVG Calibration HTML
+  if (req.url === '/calibration' || req.url === '/svg-calib' || req.url === '/svg-calibration.html') {
+    const calibHtmlPath = path.join(TEMPLATE_DIR, 'svg-calibration.html');
+    fs.readFile(calibHtmlPath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error loading SVG calibration HTML');
         return;
       }
       res.writeHead(200, {
