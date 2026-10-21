@@ -72,20 +72,20 @@
           </defs>
 
           <!-- Top Header Bar -->
-          <rect id="topHeaderRect" x="0" y="0" width="1080" height="180" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="40" y="70" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">Vista Satelital GOES-16 • Ecuador Continental</text>
-          <text id="overlayDateSubtitle" x="40" y="105" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18" style="display: none;"></text>
+          <rect id="topHeaderRect" x="0" y="0" width="1080" height="260" fill="url(#topBarGrad)"/>
+          <text id="overlayTitle" x="40" y="196" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">Vista Satelital GOES-16 • Ecuador Continental</text>
+          <text id="overlayDateSubtitle" x="40" y="228" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18" style="display: none;"></text>
 
           <!-- Top-Left Publication Alert Badge (matches VideoCompilerService) -->
-          <g id="pubStatusBadgeGroup" transform="translate(40, 125)" style="display: none;">
-            <rect id="pubBadgeRect" x="0" y="0" width="280" height="28" rx="6" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
-            <circle id="pubBadgeDotOuter" cx="14" cy="14" r="5" fill="#10b981" />
-            <circle id="pubBadgeDotInner" cx="14" cy="14" r="2.5" fill="#ffffff" style="display: none;" />
-            <text id="pubBadgeText" x="28" y="18.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12">CONDICIÓN NORMAL • SIN ALERTA</text>
+          <g id="pubStatusBadgeGroup" transform="translate(40, 234)" style="display: none;">
+            <rect id="pubBadgeRect" x="0" y="0" width="280" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
+            <circle id="pubBadgeDotOuter" cx="12" cy="12" r="4.5" fill="#10b981" />
+            <circle id="pubBadgeDotInner" cx="12" cy="12" r="2" fill="#ffffff" style="display: none;" />
+            <text id="pubBadgeText" x="24" y="16" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">CONDICIÓN NORMAL • SIN ALERTA</text>
           </g>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
-          <g id="watermarkGroup" transform="translate(820, 48)">
+          <g id="watermarkGroup" transform="translate(670, 180)">
             <g id="watermarkIconGroup">
               <!-- X Icon Box: 24x24, solid black bg, subtle border -->
               <rect x="0" y="0" width="24" height="24" rx="4.5" fill="#000000" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1"/>
@@ -150,7 +150,7 @@
 
               <!-- Center Safe Focus Zone boundary (Main content safe zone: X 20 to 882, Y 154 to 1664) -->
               <rect x="20" y="154" width="862" height="1510" fill="#38bdf8" fill-opacity="0.06" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="8,6"/>
-              <text x="40" y="195" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="22">✓ ÁREA SEGURA PRINCIPAL (CONTENIDO VISUAL Y TEXTOS CLAVE)</text>
+              <text x="36" y="172" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="13" letter-spacing="0.05em">✓ ÁREA SEGURA PRINCIPAL (CONTENIDO VISUAL Y TEXTOS CLAVE)</text>
             </g>
             <g id="safeZones11Content" style="display: none;">
               <!-- Top Header Safe Boundary (Y 0 to 70) -->
@@ -181,29 +181,29 @@
 
           <!-- Floating Thermal Scale Bar Overlay (GOES-16 Band 13 Clean Window IR) -->
           <g id="thermalScaleGroup" transform="translate(20, 684)">
-            <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
-            <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
-            <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
-            <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
-            <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
-            <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
-            <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
-            <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
+            <rect id="thermalScaleRect" x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+            <text id="thermalScaleTitle" x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+            <rect id="thermalScaleBar" x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+            <text id="thermalT1" x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
+            <text id="thermalT2" x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
+            <text id="thermalT3" x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+            <text id="thermalT4" x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
+            <text id="thermalT5" x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
           </g>
 
           <!-- Lower-Right 24h Summary Cards (Cuencas Hidroeléctricas & Regiones) -->
           <g id="summaryCardsLayer"></g>
 
           <!-- Bottom Footer Bar -->
-          <rect id="bottomFooterRect" x="0" y="1615" width="1080" height="75" fill="url(#bottomBarGrad)"/>
-          <circle id="bottomFooterDot" cx="50" cy="1650" r="8" fill="#22c55e" />
-          <text id="overlayTime" x="70" y="1657" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="22">2026-09-13  18:00 ECT</text>
+          <rect id="bottomFooterRect" x="0" y="740" width="800" height="60" fill="url(#bottomBarGrad)"/>
+          <circle id="bottomFooterDot" cx="30" cy="770" r="7" fill="#22c55e" />
+          <text id="overlayTime" x="46" y="776" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="17">2026-09-13  18:00 ECT</text>
           
           <!-- Subtitle Pill Badge on Bottom Right -->
-          <g id="badgeGroup" transform="translate(680, 1632)">
-            <rect id="badgeRect" x="0" y="0" width="220" height="36" rx="8" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
-            <circle id="badgeDot" cx="14" cy="18" r="4" fill="#38bdf8" />
-            <text id="overlayBadge" x="26" y="23" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="14">GOES-16 • Banda 13 IR (10.3 µm)</text>
+          <g id="badgeGroup" transform="translate(560, 754)">
+            <rect id="badgeRect" x="0" y="0" width="220" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
+            <circle id="badgeDot" cx="12" cy="14" r="3.5" fill="#38bdf8" />
+            <text id="overlayBadge" x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">GOES-16 • Banda 13 IR (10.3 µm)</text>
           </g>
         </svg>
       </div>
@@ -316,8 +316,8 @@
             Mostrar Pines de Todas las Centrales
           </label>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
-            <input type="checkbox" id="fitScreenCheckbox" checked>
-            Ajustar video a pantalla (visibilidad sin scroll)
+            <input type="checkbox" id="fitScreenCheckbox">
+            Ajustar video a pantalla (visibilidad compacta sin scroll)
           </label>
         </div>
       </div>
@@ -375,6 +375,14 @@
             <input type="checkbox" id="showProvincesCheckbox">
             Mostrar Delineación de Provincias
           </label>
+
+          <div id="provinceModeGroup" style="display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
+            <label class="form-label" for="provinceModeSelect" style="margin-bottom: 0; font-size: 11px;">Modo de Delineación</label>
+            <select id="provinceModeSelect" class="form-select" style="font-size: 12px; padding: 6px 8px;">
+              <option value="vector">Vectorial SVG Propia (Satélite Limpio + Editable)</option>
+              <option value="raster">Nativa GeoServer (Quemada en PNG)</option>
+            </select>
+          </div>
 
           <div id="provinceCustomizationSubgroup" style="display: flex; flex-direction: column; gap: 10px;">
             <!-- Color Picker & Swatches -->
@@ -437,14 +445,6 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="watermarkBrandSelect">Logo Red Social</label>
-          <select id="watermarkBrandSelect" class="form-select">
-            <option value="x" selected>X / Twitter</option>
-            <option value="instagram">Instagram</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label class="form-label">Marcador Individual de Presa / Captación</label>
           <div class="grid-2col">
             <input type="text" id="pinLabelInput" class="form-input" placeholder="Etiqueta del Pin" value="Captación CCS">
@@ -475,11 +475,12 @@
           Compila los fotogramas cargados en un video MP4 optimizado para Twitter (H.264) o un GIF animado.
         </p>
 
-        <!-- Video Aspect Ratio: 9:16 Vertical (Reels / Stories / TikTok) -->
+        <!-- Video Aspect Ratio: 9:16 Vertical (Reels / Stories / TikTok) vs 1:1 Square (Twitter / X) -->
         <div class="form-group" style="margin-bottom: 12px;">
           <label class="form-label" for="aspectRatioSelect">Formato de Video / Previsualización en Vivo</label>
           <select id="aspectRatioSelect" class="form-select">
             <option value="9:16" selected>9:16 Vertical (1080x1920 • Instagram Reels / Stories / TikTok)</option>
+            <option value="1:1">1:1 Cuadrado (800x800 • X / Twitter)</option>
           </select>
         </div>
 
@@ -554,6 +555,8 @@
 
     // Provincial Layer Controls
     const showProvincesCheckbox = document.getElementById('showProvincesCheckbox');
+    const provinceModeSelect = document.getElementById('provinceModeSelect');
+    const provinceModeGroup = document.getElementById('provinceModeGroup');
     const provincesColorPicker = document.getElementById('provincesColorPicker');
     const provinceColorBadge = document.getElementById('provinceColorBadge');
     const provincesOpacitySlider = document.getElementById('provincesOpacitySlider');
@@ -594,7 +597,7 @@
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
       const mapWidth = is916 ? 1080 : 800;
       const mapHeight = is916 ? 1080 : 800;
-      const offsetY = is916 ? 180 : 0;
+      const offsetY = is916 ? 290 : 0;
       const [minLon, minLat, maxLon, maxLat] = bbox;
       const x = Math.round(((lon - minLon) / (maxLon - minLon)) * mapWidth);
       const y = Math.round(((maxLat - lat) / (maxLat - minLat)) * mapHeight) + offsetY;
@@ -642,7 +645,7 @@
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
       const mapWidth = is916 ? 1080 : 800;
       const mapHeight = is916 ? 1080 : 800;
-      const offsetY = is916 ? 180 : 0;
+      const offsetY = is916 ? 290 : 0;
 
       const bbox = currentGeometry.bbox;
       allHydroPins.forEach((pin) => {
@@ -707,7 +710,7 @@
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
       const mapWidth = is916 ? 1080 : 800;
       const mapHeight = is916 ? 1080 : 800;
-      const offsetY = is916 ? 180 : 0;
+      const offsetY = is916 ? 290 : 0;
 
       const bbox = currentGeometry.bbox;
       allReferenceCities.forEach((city) => {
@@ -815,69 +818,73 @@
       let card1Rows = '', card2Rows = '';
 
       if (is916) {
-        // High-readability 9:16 vertical layout (x=40..840, width=800px, leaving right action buttons clear)
-        const cardW = 800;
-        const cardX = 40;
-        const card1H = 112;
-        const card1Y = 1275;
-        const card2H = 142;
-        const card2Y = 1398;
+        // 9:16 typography-focused layout: no container boxes, extra-large text safe from Reels buttons
+        const col1X = 50;
+        const col2X = 465;
 
         basinsList.forEach((item, idx) => {
-          const rowY = 46 + idx * 34;
-          const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+          const rowY = 1475 + idx * 70;
+          const valColor = item.highlight ? '#f87171' : item.color;
+          const shortLabel = item.label.includes('Paute') ? 'Complejo Paute' : item.label;
           card1Rows += `
-            <circle cx="20" cy="${rowY}" r="4.5" fill="${item.color}" />
-            <text x="34" y="${rowY + 5.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="16">${item.label}</text>
-            <text x="${cardW - 22}" y="${rowY + 5.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="18" text-anchor="end">${item.value}</text>
+            <circle cx="${col1X + 8}" cy="${rowY - 8}" r="5" fill="${item.color}" />
+            <text x="${col1X + 22}" y="${rowY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="24">${shortLabel}</text>
+            <text x="425" y="${rowY + 1}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="34" text-anchor="end">${item.value}</text>
           `;
         });
 
         regionsList.forEach((item, idx) => {
-          const rowY = 46 + idx * 34;
-          const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+          const rowY = 1461 + idx * 50;
+          const valColor = item.highlight ? '#f87171' : item.color;
+          let regLabel = item.label;
+          if (regLabel.includes('Costa') || regLabel.includes('Litoral')) regLabel = 'Costa';
+          else if (regLabel.includes('Sierra') || regLabel.includes('Interandina')) regLabel = 'Sierra';
+          else if (regLabel.includes('Oriente') || regLabel.includes('Amazónica')) regLabel = 'Oriente';
+
           card2Rows += `
-            <circle cx="20" cy="${rowY}" r="4.5" fill="${item.color}" />
-            <text x="34" y="${rowY + 5.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="16">${item.label}</text>
-            <text x="${cardW - 22}" y="${rowY + 5.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="18" text-anchor="end">${item.value}</text>
+            <circle cx="${col2X + 8}" cy="${rowY - 7}" r="4.5" fill="${item.color}" />
+            <text x="${col2X + 22}" y="${rowY}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="23">${regLabel}</text>
+            <text x="860" y="${rowY + 1}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="30" text-anchor="end">${item.value}</text>
           `;
         });
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.innerHTML = `
-          <!-- Card 1: Cuencas Hidroeléctricas -->
-          <g transform="translate(${cardX}, ${card1Y})">
-            <rect x="0" y="0" width="${cardW}" height="${card1H}" rx="10"
-                  fill="#0b1120" fill-opacity="0.94" stroke="rgba(255, 255, 255, 0.16)" stroke-width="1.2" />
-            <rect x="0" y="0" width="${cardW}" height="28" rx="10" fill="#1e293b" fill-opacity="0.85" />
-            <circle cx="20" cy="14" r="4.5" fill="#38bdf8" />
-            <text x="34" y="18.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12" letter-spacing="0.06em">CUENCAS HIDROELÉCTRICAS MONITOREADAS</text>
-            <line x1="0" y1="28" x2="${cardW}" y2="28" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
-            ${card1Rows}
-          </g>
+          <!-- Subtle vertical divider between columns -->
+          <line x1="445" y1="1390" x2="445" y2="1568" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1.5" stroke-linecap="round" />
 
-          <!-- Card 2: Cobertura por Región -->
-          <g transform="translate(${cardX}, ${card2Y})">
-            <rect x="0" y="0" width="${cardW}" height="${card2H}" rx="10"
-                  fill="#0b1120" fill-opacity="0.94" stroke="rgba(255, 255, 255, 0.16)" stroke-width="1.2" />
-            <rect x="0" y="0" width="${cardW}" height="28" rx="10" fill="#1e293b" fill-opacity="0.85" />
-            <circle cx="20" cy="14" r="4.5" fill="#f59e0b" />
-            <text x="34" y="18.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12" letter-spacing="0.06em">COBERTURA DE PRECIPITACIÓN POR REGIÓN</text>
-            <line x1="0" y1="28" x2="${cardW}" y2="28" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
-            ${card2Rows}
-          </g>
+          <!-- Column 1: Cuencas Monitoreadas -->
+          <circle cx="${col1X + 8}" cy="1404" r="5" fill="#38bdf8" />
+          <text x="${col1X + 22}" y="1409" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" letter-spacing="0.08em">CUENCAS MONITOREADAS</text>
+          ${card1Rows}
+
+          <!-- Column 2: Cobertura por Región -->
+          <circle cx="${col2X + 8}" cy="1404" r="5" fill="#f59e0b" />
+          <text x="${col2X + 22}" y="1409" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" letter-spacing="0.08em">COBERTURA POR REGIÓN</text>
+          ${card2Rows}
         `;
         layer.appendChild(g);
       } else {
-        // 1:1 compact layout
-        const cardW = 228;
-        const cardX = 800 - cardW - 20;
-        const card2H = 22 + regionsList.length * 24 + 6;
-        const card2Y = 800 - 60 - 12 - card2H;
-        const card1H = 22 + basinsList.length * 24 + 6;
-        const card1Y = card2Y - 8 - card1H;
+        // 1:1 compact layout strictly identical to master
+        const basinsList11 = [
+          { label: 'Coca Codo Sinclair', value: m ? `${ccsPct.toFixed(1)}%` : '--', color: '#38bdf8', highlight: ccsPct >= 10.0 },
+          { label: 'Paute', value: m ? `${pautePct.toFixed(1)}%` : '--', color: '#a855f7', highlight: pautePct >= 15.0 }
+        ];
 
-        basinsList.forEach((item, idx) => {
+        const regionsList11 = [
+          { label: 'Costa', value: m ? `${costaPct.toFixed(1)}%` : '--', color: '#38bdf8', highlight: costaPct >= 10.0 },
+          { label: 'Sierra', value: m ? `${sierraPct.toFixed(1)}%` : '--', color: '#34d399', highlight: sierraPct >= 10.0 },
+          { label: 'Amazonía', value: m ? `${amazoniaPct.toFixed(1)}%` : '--', color: '#f59e0b', highlight: amazoniaPct >= 10.0 }
+        ];
+
+        const cardW = 228;
+        const cardX = 800 - cardW - 20; // 552
+        const card2H = 22 + regionsList11.length * 24 + 6; // 100
+        const card2Y = 800 - 60 - 12 - card2H; // 628
+        const card1H = 22 + basinsList11.length * 24 + 6; // 76
+        const card1Y = card2Y - 8 - card1H; // 544
+
+        basinsList11.forEach((item, idx) => {
           const rowY = 34 + idx * 24;
           const valColor = item.highlight ? '#f87171' : '#cbd5e1';
           card1Rows += `
@@ -887,7 +894,7 @@
           `;
         });
 
-        regionsList.forEach((item, idx) => {
+        regionsList11.forEach((item, idx) => {
           const rowY = 34 + idx * 24;
           const valColor = item.highlight ? '#f87171' : '#cbd5e1';
           card2Rows += `
@@ -979,7 +986,7 @@
         const tagFontSize = is916 ? 13 : 11;
         const tagW = measureTextWidth(tagText, tagFontSize, 'bold') + (is916 ? 32 : 26);
         const tagH = is916 ? 26 : 22;
-        const minTop = is916 ? 184 : 70;
+        const minTop = is916 ? 214 : 70;
         const tagY = (boxY - tagH - 4 < minTop) ? boxY + 6 : boxY - tagH - 4;
         const textY = tagY + (is916 ? 18 : 15);
         const tagBg = isActiveStorm ? '#7f1d1d' : '#0b1120';
@@ -1031,20 +1038,26 @@
       const show = showPubBadgeCheckbox && showPubBadgeCheckbox.checked;
       if (!show) {
         group.style.display = 'none';
-        if (topRect) topRect.setAttribute('height', is916 ? '180' : '68');
-        if (title) title.setAttribute('y', is916 ? '70' : '38');
+        if (topRect) topRect.setAttribute('height', is916 ? '290' : '68');
         return;
       }
 
       group.style.display = 'block';
-      if (topRect) topRect.setAttribute('height', is916 ? '180' : '92');
-      if (title) title.setAttribute('y', is916 ? '60' : '34');
-      if (group) group.setAttribute('transform', is916 ? 'translate(40, 125)' : 'translate(20, 68)');
+      if (topRect) topRect.setAttribute('height', is916 ? '290' : '92');
+      if (group) group.setAttribute('transform', is916 ? 'translate(40, 264)' : 'translate(20, 48)');
 
       const rect = document.getElementById('pubBadgeRect');
       const dotOuter = document.getElementById('pubBadgeDotOuter');
       const dotInner = document.getElementById('pubBadgeDotInner');
       const text = document.getElementById('pubBadgeText');
+
+      if (rect) {
+        rect.setAttribute('height', is916 ? '28' : '24');
+        rect.setAttribute('rx', '5');
+      }
+      if (dotOuter) dotOuter.setAttribute('cy', is916 ? '14' : '12');
+      if (dotInner) dotInner.setAttribute('cy', is916 ? '14' : '12');
+      if (text) text.setAttribute('y', is916 ? '18' : '16.5');
 
       if (isAnyActive) {
         rect.setAttribute('width', is916 ? '340' : '300');
@@ -1094,24 +1107,24 @@
         overlayDateSubtitle.style.display = 'block';
         if (is916) {
           overlayDateSubtitle.setAttribute('x', '40');
-          overlayDateSubtitle.setAttribute('y', '102');
+          overlayDateSubtitle.setAttribute('y', showBadge ? '246' : '258');
           overlayDateSubtitle.setAttribute('font-size', '18');
-          topRect.setAttribute('height', '180');
-          title.setAttribute('y', '62');
+          topRect.setAttribute('height', '290');
+          title.setAttribute('y', showBadge ? '218' : '226');
           title.setAttribute('font-size', '28');
         } else {
           overlayDateSubtitle.setAttribute('x', '20');
-          overlayDateSubtitle.setAttribute('y', '56');
-          overlayDateSubtitle.setAttribute('font-size', '12');
-          topRect.setAttribute('height', '78');
+          overlayDateSubtitle.setAttribute('y', '53');
+          overlayDateSubtitle.setAttribute('font-size', '12.5');
+          topRect.setAttribute('height', showBadge ? '92' : '78');
           title.setAttribute('y', '31');
           title.setAttribute('font-size', '18');
         }
       } else {
         overlayDateSubtitle.style.display = 'none';
         if (is916) {
-          topRect.setAttribute('height', '180');
-          title.setAttribute('y', showBadge ? '60' : '70');
+          topRect.setAttribute('height', '290');
+          title.setAttribute('y', showBadge ? '226' : '240');
           title.setAttribute('font-size', '28');
         } else {
           topRect.setAttribute('height', showBadge ? '92' : '68');
@@ -1141,79 +1154,98 @@
       const topRect = document.getElementById('topHeaderRect');
       if (topRect) {
         topRect.setAttribute('width', is916 ? '1080' : '800');
-        topRect.setAttribute('height', is916 ? '180' : '68');
+        topRect.setAttribute('height', is916 ? '290' : '68');
       }
       const watermarkGroup = document.getElementById('watermarkGroup');
       if (watermarkGroup) {
-        watermarkGroup.setAttribute('transform', is916 ? 'translate(820, 48)' : 'translate(620, 20)');
+        watermarkGroup.setAttribute('transform', is916 ? 'translate(860, 210)' : 'translate(620, 18)');
         const watermarkText = document.getElementById('overlayWatermark');
         if (watermarkText) {
-          watermarkText.setAttribute('font-size', is916 ? '18' : '15');
+          watermarkText.setAttribute('font-size', is916 ? '18' : '16');
         }
       }
 
       // Dynamic Subtitle / Sensor Badge
       const badgeText = customBadgeInput.value;
       overlayBadge.textContent = badgeText;
-      const badgeFontSize = is916 ? 14 : 11.5;
+      const badgeFontSize = is916 ? 14.5 : 11.5;
       const badgeTextW = measureTextWidth(badgeText, badgeFontSize, 'bold');
       const badgeTotalW = badgeTextW + (is916 ? 38 : 32);
-      const badgeX = is916 ? (1080 - badgeTotalW - 40) : (800 - badgeTotalW - 20);
-      const badgeY = is916 ? 1634 : 754;
+      const badgeX = is916 ? (860 - badgeTotalW) : (800 - badgeTotalW - 20);
+      const badgeY = is916 ? 1620 : 754;
       const badgeGroup = document.getElementById('badgeGroup');
       if (badgeGroup) {
         badgeGroup.setAttribute('transform', `translate(${badgeX}, ${badgeY})`);
         const badgeRect = document.getElementById('badgeRect');
         if (badgeRect) {
           badgeRect.setAttribute('width', badgeTotalW);
-          badgeRect.setAttribute('height', is916 ? '36' : '26');
+          badgeRect.setAttribute('height', is916 ? '38' : '28');
           badgeRect.setAttribute('rx', is916 ? '8' : '6');
         }
         const badgeDot = document.getElementById('badgeDot');
         if (badgeDot) {
-          badgeDot.setAttribute('cx', is916 ? '14' : '11');
-          badgeDot.setAttribute('cy', is916 ? '18' : '13');
+          badgeDot.setAttribute('cx', is916 ? '14' : '12');
+          badgeDot.setAttribute('cy', is916 ? '19' : '14');
           badgeDot.setAttribute('r', is916 ? '4' : '3.5');
         }
-        overlayBadge.setAttribute('x', is916 ? '26' : '20');
-        overlayBadge.setAttribute('y', is916 ? '23' : '17');
+        overlayBadge.setAttribute('x', is916 ? '26' : '22');
+        overlayBadge.setAttribute('y', is916 ? '24' : '18');
         overlayBadge.setAttribute('font-size', badgeFontSize);
       }
 
       // Thermal Scale Bar visibility (GOES-16 IR)
       const thermalScaleGroup = document.getElementById('thermalScaleGroup');
       if (thermalScaleGroup) {
-        const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi' || layerSelect.value === 'nasa_gibs';
-        thermalScaleGroup.style.display = isThermalLayer ? 'block' : 'none';
-        thermalScaleGroup.setAttribute('transform', is916 ? 'translate(40, 1545)' : 'translate(20, 684)');
+        if (is916) {
+          // In 9:16 mobile view, thermal scale is removed completely to free space for large typography
+          thermalScaleGroup.style.display = 'none';
+        } else {
+          const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi' || layerSelect.value === 'nasa_gibs';
+          thermalScaleGroup.style.display = isThermalLayer ? 'block' : 'none';
+          thermalScaleGroup.setAttribute('transform', 'translate(20, 684)');
+          const tRect = document.getElementById('thermalScaleRect');
+          if (tRect) {
+            tRect.setAttribute('width', '230');
+            tRect.setAttribute('height', '42');
+          }
+          const tBar = document.getElementById('thermalScaleBar');
+          if (tBar) {
+            tBar.setAttribute('width', '210');
+          }
+        }
       }
 
-      // Bottom Footer Bar
+      // Bottom Footer Bar (in 9:16 removed completely to avoid floating dark gradient band; in 1:1 kept exactly as in master)
       const bottomFooterRect = document.getElementById('bottomFooterRect');
       const bottomFooterDot = document.getElementById('bottomFooterDot');
       if (bottomFooterRect) {
-        bottomFooterRect.setAttribute('x', '0');
-        bottomFooterRect.setAttribute('y', is916 ? '1615' : '744');
-        bottomFooterRect.setAttribute('width', is916 ? '1080' : '800');
-        bottomFooterRect.setAttribute('height', is916 ? '75' : '56');
+        if (is916) {
+          bottomFooterRect.style.display = 'none';
+        } else {
+          bottomFooterRect.style.display = 'block';
+          bottomFooterRect.setAttribute('x', '0');
+          bottomFooterRect.setAttribute('y', '740');
+          bottomFooterRect.setAttribute('width', '800');
+          bottomFooterRect.setAttribute('height', '60');
+        }
       }
       if (bottomFooterDot) {
-        bottomFooterDot.setAttribute('cx', is916 ? '50' : '30');
-        bottomFooterDot.setAttribute('cy', is916 ? '1652' : '772');
-        bottomFooterDot.setAttribute('r', is916 ? '8' : '6');
+        bottomFooterDot.setAttribute('cx', is916 ? '58' : '30');
+        bottomFooterDot.setAttribute('cy', is916 ? '1638' : '770');
+        bottomFooterDot.setAttribute('r', is916 ? '8.5' : '7');
       }
       if (overlayTime) {
-        overlayTime.setAttribute('x', is916 ? '70' : '46');
-        overlayTime.setAttribute('y', is916 ? '1660' : '778');
-        overlayTime.setAttribute('font-size', is916 ? '22' : '16');
+        overlayTime.setAttribute('x', is916 ? '80' : '46');
+        overlayTime.setAttribute('y', is916 ? '1646' : '776');
+        overlayTime.setAttribute('font-size', is916 ? '26' : '17');
       }
 
       // Scale vector overlays (provinces & WFS basins) to map area in 9:16
       if (provincesLayer) {
-        provincesLayer.setAttribute('transform', is916 ? 'translate(0, 180) scale(1.35)' : '');
+        provincesLayer.setAttribute('transform', is916 ? 'translate(0, 290) scale(1.35)' : '');
       }
       if (wfsBasinPolygonsLayer) {
-        wfsBasinPolygonsLayer.setAttribute('transform', is916 ? 'translate(0, 180) scale(1.35)' : '');
+        wfsBasinPolygonsLayer.setAttribute('transform', is916 ? 'translate(0, 290) scale(1.35)' : '');
       }
 
       updateTimestampDisplay();
@@ -1224,7 +1256,7 @@
         const { x, y } = projectGeoToPixel(lat, lon, currentGeometry.bbox);
         const mapW = is916 ? 1080 : 800;
         const mapH = is916 ? 1080 : 800;
-        const offY = is916 ? 180 : 0;
+        const offY = is916 ? 290 : 0;
         if (x >= 0 && x <= mapW && y >= offY && y <= offY + mapH) {
           singlePinGroup.setAttribute('transform', `translate(${x}, ${y})`);
           const singleText = pinLabelInput.value || label;
@@ -1269,9 +1301,10 @@
       preloadBar.style.width = '0%';
 
       let loadedCount = 0;
+      const isUnbaked = plantKey === 'ecuador' && (provinceModeSelect ? provinceModeSelect.value === 'vector' : false);
       const loadPromises = sequenceTimestamps.map((t, idx) => {
         if (layerSelect.value !== layer) return Promise.resolve(null);
-        const cacheKey = `${plantKey}_${layer}_${t}`;
+        const cacheKey = `${plantKey}_${layer}_${isUnbaked ? 'unbaked' : 'baked'}_${t}`;
         let img = frameImageCache.get(cacheKey);
 
         if (img && img.complete && img.naturalWidth > 0) {
@@ -1309,7 +1342,8 @@
             resolve(null);
           };
           if (!img.src) {
-            img.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+            const unbakedParam = isUnbaked ? '&unbaked=true' : '';
+            img.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800${unbakedParam}`;
           }
         });
       });
@@ -1330,7 +1364,7 @@
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
       const cWidth = is916 ? 1080 : 800;
       const cHeight = is916 ? 1920 : 800;
-      const mapY = is916 ? 180 : 0;
+      const mapY = is916 ? 290 : 0;
       const mapSize = is916 ? 1080 : 800;
 
       if (img.complete && img.naturalWidth > 0) {
@@ -1361,7 +1395,8 @@
       const plantKey = basinSelect.value;
       const layer = layerSelect.value;
       const targetIdx = currentFrameIdx;
-      const cacheKey = `${plantKey}_${layer}_${t}`;
+      const isUnbaked = plantKey === 'ecuador' && (provinceModeSelect ? provinceModeSelect.value === 'vector' : false);
+      const cacheKey = `${plantKey}_${layer}_${isUnbaked ? 'unbaked' : 'baked'}_${t}`;
 
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
       const cWidth = is916 ? 1080 : 800;
@@ -1388,7 +1423,8 @@
           }
         };
         if (!directImg.src) {
-          directImg.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800`;
+          const unbakedParam = isUnbaked ? '&unbaked=true' : '';
+          directImg.src = `/api/satellite-frame?time=${encodeURIComponent(t)}&plantKey=${encodeURIComponent(plantKey)}&layer=${encodeURIComponent(layer)}&width=800&height=800${unbakedParam}`;
         }
         frameImageCache.set(cacheKey, directImg);
       }
@@ -1752,6 +1788,9 @@
         }
         if (safeZones916) safeZones916.style.display = 'block';
         if (safeZones11) safeZones11.style.display = 'none';
+        updateWatermarkBrand('instagram');
+        if (provinceModeSelect) provinceModeSelect.value = 'vector';
+        if (showProvincesCheckbox) showProvincesCheckbox.checked = true;
       } else {
         if (videoCardWrapper) {
           videoCardWrapper.classList.remove('aspect-9-16');
@@ -1764,9 +1803,14 @@
         }
         if (safeZones916) safeZones916.style.display = 'none';
         if (safeZones11) safeZones11.style.display = 'block';
+        updateWatermarkBrand('x');
+        if (provinceModeSelect) provinceModeSelect.value = 'raster';
+        if (showProvincesCheckbox) showProvincesCheckbox.checked = false;
       }
 
+      updateProvinceVisibility();
       updateOverlay();
+      renderSummaryCards();
       renderCurrentFrame();
     }
     if (aspectRatioSelect) {
@@ -1902,6 +1946,7 @@
     function updateProvinceVisibility() {
       const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
       const isChecked = showProvincesCheckbox ? showProvincesCheckbox.checked : false;
+      const isVector = provinceModeSelect ? provinceModeSelect.value === 'vector' : true;
 
       if (provinceBasinNotice) {
         provinceBasinNotice.style.display = isEcuador ? 'none' : 'inline';
@@ -1915,13 +1960,21 @@
       }
 
       if (provinceCustomizationSubgroup) {
-        provinceCustomizationSubgroup.style.opacity = (isChecked && isEcuador) ? '1' : '0.4';
-        provinceCustomizationSubgroup.style.pointerEvents = (isChecked && isEcuador) ? 'auto' : 'none';
+        provinceCustomizationSubgroup.style.opacity = (isChecked && isEcuador && isVector) ? '1' : '0.4';
+        provinceCustomizationSubgroup.style.pointerEvents = (isChecked && isEcuador && isVector) ? 'auto' : 'none';
       }
 
       if (provincesLayer) {
-        provincesLayer.style.display = (isChecked && isEcuador) ? 'block' : 'none';
+        provincesLayer.style.display = (isChecked && isEcuador && isVector) ? 'block' : 'none';
       }
+    }
+
+    if (provinceModeSelect) {
+      provinceModeSelect.addEventListener('change', () => {
+        updateProvinceVisibility();
+        renderCurrentFrame();
+        preloadSequence();
+      });
     }
 
     if (provincesColorPicker) {
@@ -2043,11 +2096,13 @@
           showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
           showWfsBasins: showWfsBasinsCheckbox ? showWfsBasinsCheckbox.checked : false,
           showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,
+          provinceMode: provinceModeSelect ? provinceModeSelect.value : 'vector',
+          useVectorProvinces: provinceModeSelect ? provinceModeSelect.value === 'vector' : ((aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16'),
           provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
           provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
           provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,
           activeBasinKeys: activeBasinKeys.length > 0 ? activeBasinKeys : undefined,
-          watermarkBrand: watermarkBrandSelect ? watermarkBrandSelect.value : 'x',
+          watermarkBrand: (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '1:1' ? 'x' : 'instagram',
           aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',
           createMp4: format === 'mp4',
           createGif: format === 'gif',
@@ -2080,8 +2135,7 @@
     document.getElementById('compileMp4Btn').addEventListener('click', () => triggerCompile('mp4'));
     document.getElementById('compileGifBtn').addEventListener('click', () => triggerCompile('gif'));
 
-    // Social Brand / Watermark Switcher
-    const watermarkBrandSelect = document.getElementById('watermarkBrandSelect');
+    // Social Brand / Watermark Handler (automatically switches by aspect ratio: 9:16 -> Instagram, 1:1 -> X)
     function updateWatermarkBrand(brand) {
       const wrap = document.getElementById('watermarkIconGroup');
       if (!wrap) return;
@@ -2103,13 +2157,8 @@
         `;
       }
     }
-    if (watermarkBrandSelect) {
-      watermarkBrandSelect.addEventListener('change', (e) => updateWatermarkBrand(e.target.value));
-      const urlParams = new URLSearchParams(window.location.search);
-      const initialBrand = urlParams.get('brand') || 'x';
-      watermarkBrandSelect.value = initialBrand;
-      updateWatermarkBrand(initialBrand);
-    }
+    const initialBrand = (aspectRatioSelect && aspectRatioSelect.value === '1:1') ? 'x' : 'instagram';
+    updateWatermarkBrand(initialBrand);
     window.updateWatermarkBrand = updateWatermarkBrand;
 
     // Server-Sent Events for Live Reloading

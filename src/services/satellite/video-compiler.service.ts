@@ -54,6 +54,8 @@ export interface OverlayCustomizationOptions {
   showCityPins?: boolean;
   cityPins?: CityPin[];
   showProvinces?: boolean;
+  useVectorProvinces?: boolean;
+  unbakedProvinces?: boolean;
   provincesColor?: string;
   provincesWidth?: number;
   provincesOpacity?: number;
@@ -235,7 +237,7 @@ export class VideoCompilerService {
     const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
     const mapW = is916 ? 1080 : width;
     const mapH = is916 ? 1080 : height;
-    const offY = is916 ? 180 : 0;
+    const offY = is916 ? 290 : 0;
 
     const title = escapeXml(options.customTitle || 'Vista Satelital En Vivo');
 
@@ -245,8 +247,10 @@ export class VideoCompilerService {
 
     // Provincial Delineation Vector Overlay (Ecuador Continental)
     const isNasaGibs = frame.source === 'nasa_gibs';
-    const showProvinces = (options.showProvinces === true || isNasaGibs) &&
-      frame.source !== 'geoserver' &&
+    const isCleanGeoserver = (options.useVectorProvinces === true || options.unbakedProvinces === true || (is916 && options.useVectorProvinces !== false));
+    const showProvinces = (options.showProvinces !== false) &&
+      (isNasaGibs || isCleanGeoserver || options.showProvinces === true) &&
+      (isCleanGeoserver || frame.source !== 'geoserver') &&
       (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     const provincesColor = options.provincesColor || '#38bdf8';
     const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
@@ -256,7 +260,7 @@ export class VideoCompilerService {
     if (showProvinces) {
       const paths = this.getProvincesVectorSvg();
       if (paths) {
-        const transformAttr = is916 ? ' transform="translate(0, 180) scale(1.35)"' : '';
+        const transformAttr = is916 ? ' transform="translate(0, 290) scale(1.35)"' : '';
         provincesOverlaySvg = `
         <!-- Provincial Delineation Vector Layer -->
         <g id="provincesLayer"${transformAttr} fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
@@ -281,7 +285,7 @@ export class VideoCompilerService {
             <path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
           `;
         }
-        const transformAttr = is916 ? ' transform="translate(0, 180) scale(1.35)"' : '';
+        const transformAttr = is916 ? ' transform="translate(0, 290) scale(1.35)"' : '';
         wfsBasinsSvg = `
         <!-- Real Catchment Polygons Layer (GeoServer WFS) -->
         <g id="wfsBasinPolygonsLayer"${transformAttr}>
@@ -538,24 +542,24 @@ export class VideoCompilerService {
     const badgeFontSize = is916 ? 14 : 11.5;
     const badgeTextWidth = this.estimateTextWidth(badgeText, badgeFontSize);
     const badgeTotalWidth = badgeTextWidth + (is916 ? 38 : 32);
-    const badgeX = is916 ? (1080 - badgeTotalWidth - 40) : (width - badgeTotalWidth - 20);
+    const badgeX = is916 ? (860 - badgeTotalWidth) : (width - badgeTotalWidth - 20);
 
-    const showThermalScale = options.showThermalScale !== false;
-    const thermalScaleTransform = is916 ? 'translate(40, 1545)' : `translate(20, ${height - 116})`;
+    const showThermalScale = !is916 && options.showThermalScale !== false;
+    const thermalScaleTransform = `translate(20, ${height - 116})`;
     const thermalScaleSvg = showThermalScale
       ? `
-      <!-- Floating Thermal Scale Bar Overlay -->
-      <g transform="${thermalScaleTransform}">
-        <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
-        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
-        <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
-        <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
-        <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
-        <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
-        <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
-        <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
-      </g>
-      `
+        <!-- Floating Thermal Scale Bar Overlay (1:1 - exactly matching master) -->
+        <g transform="${thermalScaleTransform}">
+          <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+          <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+          <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+          <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
+          <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
+          <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+          <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
+          <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
+        </g>
+        `
       : '';
 
     const safeTimestamp = escapeXml(`${frame.dateEcuador}  ${frame.timeEcuador} ECT`);
@@ -564,7 +568,7 @@ export class VideoCompilerService {
     let pubStatusSvg = '';
     if (showPublicationBadge) {
       const isAnyActive = (options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.size > 0 : options.activeBasinKeys.length > 0)) || Boolean(options.highlightBasinKey);
-      const pubTransform = is916 ? 'translate(40, 125)' : 'translate(20, 44)';
+      const pubTransform = is916 ? 'translate(40, 234)' : 'translate(20, 44)';
       const pubW = is916 ? 340 : 300;
       const pubH = is916 ? 28 : 24;
       if (isAnyActive) {
@@ -603,68 +607,63 @@ export class VideoCompilerService {
     const regionsList = dynamicCards?.regions;
 
     if (is916) {
-      // 9:16 layout: high-readability cards positioned at y=1275 and y=1398, safe from Reels buttons
-      const cardW = 800;
-      const cardX = 40;
-      const card1Y = 1275;
-      const card1H = 112;
-      const card2Y = 1398;
-      const card2H = 142;
+      // 9:16 typography-focused layout: no container boxes, extra-large text safe from Reels buttons
+      const col1X = 50;
+      const col2X = 465;
 
-      let card1Svg = '';
+      let card1Rows = '';
       if (basinsList && basinsList.length > 0) {
-        let rowsSvg = '';
         for (let idx = 0; idx < basinsList.length; idx++) {
           const item = basinsList[idx];
-          const rowY = 46 + idx * 34;
+          const rowY = 1475 + idx * 70;
           const color = item.color || '#38bdf8';
-          const valColor = item.highlight ? '#f87171' : '#cbd5e1';
-          rowsSvg += `
-          <circle cx="20" cy="${rowY}" r="4.5" fill="${color}" />
-          <text x="34" y="${rowY + 5.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="16">${escapeXml(item.label)}</text>
-          <text x="${cardW - 22}" y="${rowY + 5.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="18" text-anchor="end">${escapeXml(item.value)}</text>
+          const valColor = item.highlight ? '#f87171' : color;
+          const shortLabel = item.label.includes('Paute') ? 'Complejo Paute' : item.label;
+          card1Rows += `
+          <circle cx="${col1X + 8}" cy="${rowY - 8}" r="5" fill="${color}" />
+          <text x="${col1X + 22}" y="${rowY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="24">${escapeXml(shortLabel)}</text>
+          <text x="425" y="${rowY + 1}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="34" text-anchor="end">${escapeXml(item.value)}</text>
           `;
         }
-        card1Svg = `
-        <g transform="translate(${cardX}, ${card1Y})">
-          <rect x="0" y="0" width="${cardW}" height="${card1H}" rx="10"
-                fill="#0b1120" fill-opacity="0.94" stroke="rgba(255, 255, 255, 0.16)" stroke-width="1.2" />
-          <rect x="0" y="0" width="${cardW}" height="28" rx="10" fill="#1e293b" fill-opacity="0.80" />
-          <circle cx="16" cy="14" r="4.5" fill="#38bdf8" />
-          <text x="28" y="19" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12" letter-spacing="0.05em">CUENCAS HIDROELÉCTRICAS (COBERTURA DE LLUVIAS)</text>
-          <line x1="0" y1="28" x2="${cardW}" y2="28" stroke="rgba(255, 255, 255, 0.10)" stroke-width="1" />
-          ${rowsSvg}
-        </g>
-        `;
       }
 
-      let card2Svg = '';
+      let card2Rows = '';
       if (regionsList && regionsList.length > 0) {
-        let rowsSvg = '';
         for (let idx = 0; idx < regionsList.length; idx++) {
           const item = regionsList[idx];
-          const rowY = 46 + idx * 34;
+          const rowY = 1461 + idx * 50;
           const color = item.color || '#38bdf8';
-          const valColor = item.highlight ? '#f87171' : '#cbd5e1';
-          rowsSvg += `
-          <circle cx="20" cy="${rowY}" r="4.5" fill="${color}" />
-          <text x="34" y="${rowY + 5.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="16">${escapeXml(item.label)}</text>
-          <text x="${cardW - 22}" y="${rowY + 5.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="18" text-anchor="end">${escapeXml(item.value)}</text>
+          const valColor = item.highlight ? '#f87171' : color;
+          let regLabel = item.label;
+          if (regLabel.includes('Costa') || regLabel.includes('Litoral')) regLabel = 'Costa';
+          else if (regLabel.includes('Sierra') || regLabel.includes('Interandina')) regLabel = 'Sierra';
+          else if (regLabel.includes('Oriente') || regLabel.includes('Amazónica')) regLabel = 'Oriente';
+
+          card2Rows += `
+          <circle cx="${col2X + 8}" cy="${rowY - 7}" r="4.5" fill="${color}" />
+          <text x="${col2X + 22}" y="${rowY}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="23">${escapeXml(regLabel)}</text>
+          <text x="860" y="${rowY + 1}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="30" text-anchor="end">${escapeXml(item.value)}</text>
           `;
         }
-        card2Svg = `
-        <g transform="translate(${cardX}, ${card2Y})">
-          <rect x="0" y="0" width="${cardW}" height="${card2H}" rx="10"
-                fill="#0b1120" fill-opacity="0.94" stroke="rgba(255, 255, 255, 0.16)" stroke-width="1.2" />
-          <rect x="0" y="0" width="${cardW}" height="28" rx="10" fill="#1e293b" fill-opacity="0.80" />
-          <circle cx="16" cy="14" r="4.5" fill="#f59e0b" />
-          <text x="28" y="19" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12" letter-spacing="0.05em">COBERTURA POR REGIÓN NATURAL</text>
-          <line x1="0" y1="28" x2="${cardW}" y2="28" stroke="rgba(255, 255, 255, 0.10)" stroke-width="1" />
-          ${rowsSvg}
-        </g>
-        `;
       }
-      summaryCardSvg = `${card1Svg}\n${card2Svg}`;
+
+      summaryCardSvg = `
+      <!-- 9:16 Clean Large Typography Summary Layout (No Boxes) -->
+      <g id="summaryCardsGroup">
+        <!-- Subtle divider between columns -->
+        <line x1="445" y1="1390" x2="445" y2="1568" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1.5" stroke-linecap="round" />
+
+        <!-- Column 1: Cuencas Monitoreadas -->
+        <circle cx="${col1X + 8}" cy="1404" r="5" fill="#38bdf8" />
+        <text x="${col1X + 22}" y="1409" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" letter-spacing="0.08em">CUENCAS MONITOREADAS</text>
+        ${card1Rows}
+
+        <!-- Column 2: Cobertura por Región -->
+        <circle cx="${col2X + 8}" cy="1404" r="5" fill="#f59e0b" />
+        <text x="${col2X + 22}" y="1409" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" letter-spacing="0.08em">COBERTURA POR REGIÓN</text>
+        ${card2Rows}
+      </g>
+      `;
     } else {
       // 1:1 layout: compact cards on lower-right
       const cardW = 228;
@@ -741,9 +740,7 @@ export class VideoCompilerService {
       summaryCardSvg = `${card1Svg}\n${card2Svg}`;
     }
 
-    const defaultBrand = (process.env.DEFAULT_VIDEO_BRAND as any) || 'instagram';
-    const chosenBrand = options.watermarkBrand || defaultBrand;
-    const isInstagram = chosenBrand === 'instagram';
+    const isInstagram = is916;
     const watermarkIconSvg = isInstagram
       ? `<rect width="24" height="24" rx="6.5" fill="url(#ig-grad-satellite)"/>
         <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
@@ -756,16 +753,16 @@ export class VideoCompilerService {
           </svg>
         </g>`;
 
-    const watermarkTransform = is916 ? 'translate(820, 48)' : `translate(${width - 180}, 18)`;
+    const watermarkTransform = is916 ? 'translate(860, 210)' : `translate(${width - 180}, 18)`;
     const watermarkFontSize = is916 ? 18 : 16;
 
     // Header layout
     const headerSvg = is916
       ? `
       <!-- Header Top Bar (9:16) -->
-      <rect x="0" y="0" width="1080" height="180" fill="url(#topBarGrad)"/>
-      <text x="40" y="${options.customDateSubtitle ? 62 : (showPublicationBadge ? 60 : 70)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
-      ${options.customDateSubtitle ? `<text x="40" y="102" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
+      <rect x="0" y="0" width="1080" height="290" fill="url(#topBarGrad)"/>
+      <text x="40" y="${options.customDateSubtitle ? (showPublicationBadge ? 218 : 226) : (showPublicationBadge ? 226 : 240)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
+      ${options.customDateSubtitle ? `<text x="40" y="${showPublicationBadge ? 246 : 258}" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
       ${pubStatusSvg}
       `
       : `
@@ -779,20 +776,19 @@ export class VideoCompilerService {
     // Footer layout
     const footerSvg = is916
       ? `
-      <!-- Footer Bottom Bar (9:16) -->
-      <rect x="0" y="1615" width="1080" height="75" fill="url(#bottomBarGrad)"/>
-      <circle cx="50" cy="1652" r="8" fill="#22c55e" />
-      <text x="70" y="1660" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="22">${safeTimestamp}</text>
+      <!-- Footer Bottom (9:16) - Cleanly floating without artificial gradient bar -->
+      <circle cx="58" cy="1638" r="8.5" fill="#22c55e" />
+      <text x="80" y="1646" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="26">${safeTimestamp}</text>
       
       <!-- Subtitle Pill Badge on Bottom Right -->
-      <g transform="translate(${badgeX}, 1634)">
-        <rect x="0" y="0" width="${badgeTotalWidth}" height="36" rx="8" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
-        <circle cx="14" cy="18" r="4" fill="#38bdf8" />
-        <text x="26" y="23" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="14">${badgeText}</text>
+      <g transform="translate(${badgeX}, 1620)">
+        <rect x="0" y="0" width="${badgeTotalWidth}" height="38" rx="8" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
+        <circle cx="14" cy="19" r="4" fill="#38bdf8" />
+        <text x="26" y="24" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="14.5">${badgeText}</text>
       </g>
       `
       : `
-      <!-- Footer Bottom Bar (1:1) -->
+      <!-- Footer Bottom Bar (1:1 - exactly matching master) -->
       <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
       <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
       <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="17">${safeTimestamp}</text>
@@ -1013,7 +1009,7 @@ export class VideoCompilerService {
 
             const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
             const filterComplex = is916
-              ? `color=c=#020617:s=1080x1920[bg];[0:v]scale=1080:1080[map];[bg][map]overlay=0:180[base];[base][1:v]overlay=0:0`
+              ? `color=c=#020617:s=1080x1920[bg];[0:v]scale=1080:1080[map];[bg][map]overlay=0:290[base];[base][1:v]overlay=0:0`
               : `[0:v]scale=${width}:${height}[base];[base][1:v]overlay=0:0`;
 
             await execFileAsync('ffmpeg', [
@@ -1125,6 +1121,9 @@ export class VideoCompilerService {
     const hoursBack = options.hoursBack || 3;
     const frameCount = options.frameCount || Math.round(hoursBack * 6); // 6 frames per hour (10-min cadence)
 
+    const is916 = (options.width === 1080 && options.height === 1920) || options.aspectRatio === '9:16';
+    const isCleanGeoserver = (options.useVectorProvinces === true || options.unbakedProvinces === true || (is916 && options.useVectorProvinces !== false));
+
     // Resolve source & layers from layer parameter if provided
     let source = options.source;
     let layers = options.layers;
@@ -1139,14 +1138,22 @@ export class VideoCompilerService {
         layers = 'GOES-East_ABI_Band13_Clean_Infrared';
       } else if (options.layer === 'persiann_24h') {
         source = 'geoserver';
-        layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+        layers = isCleanGeoserver
+          ? 'satellite_based_precipitation:persiann_pdir_24h'
+          : 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
       } else if (options.layer === 'wrf_daily') {
         source = 'geoserver';
-        layers = 'wrf:wrf_precipitation_daily,ecuador:provincias';
+        layers = isCleanGeoserver
+          ? 'wrf:wrf_precipitation_daily'
+          : 'wrf:wrf_precipitation_daily,ecuador:provincias';
       } else {
         source = 'geoserver';
-        layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+        layers = isCleanGeoserver
+          ? 'goes:goes_abi_l2_cmipf_13'
+          : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
       }
+    } else if (isCleanGeoserver && typeof layers === 'string' && layers.includes(',ecuador:provincias')) {
+      layers = layers.replace(',ecuador:provincias', '');
     }
 
     systemLogger.info(`[VideoCompilerService] Starting basin animation generation for ${plantKey} (${hoursBack}h back, ${frameCount} frames)...`);
@@ -1158,7 +1165,8 @@ export class VideoCompilerService {
       source,
       layers,
       width: options.width,
-      height: options.height
+      height: options.height,
+      unbaked: isCleanGeoserver
     });
 
     return this.compileFramesToVideo(frames, options);

@@ -165,8 +165,8 @@ input[type="text"], input[type="number"], textarea, .selectable-text {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 28px;
-  max-width: 1440px;
+  gap: 32px;
+  max-width: 1720px;
   width: 100%;
 }
 
@@ -175,7 +175,7 @@ input[type="text"], input[type="number"], textarea, .selectable-text {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   flex-shrink: 0;
 }
 
@@ -194,26 +194,27 @@ input[type="text"], input[type="number"], textarea, .selectable-text {
 }
 
 .video-card-wrapper.aspect-9-16 {
-  width: 450px;
-  height: 800px;
+  width: 530px;
+  height: 942px;
+  border-radius: 20px;
 }
 
 .video-card-wrapper.fit-screen {
-  width: min(800px, 60vh);
-  height: min(800px, 60vh);
+  width: min(800px, 78vh);
+  height: min(800px, 78vh);
 }
 
 .video-card-wrapper.aspect-9-16.fit-screen {
-  width: calc(min(800px, 60vh) * 9 / 16);
-  height: min(800px, 60vh);
+  width: calc(min(940px, 76vh) * 9 / 16);
+  height: min(940px, 76vh);
 }
 
 .player-controls.fit-screen {
-  width: min(800px, 60vh);
+  width: calc(min(940px, 76vh) * 9 / 16);
 }
 
 .player-controls.aspect-9-16 {
-  width: 650px;
+  width: 530px;
   max-width: 100%;
 }
 

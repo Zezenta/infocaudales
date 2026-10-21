@@ -51,6 +51,16 @@ describe('SatelliteMapService', () => {
       expect(params.HEIGHT).toBe('600');
     });
 
+    it('builds unbaked GeoServer WMS URL without provincial delineation raster when unbaked is true', () => {
+      const { params } = service.buildWmsUrl({
+        plantKey: 'ecuador',
+        unbaked: true
+      });
+
+      expect(params.LAYERS).toBe('goes:goes_abi_l2_cmipf_13');
+      expect(params.LAYERS).not.toContain('ecuador:provincias');
+    });
+
     it('builds valid NASA GIBS WMS URL with CRS:84 / EPSG:4326', () => {
       const { url, params } = service.buildWmsUrl({
         source: 'nasa_gibs',
