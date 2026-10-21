@@ -164,8 +164,8 @@
           <!-- Alignment Grid -->
           <div id="alignmentGrid" class="alignment-grid"></div>
 
-          <!-- Reference Layer 1: GeoServer Provincial Lines (Extracted Differential PNG) -->
-          <img id="refLayerImg" class="ref-layer-img" src="/api/geoserver-provinces-diff" alt="GeoServer Reference Delineation">
+          <!-- Reference Layer 1: GeoServer Provincial Lines (Clean White Lines or Normal Satellite Frame) -->
+          <img id="refLayerImg" class="ref-layer-img" src="/api/geoserver-provinces-clean" alt="GeoServer Reference Delineation">
 
           <!-- Layer 2: Vector SVG Overlay Layer -->
           <svg id="vectorOverlaySvg" class="vector-svg-overlay" viewBox="0 0 1080 1920" preserveAspectRatio="none">
@@ -296,9 +296,10 @@
           <div class="form-group">
             <label class="form-label">Origen de la Referencia</label>
             <select id="refSourceSelect" class="form-select">
-              <option value="diff" selected>Diferencial Extraído (Líneas Ráster Quemadas)</option>
-              <option value="direct">WMS Directo GeoServer (ecuador:provincias)</option>
-              <option value="none">Fondo Negro (Solo Vector Propio)</option>
+              <option value="clean" selected>✨ Delineaciones Limpias GeoServer (Sin Nubes • Blanco Nítido)</option>
+              <option value="normal">🛰️ Fotograma Satelital Normal (Con Provincias Quemadas)</option>
+              <option value="direct">🌐 WMS Directo GeoServer (Líneas Originales ecuador:provincias)</option>
+              <option value="none">⬛ Fondo Oscuro Neutro (Sin Referencia)</option>
             </select>
           </div>
 
@@ -536,14 +537,50 @@
     // 5. Reference Layer Switching & Styling
     refSourceSelect.addEventListener('change', () => {
       const val = refSourceSelect.value;
-      if (val === 'diff') {
+      if (val === 'clean') {
         refLayerImg.style.display = 'block';
-        refLayerImg.src = '/api/geoserver-provinces-diff';
+        refLayerImg.src = '/api/geoserver-provinces-clean';
+      } else if (val === 'normal') {
+        refLayerImg.style.display = 'block';
+        refLayerImg.src = '/api/geoserver-normal-frame';
       } else if (val === 'direct') {
         refLayerImg.style.display = 'block';
         refLayerImg.src = '/api/geoserver-provinces-direct';
       } else {
         refLayerImg.style.display = 'none';
+      }
+    });
+
+    // Keyboard Arrow Nudging Support
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      
+      const step = e.shiftKey ? 0.05 : (e.ctrlKey ? 1.0 : 0.2);
+      let handled = false;
+
+      if (e.key === 'ArrowLeft') {
+        svgCalibOffsetX = Math.max(-30, +(svgCalibOffsetX - step).toFixed(2));
+        handled = true;
+      } else if (e.key === 'ArrowRight') {
+        svgCalibOffsetX = Math.min(30, +(svgCalibOffsetX + step).toFixed(2));
+        handled = true;
+      } else if (e.key === 'ArrowUp') {
+        svgCalibOffsetY = Math.max(-30, +(svgCalibOffsetY - step).toFixed(2));
+        handled = true;
+      } else if (e.key === 'ArrowDown') {
+        svgCalibOffsetY = Math.min(30, +(svgCalibOffsetY + step).toFixed(2));
+        handled = true;
+      } else if (e.key === '+' || e.key === '=') {
+        svgCalibScalePct = Math.min(115, +(svgCalibScalePct + (e.shiftKey ? 0.05 : 0.2)).toFixed(2));
+        handled = true;
+      } else if (e.key === '-' || e.key === '_') {
+        svgCalibScalePct = Math.max(90, +(svgCalibScalePct - (e.shiftKey ? 0.05 : 0.2)).toFixed(2));
+        handled = true;
+      }
+
+      if (handled) {
+        e.preventDefault();
+        updateTransform();
       }
     });
 

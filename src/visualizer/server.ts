@@ -693,6 +693,72 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GeoServer Provincial Delineation Clean White PNG API
+  if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-clean' || req.url === '/assets/overlays/geoserver_provincias_clean_white.png')) {
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provincias_clean_white.png'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provincias_clean_white.png')
+    ];
+    let cleanPath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        cleanPath = c;
+        break;
+      }
+    }
+    if (!cleanPath) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Clean white provincias PNG not found');
+      return;
+    }
+    fs.readFile(cleanPath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error reading clean white provincias PNG');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
+  // GeoServer Normal Satellite Frame with Provincial Delineation
+  if (req.method === 'GET' && (req.url === '/api/geoserver-normal-frame' || req.url === '/assets/overlays/geoserver_provinces_normal_frame.png')) {
+    const candidates = [
+      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provinces_normal_frame.png'),
+      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provinces_normal_frame.png')
+    ];
+    let framePath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        framePath = c;
+        break;
+      }
+    }
+    if (!framePath) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Normal frame not found');
+      return;
+    }
+    fs.readFile(framePath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error reading normal frame');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      res.end(data);
+    });
+    return;
+  }
+
   // GeoServer Provincial Direct Transparent WMS PNG API
   if (req.method === 'GET' && (req.url === '/api/geoserver-provinces-direct' || req.url === '/assets/overlays/geoserver_provincias_direct.png')) {
     const candidates = [
