@@ -373,16 +373,13 @@
 
           <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
             <input type="checkbox" id="showProvincesCheckbox">
-            Mostrar Delineación de Provincias
+            <span>Delineación por SVG (Vector Propio)</span>
           </label>
 
-          <div id="provinceModeGroup" style="display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
-            <label class="form-label" for="provinceModeSelect" style="margin-bottom: 0; font-size: 11px;">Modo de Delineación</label>
-            <select id="provinceModeSelect" class="form-select" style="font-size: 12px; padding: 6px 8px;">
-              <option value="vector">Vectorial SVG Propia (Satélite Limpio + Editable)</option>
-              <option value="raster">Nativa GeoServer (Quemada en PNG)</option>
-            </select>
-          </div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #94a3b8; cursor: pointer; margin-top: 2px;">
+            <input type="checkbox" id="showGeoserverProvincesCheckbox">
+            <span>Delineación por GeoServer (Ráster Quemado)</span>
+          </label>
 
           <div id="provinceCustomizationSubgroup" style="display: flex; flex-direction: column; gap: 10px;">
             <!-- Color Picker & Swatches -->
@@ -555,8 +552,7 @@
 
     // Provincial Layer Controls
     const showProvincesCheckbox = document.getElementById('showProvincesCheckbox');
-    const provinceModeSelect = document.getElementById('provinceModeSelect');
-    const provinceModeGroup = document.getElementById('provinceModeGroup');
+    const showGeoserverProvincesCheckbox = document.getElementById('showGeoserverProvincesCheckbox');
     const provincesColorPicker = document.getElementById('provincesColorPicker');
     const provinceColorBadge = document.getElementById('provinceColorBadge');
     const provincesOpacitySlider = document.getElementById('provincesOpacitySlider');
@@ -1301,7 +1297,7 @@
       preloadBar.style.width = '0%';
 
       let loadedCount = 0;
-      const isUnbaked = plantKey === 'ecuador' && (provinceModeSelect ? provinceModeSelect.value === 'vector' : false);
+      const isUnbaked = plantKey === 'ecuador' && (showGeoserverProvincesCheckbox ? !showGeoserverProvincesCheckbox.checked : false);
       const loadPromises = sequenceTimestamps.map((t, idx) => {
         if (layerSelect.value !== layer) return Promise.resolve(null);
         const cacheKey = `${plantKey}_${layer}_${isUnbaked ? 'unbaked' : 'baked'}_${t}`;
@@ -1395,7 +1391,7 @@
       const plantKey = basinSelect.value;
       const layer = layerSelect.value;
       const targetIdx = currentFrameIdx;
-      const isUnbaked = plantKey === 'ecuador' && (provinceModeSelect ? provinceModeSelect.value === 'vector' : false);
+      const isUnbaked = plantKey === 'ecuador' && (showGeoserverProvincesCheckbox ? !showGeoserverProvincesCheckbox.checked : false);
       const cacheKey = `${plantKey}_${layer}_${isUnbaked ? 'unbaked' : 'baked'}_${t}`;
 
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
@@ -1789,8 +1785,8 @@
         if (safeZones916) safeZones916.style.display = 'block';
         if (safeZones11) safeZones11.style.display = 'none';
         updateWatermarkBrand('instagram');
-        if (provinceModeSelect) provinceModeSelect.value = 'vector';
         if (showProvincesCheckbox) showProvincesCheckbox.checked = true;
+        if (showGeoserverProvincesCheckbox) showGeoserverProvincesCheckbox.checked = false;
       } else {
         if (videoCardWrapper) {
           videoCardWrapper.classList.remove('aspect-9-16');
@@ -1804,8 +1800,8 @@
         if (safeZones916) safeZones916.style.display = 'none';
         if (safeZones11) safeZones11.style.display = 'block';
         updateWatermarkBrand('x');
-        if (provinceModeSelect) provinceModeSelect.value = 'raster';
         if (showProvincesCheckbox) showProvincesCheckbox.checked = false;
+        if (showGeoserverProvincesCheckbox) showGeoserverProvincesCheckbox.checked = true;
       }
 
       updateProvinceVisibility();
@@ -1945,8 +1941,7 @@
 
     function updateProvinceVisibility() {
       const isEcuador = !currentGeometry || currentGeometry.key === 'ecuador';
-      const isChecked = showProvincesCheckbox ? showProvincesCheckbox.checked : false;
-      const isVector = provinceModeSelect ? provinceModeSelect.value === 'vector' : true;
+      const isSvgChecked = showProvincesCheckbox ? showProvincesCheckbox.checked : false;
 
       if (provinceBasinNotice) {
         provinceBasinNotice.style.display = isEcuador ? 'none' : 'inline';
@@ -1960,18 +1955,17 @@
       }
 
       if (provinceCustomizationSubgroup) {
-        provinceCustomizationSubgroup.style.opacity = (isChecked && isEcuador && isVector) ? '1' : '0.4';
-        provinceCustomizationSubgroup.style.pointerEvents = (isChecked && isEcuador && isVector) ? 'auto' : 'none';
+        provinceCustomizationSubgroup.style.opacity = (isSvgChecked && isEcuador) ? '1' : '0.4';
+        provinceCustomizationSubgroup.style.pointerEvents = (isSvgChecked && isEcuador) ? 'auto' : 'none';
       }
 
       if (provincesLayer) {
-        provincesLayer.style.display = (isChecked && isEcuador && isVector) ? 'block' : 'none';
+        provincesLayer.style.display = (isSvgChecked && isEcuador) ? 'block' : 'none';
       }
     }
 
-    if (provinceModeSelect) {
-      provinceModeSelect.addEventListener('change', () => {
-        updateProvinceVisibility();
+    if (showGeoserverProvincesCheckbox) {
+      showGeoserverProvincesCheckbox.addEventListener('change', () => {
         renderCurrentFrame();
         preloadSequence();
       });
@@ -2096,8 +2090,9 @@
           showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
           showWfsBasins: showWfsBasinsCheckbox ? showWfsBasinsCheckbox.checked : false,
           showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,
-          provinceMode: provinceModeSelect ? provinceModeSelect.value : 'vector',
-          useVectorProvinces: provinceModeSelect ? provinceModeSelect.value === 'vector' : ((aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16'),
+          showGeoserverProvinces: showGeoserverProvincesCheckbox ? showGeoserverProvincesCheckbox.checked : false,
+          useVectorProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,
+          unbakedProvinces: showGeoserverProvincesCheckbox ? !showGeoserverProvincesCheckbox.checked : false,
           provincesColor: provincesColorPicker ? provincesColorPicker.value : '#38bdf8',
           provincesOpacity: provincesOpacitySlider ? parseFloat(provincesOpacitySlider.value) : 0.85,
           provincesWidth: provincesWidthSlider ? parseFloat(provincesWidthSlider.value) : 1.2,

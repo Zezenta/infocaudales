@@ -247,11 +247,12 @@ export class VideoCompilerService {
 
     // Provincial Delineation Vector Overlay (Ecuador Continental)
     const isNasaGibs = frame.source === 'nasa_gibs';
-    const isCleanGeoserver = (options.useVectorProvinces === true || options.unbakedProvinces === true || (is916 && options.useVectorProvinces !== false));
-    const showProvinces = (options.showProvinces !== false) &&
-      (isNasaGibs || isCleanGeoserver || options.showProvinces === true) &&
-      (isCleanGeoserver || frame.source !== 'geoserver') &&
-      (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    const isEcuador = geometry.key === 'ecuador' || frame.plantKey === 'ecuador';
+    const showProvinces = isEcuador && (
+      options.showProvinces === true ||
+      (options.showProvinces !== false && isNasaGibs) ||
+      (options.showProvinces !== false && options.useVectorProvinces === true)
+    );
     const provincesColor = options.provincesColor || '#38bdf8';
     const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
     const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;

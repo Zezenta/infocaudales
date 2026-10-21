@@ -817,18 +817,23 @@ const server = http.createServer(async (req, res) => {
         const targetSource: 'nasa_gibs' | 'geoserver' = isNasa ? 'nasa_gibs' : 'geoserver';
         const showThermalScale = layer === 'goes16_inamhi' || layer === 'nasa_gibs';
         const is916 = payload.aspectRatio !== '1:1';
-        const useVectorProvinces = payload.useVectorProvinces !== undefined
-          ? payload.useVectorProvinces
-          : (is916 && payload.provinceMode !== 'raster');
+        const showProvinces = payload.showProvinces !== undefined
+          ? payload.showProvinces
+          : (payload.useVectorProvinces !== undefined ? payload.useVectorProvinces : is916);
+        const showGeoserverProvinces = payload.showGeoserverProvinces !== undefined
+          ? payload.showGeoserverProvinces
+          : (payload.unbakedProvinces !== undefined ? !payload.unbakedProvinces : !is916);
+        const unbakedProvinces = !showGeoserverProvinces;
+        const useVectorProvinces = showProvinces;
 
-        console.log(`[Visualizer] Compiling rain animation for ${plantKey} (preset: ${payload.preset || 'live'}, layer: ${layer}, source: ${targetSource}, vectorProvinces: ${useVectorProvinces}, title: "${customTitle}")...`);
+        console.log(`[Visualizer] Compiling rain animation for ${plantKey} (preset: ${payload.preset || 'live'}, layer: ${layer}, source: ${targetSource}, vectorProvinces: ${useVectorProvinces}, unbaked: ${unbakedProvinces}, title: "${customTitle}")...`);
         const showSummaryCards = payload.showSummaryCards !== false && plantKey === 'ecuador';
 
         const preset = payload.preset || 'live';
         let diskFrames: any[] = [];
         let liveFrameCount: number | undefined = undefined;
 
-        const archiveSource = (useVectorProvinces && targetSource === 'geoserver') ? 'geoserver_clean' : targetSource;
+        const archiveSource = (unbakedProvinces && targetSource === 'geoserver') ? 'geoserver_clean' : targetSource;
 
         if (preset === 'live_nasa_6h') {
           liveFrameCount = 36;
