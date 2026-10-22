@@ -70,6 +70,7 @@ export interface OverlayCustomizationOptions {
   layers?: string | string[];
   watermarkBrand?: 'x' | 'instagram';
   showWfsBasins?: boolean;
+  selectedWfsBasinKeys?: string[];
 }
 
 export interface DynamicSummaryCards {
@@ -307,8 +308,12 @@ export class VideoCompilerService {
       const basinPaths = this.getBasinSvgPaths();
       if (basinPaths) {
         const colors: Record<string, string> = { coca: '#38bdf8', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b' };
+        const selectedKeys = Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0
+          ? new Set(options.selectedWfsBasinKeys.map(k => k === 'cocaCodoSinclair' ? 'coca' : (k === 'minasSanFrancisco' ? 'jubones' : k)))
+          : null;
         let pathsSvg = '';
         for (const [k, d] of Object.entries(basinPaths)) {
+          if (selectedKeys && !selectedKeys.has(k)) continue;
           const col = colors[k] || '#38bdf8';
           pathsSvg += `
             <path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>

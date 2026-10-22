@@ -76,14 +76,6 @@
           <rect id="topHeaderRect" x="0" y="0" width="1080" height="260" fill="url(#topBarGrad)"/>
           <text id="overlayTitle" x="40" y="196" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">Vista Satelital GOES-16 • Ecuador Continental</text>
           <text id="overlayDateSubtitle" x="40" y="228" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18" style="display: none;"></text>
-
-          <!-- Top-Left Publication Alert Badge (matches VideoCompilerService) -->
-          <g id="pubStatusBadgeGroup" transform="translate(40, 234)" style="display: none;">
-            <rect id="pubBadgeRect" x="0" y="0" width="280" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
-            <circle id="pubBadgeDotOuter" cx="12" cy="12" r="4.5" fill="#10b981" />
-            <circle id="pubBadgeDotInner" cx="12" cy="12" r="2" fill="#ffffff" style="display: none;" />
-            <text id="pubBadgeText" x="24" y="16" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">CONDICIÓN NORMAL • SIN ALERTA</text>
-          </g>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
           <g id="watermarkGroup" transform="translate(670, 180)">
@@ -312,232 +304,282 @@
             </select>
           </div>
 
-          <!-- Pins & Cards Toggles -->
-          <div class="form-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+        </div>
+
+        <!-- Panel: Sección Etiquetas -->
+        <div class="control-panel">
+          <h3 class="panel-title">Etiquetas</h3>
+
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- 1. Mostrar Tarjetas de Cobertura (Cuencas & Regiones) -->
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #38bdf8; cursor: pointer;">
               <input type="checkbox" id="showSummaryCardsCheckbox" checked>
-              Mostrar Tarjetas de Cobertura (Cuencas & Regiones)
+              <span>Mostrar Tarjetas de Cobertura (Cuencas & Regiones)</span>
             </label>
+
+            <!-- 2. Mostrar Ciudades de Referencia (Quito, GYE, etc.) -->
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
               <input type="checkbox" id="showCityPinsCheckbox" checked>
-              Mostrar Ciudades de Referencia (Quito, GYE, etc.)
+              <span>Mostrar Ciudades de Referencia (Quito, GYE, etc.)</span>
             </label>
+
+            <!-- 3. Mostrar Pines de Todas las Centrales -->
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
               <input type="checkbox" id="showAllPinsCheckbox" checked>
-              Mostrar Pines de Todas las Centrales
+              <span>Mostrar Pines de Todas las Centrales</span>
             </label>
+
+            <!-- 4. Ajustar video a pantalla (visibilidad compacta sin scroll) -->
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
               <input type="checkbox" id="fitScreenCheckbox">
-              Ajustar video a pantalla (visibilidad compacta sin scroll)
+              <span>Ajustar video a pantalla (visibilidad compacta sin scroll)</span>
+            </label>
+
+            <!-- 5. Mostrar Cuadros de Cuencas (CCS & Paute) -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+                <input type="checkbox" id="showDetectionBoxesCheckbox" checked>
+                <span>Mostrar Cuadros de Cuencas (CCS & Paute)</span>
+              </label>
+              <div style="display: flex; gap: 12px; padding-left: 22px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #f87171; cursor: pointer;">
+                  <input type="checkbox" id="simCcsStormCheckbox">
+                  Forzar Tormenta CCS
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #f87171; cursor: pointer;">
+                  <input type="checkbox" id="simPauteStormCheckbox">
+                  Forzar Tormenta Paute
+                </label>
+              </div>
+            </div>
+
+            <!-- 6. Mostrar Polígonos de Cuenca Reales (GeoServer WFS) con Dropdown Menu -->
+            <div id="wfsBasinsContainer" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #c084fc; cursor: pointer; flex: 1;">
+                  <input type="checkbox" id="showWfsBasinsCheckbox">
+                  <span>Mostrar Polígonos de Cuenca Reales (GeoServer WFS)</span>
+                </label>
+                <button type="button" id="toggleWfsDropdownBtn" style="background: rgba(168, 85, 247, 0.18); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 5px; color: #e2e8f0; font-size: 11px; padding: 3px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px;" title="Desplegar opciones de cuencas individuales">
+                  <span id="wfsCountBadge" style="color: #c084fc; font-weight: 700;">4/4</span>
+                  <span id="wfsDropdownArrow">▼</span>
+                </button>
+              </div>
+
+              <!-- Collapsible dropdown with individual basin toggles -->
+              <div id="wfsBasinsDropdown" style="display: none; flex-direction: column; gap: 7px; padding-top: 8px; border-top: 1px dashed rgba(168, 85, 247, 0.25);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                  <span style="font-size: 10.5px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Cuencas a visualizar:</span>
+                  <div style="display: flex; gap: 8px;">
+                    <button type="button" id="wfsSelectAllBtn" style="background: none; border: none; color: #38bdf8; font-size: 10.5px; cursor: pointer; padding: 0; font-weight: 600;">Todas</button>
+                    <span style="color: #475569;">|</span>
+                    <button type="button" id="wfsDeselectAllBtn" style="background: none; border: none; color: #94a3b8; font-size: 10.5px; cursor: pointer; padding: 0;">Ninguna</button>
+                  </div>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f1f5f9; cursor: pointer;">
+                  <input type="checkbox" class="wfs-basin-toggle" id="wfsBasin_cocaCodoSinclair" data-key="cocaCodoSinclair" checked>
+                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; display: inline-block; flex-shrink: 0;"></span>
+                  <span>Coca Codo Sinclair (Quijos / Salado)</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f1f5f9; cursor: pointer;">
+                  <input type="checkbox" class="wfs-basin-toggle" id="wfsBasin_paute" data-key="paute" checked>
+                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #a855f7; display: inline-block; flex-shrink: 0;"></span>
+                  <span>Complejo Paute (Mazar / Molino / Sopladora)</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f1f5f9; cursor: pointer;">
+                  <input type="checkbox" class="wfs-basin-toggle" id="wfsBasin_agoyan" data-key="agoyan" checked>
+                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e; display: inline-block; flex-shrink: 0;"></span>
+                  <span>Pastaza / Agoyán</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f1f5f9; cursor: pointer;">
+                  <input type="checkbox" class="wfs-basin-toggle" id="wfsBasin_minasSanFrancisco" data-key="minasSanFrancisco" checked>
+                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block; flex-shrink: 0;"></span>
+                  <span>Jubones / Minas San Francisco</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 7. Guía de Zonas Seguras Reels / Stories (9:16) -->
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f43f5e; cursor: pointer;">
+              <input type="checkbox" id="showSafeZonesCheckbox">
+              <span>Guía de Zonas Seguras Reels / Stories (9:16)</span>
             </label>
           </div>
         </div>
 
-      <!-- Styling & Overlay Editor -->
-      <div class="control-panel">
-        <h3 class="panel-title">Personalización de Overlays</h3>
+        <!-- Panel: Límites Provinciales (Ecuador) -->
+        <div class="control-panel">
+          <div class="province-controls-card" id="provinceControlsCard">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h3 class="panel-title" style="margin-bottom: 0;">Límites Provinciales (Ecuador)</h3>
+              <span id="provinceBasinNotice" style="font-size: 10.5px; color: var(--text-muted); display: none;">(Solo vista Ecuador)</span>
+            </div>
 
-        <!-- Storm Detection Boxes & Alert Badges Controls -->
-        <div class="form-group" style="background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 10px;">
-          <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">Cuadros de Detección & Alerta</div>
-          
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
-            <input type="checkbox" id="showDetectionBoxesCheckbox" checked>
-            Mostrar Cuadros de Cuencas (CCS & Paute)
-          </label>
-
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
-            <input type="checkbox" id="showPubBadgeCheckbox">
-            Mostrar Ticker de Publicación
-          </label>
-
-          <div style="display: flex; gap: 12px; margin-top: 2px;">
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #f87171; cursor: pointer;">
-              <input type="checkbox" id="simCcsStormCheckbox">
-              Forzar Tormenta CCS
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
+              <input type="checkbox" id="showProvincesCheckbox" checked>
+              <span>Delineación por SVG (Vector Propio)</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #f87171; cursor: pointer;">
-              <input type="checkbox" id="simPauteStormCheckbox">
-              Forzar Tormenta Paute
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #94a3b8; cursor: pointer; margin-top: 4px;">
+              <input type="checkbox" id="showGeoserverProvincesCheckbox">
+              <span>Delineación por GeoServer (Ráster Quemado)</span>
             </label>
-          </div>
 
-          <!-- Official INAMHI GeoServer WFS Catchment Polygons Overlay -->
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #a855f7; cursor: pointer; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
-            <input type="checkbox" id="showWfsBasinsCheckbox">
-            <span>Mostrar Polígonos de Cuenca Reales (GeoServer WFS)</span>
-          </label>
-
-          <!-- Safe Zones Guide Overlay for Reels/Stories (9:16) -->
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f43f5e; cursor: pointer;">
-            <input type="checkbox" id="showSafeZonesCheckbox">
-            <span>Guía de Zonas Seguras Reels / Stories (9:16)</span>
-          </label>
-        </div>
-
-        <!-- Provincial Delineation Layer Controls -->
-        <div class="form-group province-controls-card" id="provinceControlsCard" style="margin-top: 10px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.05em;">Límites Provinciales (Ecuador)</div>
-            <span id="provinceBasinNotice" style="font-size: 10.5px; color: var(--text-muted); display: none;">(Solo vista Ecuador)</span>
-          </div>
-
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer;">
-            <input type="checkbox" id="showProvincesCheckbox" checked>
-            <span>Delineación por SVG (Vector Propio)</span>
-          </label>
-
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #94a3b8; cursor: pointer; margin-top: 2px;">
-            <input type="checkbox" id="showGeoserverProvincesCheckbox">
-            <span>Delineación por GeoServer (Ráster Quemado)</span>
-          </label>
-
-          <div id="provinceCustomizationSubgroup" style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Color Picker & Swatches -->
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label class="form-label" style="margin-bottom: 0;">Color de Delineación</label>
-                <span id="provinceColorBadge" class="hex-badge" style="color: #ffffff; border-color: #ffffff; background: #ffffff20;">#ffffff</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="color" id="provincesColorPicker" value="#ffffff" class="color-picker-input" title="Selector de color hexadecimal">
-                <!-- Preset Swatches -->
-                <div class="swatch-container" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                  <button type="button" class="swatch-btn active" data-color="#ffffff" title="Blanco Brillante (#ffffff)" style="background: #ffffff;"></button>
-                  <button type="button" class="swatch-btn" data-color="#38bdf8" title="Cian Satelital (#38bdf8)" style="background: #38bdf8;"></button>
-                  <button type="button" class="swatch-btn" data-color="#94a3b8" title="Gris Neutro (#94a3b8)" style="background: #94a3b8;"></button>
-                  <button type="button" class="swatch-btn" data-color="#facc15" title="Amarillo Alerta (#facc15)" style="background: #facc15;"></button>
-                  <button type="button" class="swatch-btn" data-color="#4ade80" title="Verde Neón (#4ade80)" style="background: #4ade80;"></button>
-                  <button type="button" class="swatch-btn" data-color="#f43f5e" title="Rosa / Magenta (#f43f5e)" style="background: #f43f5e;"></button>
-                  <button type="button" class="swatch-btn" data-color="#fb923c" title="Naranja (#fb923c)" style="background: #fb923c;"></button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Opacity Slider -->
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label class="form-label" style="margin-bottom: 0;">Opacidad de Líneas</label>
-                <span id="provinceOpacityVal" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">70%</span>
-              </div>
-              <input type="range" id="provincesOpacitySlider" min="0.1" max="1.0" step="0.05" value="0.70" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
-            </div>
-
-            <!-- Line Thickness / Grosor Slider -->
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label class="form-label" style="margin-bottom: 0;">Grosor de Líneas</label>
-                <span id="provinceWidthVal" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">1.8 px</span>
-              </div>
-              <input type="range" id="provincesWidthSlider" min="0.5" max="3.0" step="0.1" value="1.8" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
-            </div>
-
-            <!-- Manual SVG Calibration / Nudge -->
-            <div style="border-top: 1px dashed rgba(255, 255, 255, 0.12); padding-top: 10px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em;">Calibración Manual SVG</span>
-                <button type="button" id="resetSvgCalibBtn" class="calib-step-btn" style="padding: 2px 7px; font-size: 10px;" title="Restablecer desplazamiento a 0, 0">Reset (0,0)</button>
-              </div>
-
-              <!-- Offset X -->
+            <div id="provinceCustomizationSubgroup" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+              <!-- Color Picker & Swatches -->
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                  <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Mover Eje X (Horizontal)</label>
-                  <span id="svgOffsetXVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">0.0 px</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="form-label" style="margin-bottom: 0;">Color de Delineación</label>
+                  <span id="provinceColorBadge" class="hex-badge" style="color: #ffffff; border-color: #ffffff; background: #ffffff20;">#ffffff</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="-2" title="Mover 2px a la izquierda" style="padding: 3px 6px; font-size: 10.5px;">-2</button>
-                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="-0.5" title="Mover 0.5px a la izquierda" style="padding: 3px 6px; font-size: 10.5px;">-0.5</button>
-                  <input type="range" id="svgOffsetXSlider" min="-30" max="30" step="0.2" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
-                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="0.5" title="Mover 0.5px a la derecha" style="padding: 3px 6px; font-size: 10.5px;">+0.5</button>
-                  <button type="button" class="calib-step-btn" data-axis="x" data-delta="2" title="Mover 2px a la derecha" style="padding: 3px 6px; font-size: 10.5px;">+2</button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <input type="color" id="provincesColorPicker" value="#ffffff" class="color-picker-input" title="Selector de color hexadecimal">
+                  <!-- Preset Swatches -->
+                  <div class="swatch-container" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="swatch-btn active" data-color="#ffffff" title="Blanco Brillante (#ffffff)" style="background: #ffffff;"></button>
+                    <button type="button" class="swatch-btn" data-color="#38bdf8" title="Cian Satelital (#38bdf8)" style="background: #38bdf8;"></button>
+                    <button type="button" class="swatch-btn" data-color="#94a3b8" title="Gris Neutro (#94a3b8)" style="background: #94a3b8;"></button>
+                    <button type="button" class="swatch-btn" data-color="#facc15" title="Amarillo Alerta (#facc15)" style="background: #facc15;"></button>
+                    <button type="button" class="swatch-btn" data-color="#4ade80" title="Verde Neón (#4ade80)" style="background: #4ade80;"></button>
+                    <button type="button" class="swatch-btn" data-color="#f43f5e" title="Rosa / Magenta (#f43f5e)" style="background: #f43f5e;"></button>
+                    <button type="button" class="swatch-btn" data-color="#fb923c" title="Naranja (#fb923c)" style="background: #fb923c;"></button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Offset Y -->
+              <!-- Opacity Slider -->
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                  <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Mover Eje Y (Vertical)</label>
-                  <span id="svgOffsetYVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">0.0 px</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="form-label" style="margin-bottom: 0;">Opacidad de Líneas</label>
+                  <span id="provinceOpacityVal" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">70%</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="-2" title="Mover 2px hacia arriba" style="padding: 3px 6px; font-size: 10.5px;">-2</button>
-                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="-0.5" title="Mover 0.5px hacia arriba" style="padding: 3px 6px; font-size: 10.5px;">-0.5</button>
-                  <input type="range" id="svgOffsetYSlider" min="-30" max="30" step="0.2" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
-                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="0.5" title="Mover 0.5px hacia abajo" style="padding: 3px 6px; font-size: 10.5px;">+0.5</button>
-                  <button type="button" class="calib-step-btn" data-axis="y" data-delta="2" title="Mover 2px hacia abajo" style="padding: 3px 6px; font-size: 10.5px;">+2</button>
-                </div>
+                <input type="range" id="provincesOpacitySlider" min="0.1" max="1.0" step="0.05" value="0.70" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
               </div>
 
-              <!-- Scale Factor -->
+              <!-- Line Thickness / Grosor Slider -->
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                  <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Factor de Escala (%)</label>
-                  <span id="svgScaleVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">100.0%</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="form-label" style="margin-bottom: 0;">Grosor de Líneas</label>
+                  <span id="provinceWidthVal" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">1.8 px</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-1" title="Reducir escala 1%" style="padding: 3px 6px; font-size: 10.5px;">-1%</button>
-                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-0.2" title="Reducir escala 0.2%" style="padding: 3px 6px; font-size: 10.5px;">-0.2%</button>
-                  <input type="range" id="svgScaleSlider" min="94" max="106" step="0.1" value="100" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
-                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="0.2" title="Aumentar escala 0.2%" style="padding: 3px 6px; font-size: 10.5px;">+0.2%</button>
-                  <button type="button" class="calib-step-btn" data-axis="scale" data-delta="1" title="Aumentar escala 1%" style="padding: 3px 6px; font-size: 10.5px;">+1%</button>
-                </div>
+                <input type="range" id="provincesWidthSlider" min="0.5" max="3.0" step="0.1" value="1.8" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
               </div>
 
-              <!-- Live Transform Display & Copy Box -->
-              <div style="background: rgba(2, 6, 23, 0.7); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
+              <!-- Manual SVG Calibration / Nudge -->
+              <div style="border-top: 1px dashed rgba(255, 255, 255, 0.12); padding-top: 10px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-size: 10.5px; color: #94a3b8; font-weight: 600;">Coordenadas para hardcodear:</span>
-                  <button type="button" id="copySvgTransformBtn" class="btn btn-primary" style="padding: 2px 8px; font-size: 10.5px;">Copiar</button>
+                  <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em;">Calibración Manual SVG</span>
+                  <button type="button" id="resetSvgCalibBtn" class="calib-step-btn" style="padding: 2px 7px; font-size: 10px;" title="Restablecer desplazamiento a 0, 0">Reset (0,0)</button>
                 </div>
-                <div id="svgCalibSummary" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">X: +0.0px | Y: +0.0px | Escala: 100.0%</div>
-                <code id="svgTransformCode" style="font-family: var(--font-mono); font-size: 10.5px; color: #cbd5e1; word-break: break-all; background: rgba(0,0,0,0.3); padding: 3px 5px; border-radius: 4px;">transform="translate(0, 290) scale(1.35)"</code>
+
+                <!-- Offset X -->
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                    <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Mover Eje X (Horizontal)</label>
+                    <span id="svgOffsetXVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">0.0 px</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <button type="button" class="calib-step-btn" data-axis="x" data-delta="-2" title="Mover 2px a la izquierda" style="padding: 3px 6px; font-size: 10.5px;">-2</button>
+                    <button type="button" class="calib-step-btn" data-axis="x" data-delta="-0.5" title="Mover 0.5px a la izquierda" style="padding: 3px 6px; font-size: 10.5px;">-0.5</button>
+                    <input type="range" id="svgOffsetXSlider" min="-30" max="30" step="0.2" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+                    <button type="button" class="calib-step-btn" data-axis="x" data-delta="0.5" title="Mover 0.5px a la derecha" style="padding: 3px 6px; font-size: 10.5px;">+0.5</button>
+                    <button type="button" class="calib-step-btn" data-axis="x" data-delta="2" title="Mover 2px a la derecha" style="padding: 3px 6px; font-size: 10.5px;">+2</button>
+                  </div>
+                </div>
+
+                <!-- Offset Y -->
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                    <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Mover Eje Y (Vertical)</label>
+                    <span id="svgOffsetYVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">0.0 px</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <button type="button" class="calib-step-btn" data-axis="y" data-delta="-2" title="Mover 2px hacia arriba" style="padding: 3px 6px; font-size: 10.5px;">-2</button>
+                    <button type="button" class="calib-step-btn" data-axis="y" data-delta="-0.5" title="Mover 0.5px hacia arriba" style="padding: 3px 6px; font-size: 10.5px;">-0.5</button>
+                    <input type="range" id="svgOffsetYSlider" min="-30" max="30" step="0.2" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+                    <button type="button" class="calib-step-btn" data-axis="y" data-delta="0.5" title="Mover 0.5px hacia abajo" style="padding: 3px 6px; font-size: 10.5px;">+0.5</button>
+                    <button type="button" class="calib-step-btn" data-axis="y" data-delta="2" title="Mover 2px hacia abajo" style="padding: 3px 6px; font-size: 10.5px;">+2</button>
+                  </div>
+                </div>
+
+                <!-- Scale Factor -->
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                    <label class="form-label" style="margin-bottom: 0; font-size: 11px;">Factor de Escala (%)</label>
+                    <span id="svgScaleVal" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">100.0%</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-1" title="Reducir escala 1%" style="padding: 3px 6px; font-size: 10.5px;">-1%</button>
+                    <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-0.2" title="Reducir escala 0.2%" style="padding: 3px 6px; font-size: 10.5px;">-0.2%</button>
+                    <input type="range" id="svgScaleSlider" min="94" max="106" step="0.1" value="100" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+                    <button type="button" class="calib-step-btn" data-axis="scale" data-delta="0.2" title="Aumentar escala 0.2%" style="padding: 3px 6px; font-size: 10.5px;">+0.2%</button>
+                    <button type="button" class="calib-step-btn" data-axis="scale" data-delta="1" title="Aumentar escala 1%" style="padding: 3px 6px; font-size: 10.5px;">+1%</button>
+                  </div>
+                </div>
+
+                <!-- Live Transform Display & Copy Box -->
+                <div style="background: rgba(2, 6, 23, 0.7); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 10.5px; color: #94a3b8; font-weight: 600;">Coordenadas para hardcodear:</span>
+                    <button type="button" id="copySvgTransformBtn" class="btn btn-primary" style="padding: 2px 8px; font-size: 10.5px;">Copiar</button>
+                  </div>
+                  <div id="svgCalibSummary" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; font-weight: bold;">X: +0.0px | Y: +0.0px | Escala: 100.0%</div>
+                  <code id="svgTransformCode" style="font-family: var(--font-mono); font-size: 10.5px; color: #cbd5e1; word-break: break-all; background: rgba(0,0,0,0.3); padding: 3px 5px; border-radius: 4px;">transform="translate(22.25, 272.4) scale(1.292, 1.3892)"</code>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="form-group" style="margin-top: 10px;">
-          <label class="form-label" for="customTitleInput">Título Superior</label>
-          <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital GOES-16 • Ecuador Continental">
-        </div>
+        <!-- Panel: Textos & Marcadores (Título Superior, Subtítulo, Badge, Pin y Escala Térmica) -->
+        <div class="control-panel">
+          <h3 class="panel-title">Textos & Marcadores</h3>
 
-        <div class="form-group">
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer; margin-bottom: 6px;">
-            <input type="checkbox" id="showDateSubtitleCheckbox" checked>
-            Mostrar Subtítulo de Fecha (como en videos)
-          </label>
-          <input type="text" id="customDateSubtitleInput" class="form-input" placeholder="Automático (según fotograma)">
-        </div>
+          <div class="form-group">
+            <label class="form-label" for="customTitleInput">Título Superior</label>
+            <input type="text" id="customTitleInput" class="form-input" value="Vista Satelital GOES-16 • Ecuador Continental">
+          </div>
 
-        <div class="form-group">
-          <label class="form-label" for="customBadgeInput">Badge de Subtítulo / Fuente</label>
-          <input type="text" id="customBadgeInput" class="form-input" value="GOES-16 • Banda 13 IR (10.3 µm)">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Marcador Individual de Presa / Captación</label>
-          <div class="grid-2col">
-            <input type="text" id="pinLabelInput" class="form-input" placeholder="Etiqueta del Pin" value="Captación CCS">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
-              <input type="checkbox" id="showSinglePinCheckbox" checked> Pin Enfocado
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer; margin-bottom: 6px;">
+              <input type="checkbox" id="showDateSubtitleCheckbox" checked>
+              Mostrar Subtítulo de Fecha (como en videos)
             </label>
+            <input type="text" id="customDateSubtitleInput" class="form-input" placeholder="Automático (según fotograma)">
           </div>
-        </div>
 
-        <!-- Scale Colorbar Legend Preview -->
-        <div class="color-legend-card">
-          <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; color: var(--text-secondary);">Escala Térmica Convectiva (Topes Nubosos)</div>
-          <div class="legend-bar"></div>
-          <div class="legend-labels">
-            <span>+10°C (Suelo)</span>
-            <span>-30°C (Nubes)</span>
-            <span>-50°C (Lluvia)</span>
-            <span>-70°C (Tormenta)</span>
-            <span>-90°C (Extremo)</span>
+          <div class="form-group">
+            <label class="form-label" for="customBadgeInput">Badge de Subtítulo / Fuente</label>
+            <input type="text" id="customBadgeInput" class="form-input" value="GOES-16 • Banda 13 IR (10.3 µm)">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Marcador Individual de Presa / Captación</label>
+            <div class="grid-2col">
+              <input type="text" id="pinLabelInput" class="form-input" placeholder="Etiqueta del Pin" value="Captación CCS">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+                <input type="checkbox" id="showSinglePinCheckbox" checked> Pin Enfocado
+              </label>
+            </div>
+          </div>
+
+          <!-- Scale Colorbar Legend Preview -->
+          <div class="color-legend-card">
+            <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; color: var(--text-secondary);">Escala Térmica Convectiva (Topes Nubosos)</div>
+            <div class="legend-bar"></div>
+            <div class="legend-labels">
+              <span>+10°C (Suelo)</span>
+              <span>-30°C (Nubes)</span>
+              <span>-50°C (Lluvia)</span>
+              <span>-70°C (Tormenta)</span>
+              <span>-90°C (Extremo)</span>
+            </div>
           </div>
         </div>
-      </div>
 
       <!-- Compilation & Video Export -->
       <div class="control-panel">
@@ -703,7 +745,6 @@
 
     // New Detection & Preset DOM Elements
     const showDetectionBoxesCheckbox = document.getElementById('showDetectionBoxesCheckbox');
-    const showPubBadgeCheckbox = document.getElementById('showPubBadgeCheckbox');
     const simCcsStormCheckbox = document.getElementById('simCcsStormCheckbox');
     const simPauteStormCheckbox = document.getElementById('simPauteStormCheckbox');
     const fitScreenCheckbox = document.getElementById('fitScreenCheckbox');
@@ -1156,62 +1197,6 @@
         layer.appendChild(g);
       });
 
-      renderPubStatusBadge(isCcsActive || isPauteActive);
-    }
-
-    // Render Publication Status Badge (matching VideoCompilerService)
-    function renderPubStatusBadge(isAnyActive) {
-      const group = document.getElementById('pubStatusBadgeGroup');
-      const topRect = document.getElementById('topHeaderRect');
-      const title = document.getElementById('overlayTitle');
-      if (!group) return;
-
-      const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
-      const show = showPubBadgeCheckbox && showPubBadgeCheckbox.checked;
-      if (!show) {
-        group.style.display = 'none';
-        if (topRect) topRect.setAttribute('height', is916 ? '290' : '68');
-        return;
-      }
-
-      group.style.display = 'block';
-      if (topRect) topRect.setAttribute('height', is916 ? '290' : '92');
-      if (group) group.setAttribute('transform', is916 ? 'translate(40, 264)' : 'translate(20, 48)');
-
-      const rect = document.getElementById('pubBadgeRect');
-      const dotOuter = document.getElementById('pubBadgeDotOuter');
-      const dotInner = document.getElementById('pubBadgeDotInner');
-      const text = document.getElementById('pubBadgeText');
-
-      if (rect) {
-        rect.setAttribute('height', is916 ? '28' : '24');
-        rect.setAttribute('rx', '5');
-      }
-      if (dotOuter) dotOuter.setAttribute('cy', is916 ? '14' : '12');
-      if (dotInner) dotInner.setAttribute('cy', is916 ? '14' : '12');
-      if (text) text.setAttribute('y', is916 ? '18' : '16.5');
-
-      if (isAnyActive) {
-        rect.setAttribute('width', is916 ? '340' : '300');
-        rect.setAttribute('fill', '#7f1d1d');
-        rect.setAttribute('stroke', '#ef4444');
-        rect.setAttribute('stroke-width', '1.2');
-        dotOuter.setAttribute('fill', '#ef4444');
-        dotOuter.setAttribute('r', is916 ? '5.5' : '5');
-        dotInner.style.display = 'block';
-        text.textContent = 'ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN';
-        text.setAttribute('fill', '#ffffff');
-      } else {
-        rect.setAttribute('width', is916 ? '240' : '210');
-        rect.setAttribute('fill', '#064e3b');
-        rect.setAttribute('stroke', '#10b981');
-        rect.setAttribute('stroke-width', '1');
-        dotOuter.setAttribute('fill', '#10b981');
-        dotOuter.setAttribute('r', is916 ? '5' : '4.5');
-        dotInner.style.display = 'none';
-        text.textContent = 'CONDICIÓN NORMAL • SIN ALERTA';
-        text.setAttribute('fill', '#a7f3d0');
-      }
     }
 
     // Update formal Spanish date subtitle (matches VideoCompilerService customDateSubtitle)
@@ -1232,23 +1217,21 @@
         }
       }
 
-      const showBadge = showPubBadgeCheckbox && showPubBadgeCheckbox.checked;
-
       if (dateText) {
         overlayDateSubtitle.textContent = dateText;
         overlayDateSubtitle.style.display = 'block';
         if (is916) {
           overlayDateSubtitle.setAttribute('x', '40');
-          overlayDateSubtitle.setAttribute('y', showBadge ? '246' : '258');
+          overlayDateSubtitle.setAttribute('y', '258');
           overlayDateSubtitle.setAttribute('font-size', '18');
           topRect.setAttribute('height', '290');
-          title.setAttribute('y', showBadge ? '218' : '226');
+          title.setAttribute('y', '226');
           title.setAttribute('font-size', '28');
         } else {
           overlayDateSubtitle.setAttribute('x', '20');
           overlayDateSubtitle.setAttribute('y', '53');
           overlayDateSubtitle.setAttribute('font-size', '12.5');
-          topRect.setAttribute('height', showBadge ? '92' : '78');
+          topRect.setAttribute('height', '78');
           title.setAttribute('y', '31');
           title.setAttribute('font-size', '18');
         }
@@ -1256,11 +1239,11 @@
         overlayDateSubtitle.style.display = 'none';
         if (is916) {
           topRect.setAttribute('height', '290');
-          title.setAttribute('y', showBadge ? '226' : '240');
+          title.setAttribute('y', '240');
           title.setAttribute('font-size', '28');
         } else {
-          topRect.setAttribute('height', showBadge ? '92' : '68');
-          title.setAttribute('y', showBadge ? '34' : '38');
+          topRect.setAttribute('height', '68');
+          title.setAttribute('y', '38');
           title.setAttribute('font-size', '20');
         }
       }
@@ -1826,7 +1809,6 @@
     showAllPinsCheckbox.addEventListener('change', updateOverlay);
 
     if (showDetectionBoxesCheckbox) showDetectionBoxesCheckbox.addEventListener('change', updateOverlay);
-    if (showPubBadgeCheckbox) showPubBadgeCheckbox.addEventListener('change', updateOverlay);
     if (simCcsStormCheckbox) simCcsStormCheckbox.addEventListener('change', updateOverlay);
     if (simPauteStormCheckbox) simPauteStormCheckbox.addEventListener('change', updateOverlay);
     if (showDateSubtitleCheckbox) showDateSubtitleCheckbox.addEventListener('change', updateOverlay);
@@ -1835,7 +1817,14 @@
     if (showCityPinsCheckbox) showCityPinsCheckbox.addEventListener('change', updateOverlay);
 
     // Official WFS Basin Polygons Layer Handlers (GeoServer WFS)
+    const toggleWfsDropdownBtn = document.getElementById('toggleWfsDropdownBtn');
+    const wfsBasinsDropdown = document.getElementById('wfsBasinsDropdown');
+    const wfsDropdownArrow = document.getElementById('wfsDropdownArrow');
+    const wfsSelectAllBtn = document.getElementById('wfsSelectAllBtn');
+    const wfsDeselectAllBtn = document.getElementById('wfsDeselectAllBtn');
+    const wfsCountBadge = document.getElementById('wfsCountBadge');
     let wfsBasinsLoaded = false;
+
     async function loadWfsBasinPolygons() {
       if (wfsBasinsLoaded || !wfsBasinPolygonsLayer) return;
       try {
@@ -1880,6 +1869,7 @@
 
         wfsBasinPolygonsLayer.innerHTML = svgHtml;
         wfsBasinsLoaded = true;
+        updateWfsBasinsVisibility();
       } catch (err) {
         console.error('Error loading WFS basin polygons:', err);
       }
@@ -1887,15 +1877,73 @@
 
     function updateWfsBasinsVisibility() {
       if (!wfsBasinPolygonsLayer) return;
-      const isChecked = showWfsBasinsCheckbox && showWfsBasinsCheckbox.checked;
-      wfsBasinPolygonsLayer.style.display = isChecked ? 'block' : 'none';
-      if (isChecked && !wfsBasinsLoaded) {
+      const isMasterChecked = showWfsBasinsCheckbox && showWfsBasinsCheckbox.checked;
+      wfsBasinPolygonsLayer.style.display = isMasterChecked ? 'block' : 'none';
+
+      const basinKeys = ['cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
+      let checkedCount = 0;
+      basinKeys.forEach((k) => {
+        const cb = document.getElementById(`wfsBasin_${k}`);
+        const isChecked = isMasterChecked && (!cb || cb.checked);
+        if (cb && cb.checked) checkedCount++;
+        const g = document.getElementById(`wfs_basin_${k}`);
+        if (g) g.style.display = isChecked ? 'block' : 'none';
+        if (k === 'cocaCodoSinclair') {
+          const gAlias = document.getElementById('wfs_basin_coca');
+          if (gAlias) gAlias.style.display = isChecked ? 'block' : 'none';
+        } else if (k === 'minasSanFrancisco') {
+          const gAlias = document.getElementById('wfs_basin_jubones');
+          if (gAlias) gAlias.style.display = isChecked ? 'block' : 'none';
+        }
+      });
+
+      if (wfsCountBadge) {
+        wfsCountBadge.textContent = `${checkedCount}/${basinKeys.length}`;
+      }
+
+      if (isMasterChecked && !wfsBasinsLoaded) {
         loadWfsBasinPolygons();
       }
     }
+
     if (showWfsBasinsCheckbox) {
-      showWfsBasinsCheckbox.addEventListener('change', updateWfsBasinsVisibility);
+      showWfsBasinsCheckbox.addEventListener('change', () => {
+        if (showWfsBasinsCheckbox.checked && wfsBasinsDropdown) {
+          wfsBasinsDropdown.style.display = 'flex';
+          if (wfsDropdownArrow) wfsDropdownArrow.textContent = '▲';
+        }
+        updateWfsBasinsVisibility();
+      });
     }
+
+    if (toggleWfsDropdownBtn && wfsBasinsDropdown) {
+      toggleWfsDropdownBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isOpen = wfsBasinsDropdown.style.display === 'flex';
+        wfsBasinsDropdown.style.display = isOpen ? 'none' : 'flex';
+        if (wfsDropdownArrow) wfsDropdownArrow.textContent = isOpen ? '▼' : '▲';
+      });
+    }
+
+    if (wfsSelectAllBtn) {
+      wfsSelectAllBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.wfs-basin-toggle').forEach(cb => { cb.checked = true; });
+        updateWfsBasinsVisibility();
+      });
+    }
+
+    if (wfsDeselectAllBtn) {
+      wfsDeselectAllBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.wfs-basin-toggle').forEach(cb => { cb.checked = false; });
+        updateWfsBasinsVisibility();
+      });
+    }
+
+    document.querySelectorAll('.wfs-basin-toggle').forEach(cb => {
+      cb.addEventListener('change', updateWfsBasinsVisibility);
+    });
 
     // Aspect Ratio & Live Viewport Switching (9:16 Vertical vs 1:1 Square)
     function updateAspectRatio() {
@@ -2276,6 +2324,11 @@
           ? (customDateSubtitleInput.value.trim() || (timestamps.length && timestamps[currentFrameIdx] ? formatDateToSpanish(formatEcuadorTime(timestamps[currentFrameIdx]).dateStr) : ''))
           : undefined;
 
+        const selectedWfsBasinKeys = [];
+        document.querySelectorAll('.wfs-basin-toggle:checked').forEach(el => {
+          if (el.dataset.key) selectedWfsBasinKeys.push(el.dataset.key);
+        });
+
         const payload = {
           plantKey: basinSelect.value,
           layer: layerSelect.value,
@@ -2290,6 +2343,7 @@
           showSummaryCards: showSummaryCardsCheckbox ? showSummaryCardsCheckbox.checked : true,
           showDetectionBoxes: showDetectionBoxesCheckbox ? showDetectionBoxesCheckbox.checked : true,
           showWfsBasins: showWfsBasinsCheckbox ? showWfsBasinsCheckbox.checked : false,
+          selectedWfsBasinKeys: selectedWfsBasinKeys.length > 0 ? selectedWfsBasinKeys : undefined,
           showProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,
           showGeoserverProvinces: showGeoserverProvincesCheckbox ? showGeoserverProvincesCheckbox.checked : false,
           useVectorProvinces: showProvincesCheckbox ? showProvincesCheckbox.checked : false,

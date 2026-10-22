@@ -8,7 +8,7 @@
     "visualizer": "tsx src/visualizer/server.ts",
     "build": "rm -rf dist && tsc",
     "start": "npm run build && node dist/src/index.js",
-    "test": "vitest run --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/x.service.test.ts'",
+    "test": "vitest run --fileParallelism=false --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/x.service.test.ts'",
     "test:watch": "vitest --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/x.service.test.ts'",
     "archive:sat": "tsx src/scripts/satellite-archiver-daemon.ts"
   },

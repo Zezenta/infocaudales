@@ -1055,6 +1055,7 @@ const server = http.createServer(async (req, res) => {
           highlightBasinKey: payload.activeBasinKeys?.[0],
           showThermalScale,
           showWfsBasins: payload.showWfsBasins === true,
+          selectedWfsBasinKeys: Array.isArray(payload.selectedWfsBasinKeys) ? payload.selectedWfsBasinKeys : undefined,
           layer,
           aspectRatio: payload.aspectRatio === '1:1' ? '1:1' : '9:16',
           width: payload.aspectRatio === '1:1' ? 800 : 1080,
