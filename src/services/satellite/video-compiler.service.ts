@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../../data/basin-geometries.js';
-import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
+import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService, SatelliteSource } from '../telemetry/satellite-telemetry.service.js';
 import { systemLogger } from '../../utils/logger.js';
 import { db } from '../../utils/db.js';
 
@@ -124,7 +124,7 @@ export interface GenerateBasinVideoOptions extends CompileOptions {
   bbox?: [number, number, number, number];
   hoursBack?: number;
   frameCount?: number;
-  source?: 'geoserver' | 'nasa_gibs' | 'esri_satellite';
+  source?: SatelliteSource;
 }
 
 export class VideoCompilerService {
@@ -1203,8 +1203,13 @@ export class VideoCompilerService {
       } else if (options.layer === 'nasa_gibs') {
         source = 'nasa_gibs';
         layers = 'GOES-East_ABI_Band13_Clean_Infrared';
+      } else if (options.layer === 'persiann_hourly') {
+        source = 'persiann_hourly';
+        layers = isCleanGeoserver
+          ? 'satellite_based_precipitation:persiann_pdir_hourly'
+          : 'satellite_based_precipitation:persiann_pdir_hourly,ecuador:provincias';
       } else if (options.layer === 'persiann_24h') {
-        source = 'geoserver';
+        source = 'persiann_24h';
         layers = isCleanGeoserver
           ? 'satellite_based_precipitation:persiann_pdir_24h'
           : 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';

@@ -73,9 +73,12 @@ export class SatelliteArchiverService {
     }
 
     const safeTs = timeIso.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const sourcePrefix = source === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver';
-    const filePath = path.join(targetSubdir, `goes16_${sourcePrefix}_${plantKey}_${safeTs}.png`);
-    const metaPath = path.join(targetSubdir, `goes16_${sourcePrefix}_${plantKey}_${safeTs}.json`);
+    const sourcePrefix = source === 'nasa_gibs'
+      ? 'nasa_gibs'
+      : (source === 'persiann_hourly' ? 'persiann_hourly' : (source === 'persiann_24h' ? 'persiann_24h' : 'geoserver'));
+    const filePrefix = source.startsWith('persiann') ? 'persiann' : 'goes16';
+    const filePath = path.join(targetSubdir, `${filePrefix}_${sourcePrefix}_${plantKey}_${safeTs}.png`);
+    const metaPath = path.join(targetSubdir, `${filePrefix}_${sourcePrefix}_${plantKey}_${safeTs}.json`);
 
     // Backward compatibility: if source is geoserver and legacy file exists, register and skip
     if (source === 'geoserver') {
@@ -97,9 +100,16 @@ export class SatelliteArchiverService {
     let buffer: Buffer | null = null;
     let lastErr: any = null;
 
-    const layers = source === 'nasa_gibs'
-      ? 'GOES-East_ABI_Band13_Clean_Infrared'
-      : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+    let layers: string;
+    if (source === 'nasa_gibs') {
+      layers = 'GOES-East_ABI_Band13_Clean_Infrared';
+    } else if (source === 'persiann_hourly') {
+      layers = 'satellite_based_precipitation:persiann_pdir_hourly,ecuador:provincias';
+    } else if (source === 'persiann_24h') {
+      layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+    } else {
+      layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+    }
 
     const minSize = options?.minSizeBytes ?? (source === 'nasa_gibs' ? 20000 : 0);
 
@@ -259,6 +269,60 @@ export class SatelliteArchiverService {
           skippedCount++;
         }
       }
+    }
+
+    return {
+      scanned: scannedCount,
+      downloaded: downloadedCount,
+      skipped: skippedCount,
+      newestTimestamp: newestTs
+    };
+  }
+
+  /**
+   * Scans and downloads the latest PERSIANN precipitation frames from GEOGLOWS GeoServer.
+   * Supports 'hourly' (persiann_hourly) and '24h' (persiann_24h).
+   */
+  public async archiveLatestPersiannFrames(options: {
+    type?: 'hourly' | '24h';
+    limit?: number;
+    plantKey?: string;
+  } = {}): Promise<{
+    scanned: number;
+    downloaded: number;
+    skipped: number;
+    newestTimestamp: string | null;
+  }> {
+    const type = options.type || 'hourly';
+    const limit = options.limit ?? 24;
+    const plantKey = options.plantKey || 'ecuador';
+    const source: SatelliteSource = type === '24h' ? 'persiann_24h' : 'persiann_hourly';
+
+    let timestamps: string[] = [];
+    try {
+      timestamps = await this.satelliteService.fetchPersiannTimestamps({
+        type,
+        limit
+      });
+    } catch (err: any) {
+      systemLogger.warn(`[SatelliteArchiver] Failed to fetch PERSIANN timestamps: ${err?.message || err}`);
+      return { scanned: 0, downloaded: 0, skipped: 0, newestTimestamp: null };
+    }
+
+    if (!timestamps || timestamps.length === 0) {
+      return { scanned: 0, downloaded: 0, skipped: 0, newestTimestamp: null };
+    }
+
+    const newestTs = timestamps[timestamps.length - 1] || timestamps[0];
+    let scannedCount = 0;
+    let downloadedCount = 0;
+    let skippedCount = 0;
+
+    for (const timeIso of timestamps) {
+      scannedCount++;
+      const res = await this.archiveSingleFrame(timeIso, plantKey, source);
+      if (res === 'DOWNLOADED') downloadedCount++;
+      else if (res === 'SKIPPED') skippedCount++;
     }
 
     return {

@@ -385,6 +385,10 @@ const server = http.createServer(async (req, res) => {
         { id: 'today_nasa', name: 'NASA GIBS: Resumen de Hoy (desde 00:00 ECT)', source: 'nasa_gibs' },
         { id: 'live_geoserver', name: 'GEOGLOWS / INAMHI: En Vivo Directo (~3.5 horas máx)', source: 'geoserver' },
         { id: 'today', name: 'GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)', source: 'geoserver' },
+        { id: 'persiann_live_24h', name: 'PERSIANN: En Vivo Horario (Últimas 24h de Lluvia)', source: 'persiann_hourly' },
+        { id: 'persiann_today', name: 'PERSIANN: Lluvia Horaria de Hoy en Disco', source: 'persiann_hourly' },
+        { id: 'persiann_24h_7d', name: 'PERSIANN: Lluvia Acumulada 24h (Últimos 7 Días)', source: 'persiann_24h' },
+        { id: 'persiann_24h_30d', name: 'PERSIANN: Lluvia Acumulada 24h (Historial 30 Días)', source: 'persiann_24h' },
         { id: 'yesterday_24h', name: 'GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)', source: 'geoserver' },
         { id: 'storm_paute_oct7', name: 'GEOGLOWS: Tormenta Severa en Paute (07-08 Oct • 37 fotogramas)', source: 'geoserver' },
         { id: 'storm_ccs_oct7', name: 'GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)', source: 'geoserver' },
@@ -410,6 +414,35 @@ const server = http.createServer(async (req, res) => {
     const effectiveSource: 'nasa_gibs' | 'geoserver' = isNasa ? 'nasa_gibs' : 'geoserver';
 
     try {
+      const isPersiannHourly = layer === 'persiann_hourly' || requestedSource === 'persiann_hourly' || preset.startsWith('persiann_live_') || preset === 'persiann_today';
+      const isPersiann24h = layer === 'persiann_24h' || requestedSource === 'persiann_24h' || preset.startsWith('persiann_24h_');
+
+      if (isPersiannHourly) {
+        if (preset === 'persiann_today') {
+          const rows = db.prepare(`
+            SELECT timestamp_iso, file_path, source FROM satellite_archive
+            WHERE source = 'persiann_hourly'
+            ORDER BY timestamp_iso ASC
+          `).all() as any[];
+          const timestamps = rows.map(r => r.timestamp_iso);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ timestamps, metrics: {} }));
+          return;
+        }
+        const timestamps = await satelliteMapService.fetchPersiannTimestamps({ type: 'hourly', limit: 24 });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ timestamps, metrics: {} }));
+        return;
+      }
+
+      if (isPersiann24h) {
+        const limit = preset === 'persiann_24h_30d' ? 30 : 7;
+        const timestamps = await satelliteMapService.fetchPersiannTimestamps({ type: '24h', limit });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ timestamps, metrics: {} }));
+        return;
+      }
+
       if (effectiveSource === 'nasa_gibs') {
         if (preset === 'live_nasa_6h') {
           const timestamps = await satelliteMapService.fetchGoesTimestamps({ limit: 36, source: 'nasa_gibs' });
@@ -803,11 +836,15 @@ const server = http.createServer(async (req, res) => {
     const unbaked = urlObj.searchParams.get('unbaked') === 'true';
 
     // Fast path: Check local satellite archive if layer matches archived frame or is default IR on ecuador
-    if (plantKey === 'ecuador' && time && (layer === 'goes16_inamhi' || layer === 'nasa_gibs')) {
+    if (plantKey === 'ecuador' && time && (layer === 'goes16_inamhi' || layer === 'nasa_gibs' || layer === 'persiann_hourly' || layer === 'persiann_24h')) {
       try {
         let archiveSource = 'geoserver';
         if (layer === 'nasa_gibs') {
           archiveSource = 'nasa_gibs';
+        } else if (layer === 'persiann_hourly') {
+          archiveSource = 'persiann_hourly';
+        } else if (layer === 'persiann_24h') {
+          archiveSource = 'persiann_24h';
         } else if (unbaked) {
           archiveSource = 'geoserver_clean';
         }
@@ -834,7 +871,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    let source: 'geoserver' | 'nasa_gibs' | 'esri_satellite' = 'geoserver';
+    let source: 'geoserver' | 'nasa_gibs' | 'esri_satellite' | 'persiann_hourly' | 'persiann_24h' = 'geoserver';
     let layers: string | undefined = undefined;
 
     if (layer === 'esri_satellite') {
@@ -845,7 +882,11 @@ const server = http.createServer(async (req, res) => {
     } else if (layer === 'nasa_gibs') {
       source = 'nasa_gibs';
       layers = 'GOES-East_ABI_Band13_Clean_Infrared';
+    } else if (layer === 'persiann_hourly') {
+      source = 'persiann_hourly';
+      layers = unbaked ? 'satellite_based_precipitation:persiann_pdir_hourly' : 'satellite_based_precipitation:persiann_pdir_hourly,ecuador:provincias';
     } else if (layer === 'persiann_24h') {
+      source = 'persiann_24h';
       layers = unbaked ? 'satellite_based_precipitation:persiann_pdir_24h' : 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
     } else if (layer === 'wrf_daily') {
       layers = unbaked ? 'wrf:wrf_precipitation_daily' : 'wrf:wrf_precipitation_daily,ecuador:provincias';
@@ -909,6 +950,31 @@ const server = http.createServer(async (req, res) => {
                   file_size_bytes = excluded.file_size_bytes,
                   recorded_at = excluded.recorded_at
               `).run(time, dateEcuador, timeEcuador, plantKey, cachedFilePath, buffer.length, Date.now());
+            }
+          } catch (cacheErr) {}
+        }
+
+        // Cache clean raw PERSIANN frame to disk archive for instant future scrubs & compilation
+        if (time && (layer === 'persiann_hourly' || layer === 'persiann_24h') && plantKey === 'ecuador' && buffer && buffer.length > 0) {
+          try {
+            const { dateEcuador, timeEcuador } = satelliteMapService.formatEcuadorTimestamp(time);
+            const yearMonth = dateEcuador.slice(0, 7);
+            const targetSubdir = path.join(process.cwd(), 'data', 'satellite_archive', yearMonth);
+            if (!fs.existsSync(targetSubdir)) fs.mkdirSync(targetSubdir, { recursive: true });
+            const safeTs = time.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const cachedFilePath = path.join(targetSubdir, `persiann_${layer}_${plantKey}_${safeTs}.png`);
+            if (!fs.existsSync(cachedFilePath)) {
+              fs.writeFileSync(cachedFilePath, buffer);
+              db.prepare(`
+                INSERT INTO satellite_archive (
+                  timestamp_iso, date_ecuador, time_ecuador, plant_key,
+                  file_path, file_size_bytes, recorded_at, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(timestamp_iso, source) DO UPDATE SET
+                  file_path = excluded.file_path,
+                  file_size_bytes = excluded.file_size_bytes,
+                  recorded_at = excluded.recorded_at
+              `).run(time, dateEcuador, timeEcuador, plantKey, cachedFilePath, buffer.length, Date.now(), layer);
             }
           } catch (cacheErr) {}
         }

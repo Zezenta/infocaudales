@@ -163,4 +163,27 @@ describe('SatelliteArchiverService', () => {
     const nasaStats = archiver.getStats('nasa_gibs');
     expect(nasaStats.totalFrames).toBe(144);
   }, 20000);
+
+  it('archives PERSIANN hourly precipitation frames and keeps them segregated', async () => {
+    const mockSat = new SatelliteMapService();
+    vi.spyOn(mockSat, 'fetchPersiannTimestamps').mockResolvedValue([
+      '2026-10-22T05:00:00.000Z',
+      '2026-10-22T06:00:00.000Z'
+    ]);
+
+    const fakePersiannPng = Buffer.alloc(15000, 7);
+    vi.spyOn(mockSat, 'fetchMapTile').mockResolvedValue(fakePersiannPng);
+
+    const archiver = new SatelliteArchiverService(mockSat, testArchiveDir);
+
+    const res = await archiver.archiveLatestPersiannFrames({ limit: 2, type: 'hourly' });
+    expect(res.downloaded).toBe(2);
+
+    const stats = archiver.getStats('persiann_hourly');
+    expect(stats.totalFrames).toBe(2);
+
+    const frames = archiver.getArchivedFrames({ source: 'persiann_hourly' });
+    expect(frames).toHaveLength(2);
+    expect(frames[0].source).toBe('persiann_hourly');
+  });
 });

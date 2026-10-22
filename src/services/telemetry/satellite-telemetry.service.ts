@@ -8,7 +8,7 @@ import { systemLogger } from '../../utils/logger.js';
 
 const execFileAsync = promisify(execFile);
 
-export type SatelliteSource = 'geoserver' | 'nasa_gibs' | 'esri_satellite';
+export type SatelliteSource = 'geoserver' | 'nasa_gibs' | 'esri_satellite' | 'persiann_hourly' | 'persiann_24h';
 
 export interface FetchMapTileOptions {
   source?: SatelliteSource;
@@ -159,6 +159,60 @@ export class SatelliteTelemetryService {
   }
 
   /**
+   * Fetches available PERSIANN precipitation timestamps from GEOGLOWS GeoServer GetCapabilities.
+   * Supports 'hourly' (persiann_pdir_hourly) and '24h' (persiann_pdir_24h).
+   */
+  public async fetchPersiannTimestamps(options: {
+    type?: 'hourly' | '24h';
+    limit?: number;
+  } = {}): Promise<string[]> {
+    const type = options.type || 'hourly';
+    const limit = options.limit ?? 24;
+    const layerName = type === '24h' ? 'persiann_pdir_24h' : 'persiann_pdir_hourly';
+    const capabilitiesUrl = 'https://services.geoglows.org/geoserver/satellite_based_precipitation/wms?service=WMS&version=1.1.1&request=GetCapabilities';
+
+    try {
+      const response = await axios.get(capabilitiesUrl, { timeout: 15000 });
+      if (response.status === 200 && typeof response.data === 'string') {
+        const xml = response.data;
+        const layerBlockRegex = new RegExp(`<Layer[\\s\\S]*?<Name>${layerName}<\\/Name>[\\s\\S]*?<Extent name="time"[^>]*>([\\s\\S]*?)<\\/Extent>`, 'i');
+        const match = xml.match(layerBlockRegex);
+        if (match && match[1]) {
+          const rawTimes = match[1]
+            .trim()
+            .split(',')
+            .map(t => t.trim())
+            .filter(t => Boolean(t) && !isNaN(Date.parse(t)));
+
+          rawTimes.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+          if (rawTimes.length > 0) {
+            return limit > 0 ? rawTimes.slice(-limit) : rawTimes;
+          }
+        }
+      }
+    } catch (err: any) {
+      systemLogger.warn(`[SatelliteMapService] Failed to fetch PERSIANN capabilities: ${err?.message || err}`);
+    }
+
+    // Fallback: generate recent hourly or daily timestamps
+    const nowMs = Date.now();
+    const timestamps: string[] = [];
+    if (type === '24h') {
+      const ecDt = new Date(nowMs - 5 * 3600 * 1000);
+      for (let i = limit - 1; i >= 0; i--) {
+        const d = new Date(ecDt.getTime() - i * 24 * 3600 * 1000);
+        timestamps.push(`${d.toISOString().slice(0, 10)}T00:00:00.000Z`);
+      }
+    } else {
+      const latestHourMs = Math.floor(nowMs / (3600 * 1000)) * (3600 * 1000);
+      for (let i = limit - 1; i >= 0; i--) {
+        timestamps.push(new Date(latestHourMs - i * 3600 * 1000).toISOString());
+      }
+    }
+    return timestamps;
+  }
+
+  /**
    * Resolves bounding box from options (either explicit bbox, basin plantKey, or default Ecuador).
    */
   public resolveBbox(options: { bbox?: [number, number, number, number]; plantKey?: string }): [number, number, number, number] {
@@ -222,6 +276,52 @@ export class SatelliteTelemetryService {
       return { url: this.nasaGibsUrl, params };
     }
 
+    if (source === 'persiann_hourly' || (typeof options.layers === 'string' && options.layers.includes('persiann_pdir_hourly'))) {
+      const layers = options.unbaked === true
+        ? 'satellite_based_precipitation:persiann_pdir_hourly'
+        : 'satellite_based_precipitation:persiann_pdir_hourly,ecuador:provincias';
+      const params: Record<string, string> = {
+        SERVICE: 'WMS',
+        VERSION: '1.1.1',
+        REQUEST: 'GetMap',
+        LAYERS: layers,
+        STYLES: '',
+        SRS: srs,
+        BBOX: bboxStr,
+        WIDTH: width.toString(),
+        HEIGHT: height.toString(),
+        FORMAT: format,
+        TRANSPARENT: options.transparent !== false ? 'TRUE' : 'FALSE'
+      };
+      if (options.time) {
+        params.TIME = options.time;
+      }
+      return { url: this.geoserverGlobalUrl, params };
+    }
+
+    if (source === 'persiann_24h' || (typeof options.layers === 'string' && options.layers.includes('persiann_pdir_24h'))) {
+      const layers = options.unbaked === true
+        ? 'satellite_based_precipitation:persiann_pdir_24h'
+        : 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+      const params: Record<string, string> = {
+        SERVICE: 'WMS',
+        VERSION: '1.1.1',
+        REQUEST: 'GetMap',
+        LAYERS: layers,
+        STYLES: '',
+        SRS: srs,
+        BBOX: bboxStr,
+        WIDTH: width.toString(),
+        HEIGHT: height.toString(),
+        FORMAT: format,
+        TRANSPARENT: options.transparent !== false ? 'TRUE' : 'FALSE'
+      };
+      if (options.time) {
+        params.TIME = options.time;
+      }
+      return { url: this.geoserverGlobalUrl, params };
+    }
+
     // Default: GeoServer
     const defaultGeoLayers = options.unbaked === true
       ? 'goes:goes_abi_l2_cmipf_13'
@@ -248,9 +348,8 @@ export class SatelliteTelemetryService {
       TRANSPARENT: options.transparent !== false ? 'TRUE' : 'FALSE'
     };
 
-    // Only real-time GOES-16 raster layers have sub-hourly 10-minute timestamps.
-    // Static and daily layers (PERSIANN 24h, WRF daily) throw ServiceException if sent a 10-min timestamp.
-    const isTemporalLayer = layers.includes('goes:goes_abi_l2_cmipf_13');
+    // Real-time GOES-16 and temporal PERSIANN raster layers have timestamps.
+    const isTemporalLayer = layers.includes('goes:goes_abi_l2_cmipf_13') || layers.includes('persiann_pdir');
     if (options.time && isTemporalLayer) {
       params.TIME = options.time;
     }

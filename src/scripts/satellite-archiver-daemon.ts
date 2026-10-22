@@ -111,10 +111,27 @@ async function syncArchive() {
     // NASA GIBS connection warning
   }
 
+  try {
+    const persiannResult = await archiver.archiveLatestPersiannFrames({
+      limit: 12,
+      type: 'hourly',
+      plantKey: 'ecuador'
+    });
+
+    if (persiannResult.downloaded > 0) {
+      console.log(
+        `[Archiver ${nowEcuador}] PERSIANN: +${persiannResult.downloaded} fotograma(s) horario(s) de lluvia descargado(s).`
+      );
+    }
+  } catch (err: any) {
+    // PERSIANN indexing warning
+  }
+
   const stats = archiver.getStats();
   const geoStats = archiver.getStats('geoserver');
   const nasaStats = archiver.getStats('nasa_gibs');
-  console.log(`[Archiver ${nowEcuador}] Total en disco: ${stats.totalFrames} frames (${geoStats.totalFrames} GEOGLOWS, ${nasaStats.totalFrames} NASA).`);
+  const persiannHourlyStats = archiver.getStats('persiann_hourly');
+  console.log(`[Archiver ${nowEcuador}] Total en disco: ${stats.totalFrames} frames (${geoStats.totalFrames} GEOGLOWS, ${nasaStats.totalFrames} NASA, ${persiannHourlyStats.totalFrames} PERSIANN).`);
 
   // Check storm activity in monitored basins
   await checkStorms();

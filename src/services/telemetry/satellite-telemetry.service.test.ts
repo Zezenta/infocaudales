@@ -75,13 +75,29 @@ describe('SatelliteMapService', () => {
       expect(params.TIME).toBe('2026-09-10T20:00:00Z');
     });
 
-    it('omits TIME parameter for non-temporal raster layers like PERSIANN, WRF daily, or Blue Marble', () => {
-      const persiann = service.buildWmsUrl({
+    it('passes TIME parameter for temporal PERSIANN precipitation layers', () => {
+      const persiannHourly = service.buildWmsUrl({
+        source: 'persiann_hourly',
+        time: '2026-10-22T06:00:00Z'
+      });
+      expect(persiannHourly.params.TIME).toBe('2026-10-22T06:00:00Z');
+      expect(persiannHourly.params.LAYERS).toBe('satellite_based_precipitation:persiann_pdir_hourly,ecuador:provincias');
+
+      const persiann24h = service.buildWmsUrl({
+        source: 'persiann_24h',
+        time: '2026-10-21T00:00:00Z'
+      });
+      expect(persiann24h.params.TIME).toBe('2026-10-21T00:00:00Z');
+      expect(persiann24h.params.LAYERS).toBe('satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias');
+    });
+
+    it('omits TIME parameter for non-temporal raster layers like WRF daily or Blue Marble', () => {
+      const wrf = service.buildWmsUrl({
         source: 'geoserver',
-        layers: 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias',
+        layers: 'wrf:wrf_precipitation_daily,ecuador:provincias',
         time: '2026-09-10T20:00:00Z'
       });
-      expect(persiann.params.TIME).toBeUndefined();
+      expect(wrf.params.TIME).toBeUndefined();
 
       const blueMarble = service.buildWmsUrl({
         source: 'nasa_gibs',
@@ -116,6 +132,18 @@ describe('SatelliteMapService', () => {
       const { dateEcuador, timeEcuador } = service.formatEcuadorTimestamp('invalid-date-string');
       expect(dateEcuador).toBe('N/A');
       expect(timeEcuador).toBe('N/A');
+    });
+  });
+
+  describe('fetchPersiannTimestamps', () => {
+    it('returns an array of timestamps with requested limit', async () => {
+      const hourly = await service.fetchPersiannTimestamps({ type: 'hourly', limit: 6 });
+      expect(hourly).toHaveLength(6);
+      expect(new Date(hourly[0]).getTime()).toBeLessThan(new Date(hourly[5]).getTime());
+
+      const daily = await service.fetchPersiannTimestamps({ type: '24h', limit: 4 });
+      expect(daily).toHaveLength(4);
+      expect(new Date(daily[0]).getTime()).toBeLessThan(new Date(daily[3]).getTime());
     });
   });
 

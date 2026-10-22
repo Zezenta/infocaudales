@@ -61,6 +61,15 @@
               <stop offset="85%" stop-color="#921313"/>
               <stop offset="100%" stop-color="#FFFFFF"/>
             </linearGradient>
+            <linearGradient id="persiannScaleGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3"/>
+              <stop offset="10%" stop-color="#60a5fa"/>
+              <stop offset="25%" stop-color="#2563eb"/>
+              <stop offset="45%" stop-color="#22c55e"/>
+              <stop offset="65%" stop-color="#eab308"/>
+              <stop offset="85%" stop-color="#ef4444"/>
+              <stop offset="100%" stop-color="#450a0a"/>
+            </linearGradient>
 
             <linearGradient id="ig-grad-rain" x1="0%" y1="100%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="#ffd521"/>
@@ -182,6 +191,18 @@
             <text id="thermalT3" x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
             <text id="thermalT4" x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
             <text id="thermalT5" x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
+          </g>
+
+          <!-- Floating PERSIANN Precipitation Scale Bar Overlay -->
+          <g id="persiannScaleGroup" transform="translate(20, 684)" style="display: none;">
+            <rect id="persiannScaleRect" x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+            <text id="persiannScaleTitle" x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">LLUVIA ESTIMADA PERSIANN</text>
+            <rect id="persiannScaleBar" x="10" y="19" width="210" height="7" rx="3.5" fill="url(#persiannScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+            <text id="persiannT1" x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">0</text>
+            <text id="persiannT2" x="55" y="37" fill="#60a5fa" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">5</text>
+            <text id="persiannT3" x="100" y="37" fill="#22c55e" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">15</text>
+            <text id="persiannT4" x="145" y="37" fill="#eab308" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">35</text>
+            <text id="persiannT5" x="185" y="37" fill="#ef4444" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">70+ mm</text>
           </g>
 
           <!-- Lower-Right 24h Summary Cards (Cuencas Hidroeléctricas & Regiones) -->
@@ -562,8 +583,9 @@
           <div class="form-group">
             <label class="form-label" for="layerSelect">Sensor / Modo de Análisis</label>
             <select id="layerSelect" class="form-select">
-              <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Actual • Infrarrojo Térmico)</option>
-              <option value="persiann_24h">PERSIANN-PDIR / WRF (Estimación de Lluvia y Precipitación)</option>
+              <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Infrarrojo Térmico • 10.3 µm)</option>
+              <option value="persiann_hourly">PERSIANN-PDIR Horario (Lluvia en Superficie en Tiempo Real • mm/h)</option>
+              <option value="persiann_24h">PERSIANN-PDIR 24h (Lluvia Acumulada Diaria • mm)</option>
             </select>
           </div>
 
@@ -1311,14 +1333,16 @@
         overlayBadge.setAttribute('font-size', badgeFontSize);
       }
 
-      // Thermal Scale Bar visibility (GOES-16 IR)
+      // Thermal & Precipitation Scale Bar visibility
       const thermalScaleGroup = document.getElementById('thermalScaleGroup');
+      const persiannScaleGroup = document.getElementById('persiannScaleGroup');
+      const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi' || layerSelect.value === 'nasa_gibs';
+      const isPersiannLayer = layerSelect && (layerSelect.value === 'persiann_hourly' || layerSelect.value === 'persiann_24h');
+
       if (thermalScaleGroup) {
         if (is916) {
-          // In 9:16 mobile view, thermal scale is removed completely to free space for large typography
           thermalScaleGroup.style.display = 'none';
         } else {
-          const isThermalLayer = !layerSelect || layerSelect.value === 'goes16_inamhi' || layerSelect.value === 'nasa_gibs';
           thermalScaleGroup.style.display = isThermalLayer ? 'block' : 'none';
           thermalScaleGroup.setAttribute('transform', 'translate(20, 684)');
           const tRect = document.getElementById('thermalScaleRect');
@@ -1329,6 +1353,21 @@
           const tBar = document.getElementById('thermalScaleBar');
           if (tBar) {
             tBar.setAttribute('width', '210');
+          }
+        }
+      }
+
+      if (persiannScaleGroup) {
+        if (is916) {
+          persiannScaleGroup.style.display = 'none';
+        } else {
+          persiannScaleGroup.style.display = isPersiannLayer ? 'block' : 'none';
+          persiannScaleGroup.setAttribute('transform', 'translate(20, 684)');
+          const pTitle = document.getElementById('persiannScaleTitle');
+          if (pTitle) {
+            pTitle.textContent = layerSelect && layerSelect.value === 'persiann_hourly'
+              ? 'TASA DE LLUVIA ESTIMADA (mm/h)'
+              : 'LLUVIA ACUMULADA 24H (mm)';
           }
         }
       }
@@ -1591,16 +1630,28 @@
     function updateDetectionModeDescription() {
       if (!detectionModeDesc || !layerSelect) return;
       const layer = layerSelect.value;
-      if (layer === 'persiann_24h') {
+      if (layer === 'persiann_hourly') {
         detectionModeDesc.innerHTML = `
           <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            <span>🌧️</span> <span>PERSIANN-PDIR / WRF • Lluvia en Superficie</span>
+            <span>🌧️</span> <span>PERSIANN-PDIR Horario • Lluvia en Superficie</span>
           </div>
           <p style="margin: 0; color: #94a3b8;">
-            <strong style="color: #f1f5f9;">¿Qué es y qué hace?</strong> Estima la lluvia acumulada en milímetros (<strong style="color: #f1f5f9;">mm</strong>) caída efectivamente sobre el terreno durante las últimas 24 horas.
+            <strong style="color: #f1f5f9;">¿Qué es y qué hace?</strong> Monitorea la tasa de precipitación en tiempo real estimada cada hora en milímetros por hora (<strong style="color: #f1f5f9;">mm/h</strong>) caída directamente sobre el territorio ecuatoriano.
           </p>
           <p style="margin: 5px 0 0; color: #94a3b8;">
-            <strong style="color: #f1f5f9;">¿Cómo funciona?</strong> Integra el algoritmo satelital PERSIANN-PDIR (CHRS Universidad de California / NOAA) con el modelo físico WRF del INAMHI. Traduce la reflectividad y topes fríos en precipitación real en tierra, confirmando si la nubosidad descargó agua útil en las cuencas.
+            <strong style="color: #f1f5f9;">¿Cómo funciona?</strong> Utiliza redes neuronales artificiales calibradas por NOAA y la Universidad de California que cruzan el infrarrojo térmico GOES con microondas pasivas satelitales (PMW) para deducir lluvia líquida real en superficie, superando la limitación de nubes frías no lluviosas.
+          </p>
+        `;
+      } else if (layer === 'persiann_24h') {
+        detectionModeDesc.innerHTML = `
+          <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>🌧️</span> <span>PERSIANN-PDIR 24h • Lluvia Acumulada Diaria</span>
+          </div>
+          <p style="margin: 0; color: #94a3b8;">
+            <strong style="color: #f1f5f9;">¿Qué es y qué hace?</strong> Mide la lluvia total acumulada en milímetros (<strong style="color: #f1f5f9;">mm</strong>) caída efectivamente sobre las cuencas durante las últimas 24 horas.
+          </p>
+          <p style="margin: 5px 0 0; color: #94a3b8;">
+            <strong style="color: #f1f5f9;">¿Cómo funciona?</strong> Acumula las observaciones del satélite PERSIANN-PDIR calibradas con estaciones de INAMHI, confirmando si la nubosidad descargó agua útil en las cuencas de captación hidroeléctrica.
           </p>
         `;
       } else {
@@ -1631,6 +1682,9 @@
       } else if (layerKey === 'blue_marble') {
         customTitleInput.value = isEcuador ? 'Vista Satelital • Ecuador' : `${basinName} • Vista Satelital`;
         customBadgeInput.value = 'NASA EarthData';
+      } else if (layerKey === 'persiann_hourly') {
+        customTitleInput.value = isEcuador ? 'Precipitación Horaria • Ecuador Continental' : `${basinName} • Precipitación Horaria`;
+        customBadgeInput.value = 'PERSIANN-PDIR • mm/h';
       } else if (layerKey === 'persiann_24h') {
         customTitleInput.value = isEcuador ? 'Lluvia Acumulada 24h • Ecuador Continental' : `${basinName} • Lluvia 24h`;
         customBadgeInput.value = 'PERSIANN-PDIR • Lluvia 24h';
@@ -1686,9 +1740,13 @@
         if (!isNasaPreset && presetSelect) {
           presetSelect.value = 'live_nasa_12h';
         }
+      } else if (layer === 'persiann_hourly') {
+        if (presetSelect) presetSelect.value = 'persiann_live_24h';
+      } else if (layer === 'persiann_24h') {
+        if (presetSelect) presetSelect.value = 'persiann_24h_7d';
       } else if (layer === 'goes16_inamhi') {
-        const isNasaPreset = currentPreset.startsWith('live_nasa_') || currentPreset === 'today_nasa';
-        if (isNasaPreset && presetSelect) {
+        const isOpposingPreset = currentPreset.startsWith('live_nasa_') || currentPreset === 'today_nasa' || currentPreset.startsWith('persiann_');
+        if (isOpposingPreset && presetSelect) {
           presetSelect.value = 'live_geoserver';
         }
       }
@@ -2310,6 +2368,14 @@
       if (preset.startsWith('live_nasa_') || preset === 'today_nasa') {
         if (layerSelect.value !== 'nasa_gibs') {
           layerSelect.value = 'nasa_gibs';
+        }
+      } else if (preset.startsWith('persiann_live_') || preset === 'persiann_today') {
+        if (layerSelect.value !== 'persiann_hourly') {
+          layerSelect.value = 'persiann_hourly';
+        }
+      } else if (preset.startsWith('persiann_24h_')) {
+        if (layerSelect.value !== 'persiann_24h') {
+          layerSelect.value = 'persiann_24h';
         }
       } else if (preset === 'live_geoserver' || preset === 'today' || preset === 'yesterday_24h' || preset.startsWith('storm_') || preset === 'recent_50' || preset === 'all_frames') {
         if (layerSelect.value !== 'goes16_inamhi') {
