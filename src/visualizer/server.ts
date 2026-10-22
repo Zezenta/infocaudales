@@ -613,10 +613,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Hydroelectric Basin Polygons Vector API (From INAMHI/GEOGLOWS GeoServer WFS)
-  if (req.method === 'GET' && req.url === '/api/basin-polygons') {
+  if (req.method === 'GET' && (req.url === '/api/basin-polygons' || req.url?.startsWith('/api/basin-polygons?'))) {
     const jsonPath = path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json');
     if (fs.existsSync(jsonPath)) {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       fs.createReadStream(jsonPath).pipe(res);
       return;
     }

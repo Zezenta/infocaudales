@@ -1839,7 +1839,7 @@
     async function loadWfsBasinPolygons() {
       if (wfsBasinsLoaded || !wfsBasinPolygonsLayer) return;
       try {
-        const res = await fetch('/api/basin-polygons');
+        const res = await fetch('/api/basin-polygons?v=' + Date.now());
         const pathsData = await res.json();
         
         // Colors corresponding to each monitored hydroelectric basin
