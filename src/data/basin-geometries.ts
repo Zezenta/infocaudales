@@ -5,6 +5,17 @@ export interface PlantPin {
   placement?: 'top-left' | 'bottom-left' | 'top-right' | 'bottom-right' | 'right' | 'left';
 }
 
+export {
+  PolygonPoint,
+  BasinPolygonMap,
+  BasinRasterMask,
+  resolveBasinKey,
+  loadBasinPolygons,
+  getBasinPolygon,
+  isPointInPolygon,
+  getBasinRasterMask
+} from './basin-polygons.js';
+
 export interface BasinGeometry {
   key: string;
   name: string;

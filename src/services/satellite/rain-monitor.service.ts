@@ -2,7 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { db } from '../../utils/db.js';
-import { BASIN_GEOMETRIES, COSTA_SIERRA_DIVIDE, SIERRA_AMAZONIA_DIVIDE, interpolateDivideLon } from '../../data/basin-geometries.js';
+import {
+  BASIN_GEOMETRIES,
+  COSTA_SIERRA_DIVIDE,
+  SIERRA_AMAZONIA_DIVIDE,
+  interpolateDivideLon,
+  getBasinRasterMask,
+  getBasinPolygon,
+  resolveBasinKey
+} from '../../data/basin-geometries.js';
 import { SatelliteTelemetryService, SatelliteMapService, SatelliteFrame, SatelliteSource } from '../telemetry/satellite-telemetry.service.js';
 import { SatelliteArchiverService } from './satellite-archiver.service.js';
 import { VideoCompilerService, CompiledAnimationResult } from './video-compiler.service.js';
@@ -259,7 +267,50 @@ export function analyzeBasinCoverageFromEcuadorFrame(
   const bpp = colorType === 6 ? 4 : (colorType === 3 ? 1 : 3);
   const pixels = unfilterPngScanlines(inflated, width, height, bpp);
 
-  // Compute pixel bounding box for this basin inside Ecuador frame
+  // 1. Evaluate using the exact hydrological basin polygon raster mask
+  const rasterMask = getBasinRasterMask(plantKey, width, height, ecBasin.bbox);
+  if (rasterMask && rasterMask.totalPixels > 0) {
+    let convectiveCount = 0;
+    let severeCount = 0;
+    const { minX, maxX, minY, maxY, boxW, mask, totalPixels } = rasterMask;
+
+    for (let y = minY; y <= maxY; y++) {
+      const rowOffset = (y - minY) * boxW;
+      for (let x = minX; x <= maxX; x++) {
+        if (mask[rowOffset + (x - minX)] === 0) continue;
+        const pIdx = (y * width + x) * bpp;
+        let r = 0, g = 0, b = 0;
+        if (colorType === 3 && plte) {
+          const idx = pixels[pIdx];
+          const pOff = idx * 3;
+          if (pOff + 2 < plte.length) {
+            r = plte[pOff];
+            g = plte[pOff + 1];
+            b = plte[pOff + 2];
+          }
+        } else {
+          r = pixels[pIdx];
+          g = pixels[pIdx + 1];
+          b = pixels[pIdx + 2];
+        }
+
+        const { isSevere, isConvective } = isConvectivePixel(r, g, b, source);
+        if (isSevere) {
+          severeCount++;
+          convectiveCount++;
+        } else if (isConvective) {
+          convectiveCount++;
+        }
+      }
+    }
+
+    const convPct = (convectiveCount / totalPixels) * 100;
+    const sevPct = (severeCount / totalPixels) * 100;
+    const effectiveCoverage = convPct + (sevPct * 1.5);
+    return parseFloat(effectiveCoverage.toFixed(1));
+  }
+
+  // 2. Fallback to rectangular bounding box if no polygon is configured
   const ecMinLon = ecBasin.bbox[0];
   const ecMinLat = ecBasin.bbox[1];
   const ecMaxLon = ecBasin.bbox[2];
@@ -1397,8 +1448,8 @@ export class RainMonitorService {
       const img = this.decodePng(buffer);
       const px = this.unfilterScanlines(img.raw, img.width, img.height);
       const ecuadorBbox = BASIN_GEOMETRIES.ecuador.bbox;
-      const ccs = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.cocaCodoSinclair.bbox, effectiveSource);
-      const paute = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.paute.bbox, effectiveSource);
+      const ccs = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.cocaCodoSinclair.bbox, effectiveSource, 'cocaCodoSinclair');
+      const paute = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES.paute.bbox, effectiveSource, 'paute');
       const regions = this.measureRegionalCoveragesInEcuadorImage(px, img.width, img.height, ecuadorBbox, effectiveSource);
       return { ccs, paute, ...regions };
     } catch (err) {
@@ -1407,18 +1458,68 @@ export class RainMonitorService {
   }
 
   /**
-   * Measures convective rain cloud coverage inside a basin's geographic bounding box
+   * Measures convective rain cloud coverage inside a basin's geographic bounding box or real polygon
    * directly from a full Continental Ecuador RGBA image buffer.
    */
   public measureBasinCoverageInEcuadorImage(
-    px: Buffer,
+    px: Buffer | Uint8Array,
     imgWidth: number,
     imgHeight: number,
     ecuadorBbox: [number, number, number, number],
     basinBbox: [number, number, number, number],
-    source?: 'geoserver' | 'nasa_gibs'
+    source?: 'geoserver' | 'nasa_gibs',
+    plantKey?: string
   ): number {
     const effectiveSource = source || (process.env.SATELLITE_SOURCE === 'nasa_gibs' ? 'nasa_gibs' : 'geoserver');
+
+    // Auto-detect plantKey if not explicitly provided
+    let effectivePlantKey = plantKey;
+    if (!effectivePlantKey) {
+      for (const [key, geom] of Object.entries(BASIN_GEOMETRIES)) {
+        if (
+          Math.abs(geom.bbox[0] - basinBbox[0]) < 0.01 &&
+          Math.abs(geom.bbox[1] - basinBbox[1]) < 0.01 &&
+          Math.abs(geom.bbox[2] - basinBbox[2]) < 0.01 &&
+          Math.abs(geom.bbox[3] - basinBbox[3]) < 0.01
+        ) {
+          effectivePlantKey = key;
+          break;
+        }
+      }
+    }
+
+    if (effectivePlantKey) {
+      const rasterMask = getBasinRasterMask(effectivePlantKey, imgWidth, imgHeight, ecuadorBbox);
+      if (rasterMask && rasterMask.totalPixels > 0) {
+        let convCount = 0;
+        let sevCount = 0;
+        const { minX, maxX, minY, maxY, boxW, mask, totalPixels } = rasterMask;
+
+        for (let y = minY; y <= maxY; y++) {
+          const rowOffset = (y - minY) * boxW;
+          for (let x = minX; x <= maxX; x++) {
+            if (mask[rowOffset + (x - minX)] === 0) continue;
+            const i = (y * imgWidth + x) * 4;
+            const r = px[i];
+            const g = px[i + 1];
+            const b = px[i + 2];
+
+            const { isSevere, isConvective } = isConvectivePixel(r, g, b, effectiveSource);
+            if (isSevere) {
+              sevCount++;
+              convCount++;
+            } else if (isConvective) {
+              convCount++;
+            }
+          }
+        }
+
+        const eff = (convCount / totalPixels) * 100 + ((sevCount / totalPixels) * 100 * 1.5);
+        return parseFloat(eff.toFixed(1));
+      }
+    }
+
+    // Fallback to bounding box if no polygon is available
     const [minLon, minLat, maxLon, maxLat] = ecuadorBbox;
     const projectX = (lon: number) => Math.max(0, Math.min(imgWidth - 1, Math.round(((lon - minLon) / (maxLon - minLon)) * imgWidth)));
     const projectY = (lat: number) => Math.max(0, Math.min(imgHeight - 1, Math.round(((maxLat - lat) / (maxLat - minLat)) * imgHeight)));
@@ -1699,7 +1800,7 @@ export class RainMonitorService {
 
         for (const bKey of targetBasins) {
           const threshold = DEFAULT_STORM_THRESHOLDS[bKey] ?? 10.0;
-          const cov = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES[bKey].bbox, selectedSource);
+          const cov = this.measureBasinCoverageInEcuadorImage(px, img.width, img.height, ecuadorBbox, BASIN_GEOMETRIES[bKey].bbox, selectedSource, bKey);
           const stats = basinStats.get(bKey)!;
           if (cov > stats.maxCoverage) stats.maxCoverage = cov;
 
