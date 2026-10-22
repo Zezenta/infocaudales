@@ -256,7 +256,7 @@ export class VideoCompilerService {
     const showProvinces = isEcuador && (
       options.showProvinces === true ||
       (options.showProvinces !== false && isNasaGibs) ||
-      (options.showProvinces !== false && options.useVectorProvinces === true)
+      (options.showProvinces !== false && options.useVectorProvinces !== false)
     );
     const provincesColor = options.provincesColor || '#ffffff';
     const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.8;
@@ -1153,7 +1153,7 @@ export class VideoCompilerService {
     const frameCount = options.frameCount || Math.round(hoursBack * 6); // 6 frames per hour (10-min cadence)
 
     const is916 = (options.width === 1080 && options.height === 1920) || options.aspectRatio === '9:16';
-    const isCleanGeoserver = (options.useVectorProvinces === true || options.unbakedProvinces === true || (is916 && options.useVectorProvinces !== false));
+    const isCleanGeoserver = (options.useVectorProvinces === true || options.unbakedProvinces === true || options.useVectorProvinces !== false);
 
     // Resolve source & layers from layer parameter if provided
     let source = options.source;

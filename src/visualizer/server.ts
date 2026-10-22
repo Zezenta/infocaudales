@@ -951,10 +951,10 @@ const server = http.createServer(async (req, res) => {
         const is916 = payload.aspectRatio !== '1:1';
         const showProvinces = payload.showProvinces !== undefined
           ? payload.showProvinces
-          : (payload.useVectorProvinces !== undefined ? payload.useVectorProvinces : is916);
+          : (payload.useVectorProvinces !== undefined ? payload.useVectorProvinces : true);
         const showGeoserverProvinces = payload.showGeoserverProvinces !== undefined
           ? payload.showGeoserverProvinces
-          : (payload.unbakedProvinces !== undefined ? !payload.unbakedProvinces : !is916);
+          : (payload.unbakedProvinces !== undefined ? !payload.unbakedProvinces : false);
         const unbakedProvinces = !showGeoserverProvinces;
         const useVectorProvinces = showProvinces;
 
