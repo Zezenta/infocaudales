@@ -266,44 +266,18 @@
       <!-- Scrollable Sidebar Body -->
       <div class="sidebar-body">
 
-        <!-- Panel de Detección Meteorológica & Capa -->
-        <div class="control-panel">
-          <h3 class="panel-title">Detección Meteorológica</h3>
-
-          <div class="form-group">
-            <label class="form-label" for="layerSelect">Sensor / Modo de Análisis</label>
-            <select id="layerSelect" class="form-select">
-              <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Actual • Infrarrojo Térmico)</option>
-              <option value="persiann_24h">PERSIANN-PDIR / WRF (Estimación de Lluvia y Precipitación)</option>
+        <!-- Selector de Formato de Video (Aspect Ratio) al Inicio -->
+        <div class="control-panel" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.35);">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="aspectRatioSelect" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; color: #38bdf8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em;">Formato / Aspect Ratio</span>
+              <span id="aspectRatioBadge" style="font-size: 11px; color: #cbd5e1; font-family: var(--font-mono); background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); padding: 1px 6px; border-radius: 4px;">9:16 Vertical</span>
+            </label>
+            <select id="aspectRatioSelect" class="form-select" style="font-weight: 600; font-size: 13px;">
+              <option value="9:16" selected>9:16 Vertical (1080x1920 • Instagram Reels / Stories / TikTok)</option>
+              <option value="1:1">1:1 Cuadrado (800x800 • X / Twitter)</option>
             </select>
           </div>
-
-          <!-- Tarjeta explicativa con descripción corta de qué es, qué hace y cómo funciona -->
-          <div id="detectionModeDesc" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 11.5px; line-height: 1.45; color: #cbd5e1; margin-top: 8px;">
-          </div>
-
-          <!-- Timeline Preset Selector -->
-          <div class="form-group" style="margin-top: 10px;">
-            <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
-            <select id="presetSelect" class="form-select">
-              <optgroup label="── GEOGLOWS / INAMHI (GeoServer Local) ──">
-                <option value="live_geoserver" selected>GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
-                <option value="today">GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)</option>
-                <option value="yesterday_24h">GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
-                <option value="storm_paute_oct7">GEOGLOWS: Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
-                <option value="storm_ccs_oct7">GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
-                <option value="recent_50">GEOGLOWS: Últimos 50 fotogramas archivados</option>
-                <option value="all_frames">GEOGLOWS: Archivo Histórico Completo</option>
-              </optgroup>
-              <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
-                <option value="live_nasa_12h">NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
-                <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
-                <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
-                <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
-              </optgroup>
-            </select>
-          </div>
-
         </div>
 
         <!-- Panel: Sección Etiquetas -->
@@ -581,29 +555,59 @@
           </div>
         </div>
 
-      <!-- Compilation & Video Export -->
-      <div class="control-panel">
-        <h3 class="panel-title">Compilación y Exportación</h3>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-          Compila los fotogramas cargados en un video MP4 optimizado para Twitter (H.264) o un GIF animado.
-        </p>
+        <!-- Panel de Detección Meteorológica & Capa (al final) -->
+        <div class="control-panel">
+          <h3 class="panel-title">Detección Meteorológica</h3>
 
-        <!-- Video Aspect Ratio: 9:16 Vertical (Reels / Stories / TikTok) vs 1:1 Square (Twitter / X) -->
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label class="form-label" for="aspectRatioSelect">Formato de Video / Previsualización en Vivo</label>
-          <select id="aspectRatioSelect" class="form-select">
-            <option value="9:16" selected>9:16 Vertical (1080x1920 • Instagram Reels / Stories / TikTok)</option>
-            <option value="1:1">1:1 Cuadrado (800x800 • X / Twitter)</option>
-          </select>
+          <div class="form-group">
+            <label class="form-label" for="layerSelect">Sensor / Modo de Análisis</label>
+            <select id="layerSelect" class="form-select">
+              <option value="goes16_inamhi" selected>GOES-16 Banda 13 (Actual • Infrarrojo Térmico)</option>
+              <option value="persiann_24h">PERSIANN-PDIR / WRF (Estimación de Lluvia y Precipitación)</option>
+            </select>
+          </div>
+
+          <!-- Tarjeta explicativa con descripción corta de qué es, qué hace y cómo funciona -->
+          <div id="detectionModeDesc" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 11.5px; line-height: 1.45; color: #cbd5e1; margin-top: 8px;">
+          </div>
+
+          <!-- Timeline Preset Selector -->
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label" for="presetSelect">Línea de Tiempo / Colección de Fotogramas</label>
+            <select id="presetSelect" class="form-select">
+              <optgroup label="── GEOGLOWS / INAMHI (GeoServer Local) ──">
+                <option value="live_geoserver" selected>GEOGLOWS: En Vivo Directo (~3.5 horas máx)</option>
+                <option value="today">GEOGLOWS: Resumen de Hoy en Disco (desde 00:00 ECT)</option>
+                <option value="yesterday_24h">GEOGLOWS: Resumen 24h Ayer (11 de Octubre • 133 fotogramas)</option>
+                <option value="storm_paute_oct7">GEOGLOWS: Tormenta Severa Paute (07-08 Oct • 37 fotogramas)</option>
+                <option value="storm_ccs_oct7">GEOGLOWS: Tormenta Coca Codo Sinclair (07 Oct • 31 fotogramas)</option>
+                <option value="recent_50">GEOGLOWS: Últimos 50 fotogramas archivados</option>
+                <option value="all_frames">GEOGLOWS: Archivo Histórico Completo</option>
+              </optgroup>
+              <optgroup label="── NASA GIBS (CDN NOAA/NASA) ──">
+                <option value="live_nasa_12h">NASA GIBS: Últimas 12 Horas Directo (72 fotogramas continuos)</option>
+                <option value="live_nasa_6h">NASA GIBS: Últimas 6 Horas Directo (36 fotogramas continuos)</option>
+                <option value="live_nasa_24h">NASA GIBS: Últimas 24 Horas Directo (144 fotogramas continuos)</option>
+                <option value="today_nasa">NASA GIBS: Resumen de Hoy (desde 00:00 ECT)</option>
+              </optgroup>
+            </select>
+          </div>
         </div>
 
-        <div class="grid-2col">
-          <button id="compileMp4Btn" class="btn btn-success">Compilar MP4</button>
-          <button id="compileGifBtn" class="btn">Compilar GIF</button>
-        </div>
+        <!-- Compilation & Video Export -->
+        <div class="control-panel">
+          <h3 class="panel-title">Compilación y Exportación</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+            Compila los fotogramas cargados en un video MP4 optimizado para redes sociales o un GIF animado.
+          </p>
 
-        <div id="exportStatus" class="status-box"></div>
-      </div>
+          <div class="grid-2col">
+            <button id="compileMp4Btn" class="btn btn-success">Compilar MP4</button>
+            <button id="compileGifBtn" class="btn">Compilar GIF</button>
+          </div>
+
+          <div id="exportStatus" class="status-box"></div>
+        </div>
 
       </div> <!-- /sidebar-body -->
     </aside>
@@ -1986,6 +1990,12 @@
         updateWatermarkBrand('x');
         if (showProvincesCheckbox) showProvincesCheckbox.checked = true;
         if (showGeoserverProvincesCheckbox) showGeoserverProvincesCheckbox.checked = false;
+      }
+
+      const aspectRatioBadge = document.getElementById('aspectRatioBadge');
+      if (aspectRatioBadge) {
+        aspectRatioBadge.textContent = is916 ? '9:16 Vertical' : '1:1 Cuadrado';
+        aspectRatioBadge.style.color = is916 ? '#cbd5e1' : '#38bdf8';
       }
 
       updateProvinceVisibility();
