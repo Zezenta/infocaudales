@@ -258,9 +258,9 @@ export class VideoCompilerService {
       (options.showProvinces !== false && isNasaGibs) ||
       (options.showProvinces !== false && options.useVectorProvinces === true)
     );
-    const provincesColor = options.provincesColor || '#38bdf8';
-    const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
-    const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;
+    const provincesColor = options.provincesColor || '#ffffff';
+    const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.8;
+    const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.7;
 
     let provincesOverlaySvg = '';
     if (showProvinces) {
