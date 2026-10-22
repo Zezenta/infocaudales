@@ -308,6 +308,23 @@ export class VideoCompilerService {
       const basinPaths = this.getBasinSvgPaths();
       if (basinPaths) {
         const colors: Record<string, string> = { coca: '#38bdf8', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b' };
+        const labels: Record<string, string> = {
+          cocaCodoSinclair: 'Cuenca hídrica Coca Codo Sinclair',
+          coca: 'Cuenca hídrica Coca Codo Sinclair',
+          paute: 'Cuenca hídrica Complejo Paute',
+          agoyan: 'Cuenca hídrica Pastaza / Agoyán',
+          minasSanFrancisco: 'Cuenca hídrica Jubones / Minas San Francisco',
+          jubones: 'Cuenca hídrica Jubones / Minas San Francisco'
+        };
+        const tagPositions: Record<string, { x: number; y: number; w: number }> = {
+          cocaCodoSinclair: { x: 360, y: 152, w: 248 },
+          coca: { x: 360, y: 152, w: 248 },
+          paute: { x: 260, y: 442, w: 225 },
+          agoyan: { x: 275, y: 244, w: 220 },
+          minasSanFrancisco: { x: 180, y: 528, w: 295 },
+          jubones: { x: 180, y: 528, w: 295 }
+        };
+
         const selectedKeys = Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0
           ? new Set(options.selectedWfsBasinKeys.map(k => k === 'cocaCodoSinclair' ? 'coca' : (k === 'minasSanFrancisco' ? 'jubones' : k)))
           : null;
@@ -315,10 +332,24 @@ export class VideoCompilerService {
         for (const [k, d] of Object.entries(basinPaths)) {
           if (selectedKeys && !selectedKeys.has(k)) continue;
           const col = colors[k] || '#38bdf8';
+          const label = labels[k] || k;
+          const pos = tagPositions[k];
+          let labelBadgeSvg = '';
+          if (pos) {
+            labelBadgeSvg = `
+              <g class="wfs-basin-label" id="wfs_label_${k}">
+                <rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="22" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${col}" stroke-width="1.3" />
+                <circle cx="${pos.x + 10}" cy="${pos.y + 11}" r="3.5" fill="${col}" />
+                <text x="${pos.x + 20}" y="${pos.y + 15}" fill="#f8fafc" font-family="'Space Grotesk', -apple-system, sans-serif" font-weight="700" font-size="11" letter-spacing="0.02em">${label}</text>
+              </g>
+            `;
+          }
+
           pathsSvg += `
             <path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="${d}" fill="none" stroke="#000000" stroke-width="4.5" stroke-opacity="0.75" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            ${labelBadgeSvg}
           `;
         }
         const transformAttr = is916 ? ' transform="translate(0, 290) scale(1.35)"' : '';
