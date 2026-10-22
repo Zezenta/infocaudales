@@ -657,17 +657,24 @@
 
     function updateProvinceTransform() {
       const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
-      const baseX = 0;
-      const baseY = is916 ? 290 : 0;
-      const baseScale = is916 ? 1.35 : 1.0;
+      // Default calibrated parameters:
+      // Instagram 9:16: translate(22.25, 272.4) scale(1.292, 1.3892)
+      // Twitter 1:1: translate(16.48, -13.04) scale(0.957, 1.029)
+      const baseX = is916 ? 22.25 : 16.48;
+      const baseY = is916 ? 272.4 : -13.04;
+      const baseScaleX = is916 ? 1.292 : 0.957;
+      const baseScaleY = is916 ? 1.3892 : 1.029;
 
       const curX = +(baseX + svgCalibOffsetX).toFixed(2);
       const curY = +(baseY + svgCalibOffsetY).toFixed(2);
-      const curScale = +(baseScale * (svgCalibScalePct / 100.0)).toFixed(4);
+      const curScaleX = +(baseScaleX * (svgCalibScalePct / 100.0)).toFixed(4);
+      const curScaleY = +(baseScaleY * (svgCalibScalePct / 100.0)).toFixed(4);
 
-      const transformStr = (curX === 0 && curY === 0 && curScale === 1.0)
+      const transformStr = (curX === 0 && curY === 0 && curScaleX === 1.0 && curScaleY === 1.0)
         ? ''
-        : `translate(${curX}, ${curY}) scale(${curScale})`;
+        : (curScaleX === curScaleY
+            ? `translate(${curX}, ${curY}) scale(${curScaleX})`
+            : `translate(${curX}, ${curY}) scale(${curScaleX}, ${curScaleY})`);
 
       if (provincesLayer) {
         provincesLayer.setAttribute('transform', transformStr);
@@ -690,7 +697,7 @@
         svgCalibSummary.textContent = `X: ${svgCalibOffsetX >= 0 ? '+' : ''}${svgCalibOffsetX.toFixed(1)}px | Y: ${svgCalibOffsetY >= 0 ? '+' : ''}${svgCalibOffsetY.toFixed(1)}px | Escala: ${svgCalibScalePct.toFixed(1)}%`;
       }
       if (svgTransformCode) {
-        svgTransformCode.textContent = `transform="translate(${curX}, ${curY}) scale(${curScale})"`;
+        svgTransformCode.textContent = `transform="${transformStr}"`;
       }
     }
 

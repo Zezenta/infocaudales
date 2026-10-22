@@ -62,6 +62,8 @@ export interface OverlayCustomizationOptions {
   svgOffsetX?: number;
   svgOffsetY?: number;
   svgScale?: number;
+  svgScaleX?: number;
+  svgScaleY?: number;
   summaryCardItems?: BasinSummaryCardItem[];
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
@@ -264,18 +266,32 @@ export class VideoCompilerService {
     if (showProvinces) {
       const paths = this.getProvincesVectorSvg();
       if (paths) {
-        const baseX = 0;
-        const baseY = is916 ? 290 : 0;
-        const baseScale = is916 ? 1.35 : 1.0;
-        const offsetX = typeof options.svgOffsetX === 'number' ? options.svgOffsetX : 0;
-        const offsetY = typeof options.svgOffsetY === 'number' ? options.svgOffsetY : 0;
+        // Calibrated defaults matching GeoServer delineation:
+        // Instagram 9:16 (1080x1920) default: translate(22.25, 272.4) scale(1.292, 1.3892)
+        // Twitter/X 1:1 (800x800) default: translate(16.48, -13.04) scale(0.957, 1.029)
+        const default916 = { x: 22.25, y: 272.4, scaleX: 1.292, scaleY: 1.3892 };
+        const default11 = { x: +(22.25 * (800 / 1080)).toFixed(2), y: +((272.4 - 290) * (800 / 1080)).toFixed(2), scaleX: +(1.292 / 1.35).toFixed(4), scaleY: +(1.3892 / 1.35).toFixed(4) };
+
+        const def = is916 ? default916 : default11;
+        const offsetX = typeof options.svgOffsetX === 'number' ? options.svgOffsetX : def.x;
+        const offsetY = typeof options.svgOffsetY === 'number' ? options.svgOffsetY : def.y;
         const scaleMult = typeof options.svgScale === 'number' ? options.svgScale : 1.0;
-        const finalX = +(baseX + offsetX).toFixed(2);
-        const finalY = +(baseY + offsetY).toFixed(2);
-        const finalScale = +(baseScale * scaleMult).toFixed(4);
-        const transformAttr = (finalX === 0 && finalY === 0 && finalScale === 1.0)
-          ? ''
-          : ` transform="translate(${finalX}, ${finalY}) scale(${finalScale})"`;
+        const scaleX = typeof options.svgScaleX === 'number' ? options.svgScaleX : (def.scaleX * scaleMult);
+        const scaleY = typeof options.svgScaleY === 'number' ? options.svgScaleY : (def.scaleY * scaleMult);
+
+        const finalX = +(offsetX).toFixed(2);
+        const finalY = +(offsetY).toFixed(2);
+        const finalScaleX = +(scaleX).toFixed(4);
+        const finalScaleY = +(scaleY).toFixed(4);
+
+        let transformAttr = '';
+        if (finalX !== 0 || finalY !== 0 || finalScaleX !== 1.0 || finalScaleY !== 1.0) {
+          if (finalScaleX === finalScaleY) {
+            transformAttr = ` transform="translate(${finalX}, ${finalY}) scale(${finalScaleX})"`;
+          } else {
+            transformAttr = ` transform="translate(${finalX}, ${finalY}) scale(${finalScaleX}, ${finalScaleY})"`;
+          }
+        }
         provincesOverlaySvg = `
         <!-- Provincial Delineation Vector Layer -->
         <g id="provincesLayer"${transformAttr} fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">

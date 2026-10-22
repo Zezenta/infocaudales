@@ -136,7 +136,7 @@ describe('VideoCompilerService', () => {
       });
 
       expect(svg).toContain('id="provincesLayer"');
-      expect(svg).toContain('transform="translate(0, 290) scale(1.35)"');
+      expect(svg).toContain('transform="translate(22.25, 272.4) scale(1.292, 1.3892)"');
       expect(svg).toContain('stroke="#38bdf8"');
     });
 

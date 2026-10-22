@@ -220,21 +220,21 @@
         <!-- Coordenadas & Transform Resultado (Top priority for quick copying) -->
         <div class="control-panel" style="background: rgba(2, 6, 23, 0.85); border: 1px solid rgba(56, 189, 248, 0.4);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Coordenadas Resultantes</span>
+            <span style="font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Transform Resultante</span>
             <button type="button" id="copySvgTransformBtn" class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;">📋 Copiar Código</button>
           </div>
-          <div id="svgCalibSummary" style="font-family: var(--font-mono); font-size: 12.5px; color: #38bdf8; font-weight: 700; margin-bottom: 6px;">
-            X: +0.00px | Y: +0.00px | Escala: 100.00%
+          <div id="svgCalibSummary" style="font-family: var(--font-mono); font-size: 12px; color: #38bdf8; font-weight: 700; margin-bottom: 6px; line-height: 1.4;">
+            X: +0.00px | Y: +0.00px<br>Escala X: 100.00% | Escala Y: 100.00%
           </div>
           <code id="svgTransformCode" style="display: block; font-family: var(--font-mono); font-size: 11px; color: #cbd5e1; word-break: break-all; background: rgba(0,0,0,0.5); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-            transform="translate(0, 290) scale(1.35)"
+            transform="translate(0, 290) scale(1.35, 1.35)"
           </code>
           <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
             <button type="button" id="resetSvgCalibBtn" class="calib-step-btn" style="padding: 3px 10px; font-size: 11px;">Restablecer Neutro (0, 0)</button>
           </div>
         </div>
 
-        <!-- Controles Eje X -->
+        <!-- Controles Eje X (Desplazamiento) -->
         <div class="control-panel">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label class="form-label" style="margin-bottom: 0;">Mover Eje X (Horizontal)</label>
@@ -245,7 +245,7 @@
             <button type="button" class="calib-step-btn" data-axis="x" data-delta="-1">-1</button>
             <button type="button" class="calib-step-btn" data-axis="x" data-delta="-0.2">-0.2</button>
             <button type="button" class="calib-step-btn" data-axis="x" data-delta="-0.05">-0.05</button>
-            <input type="range" id="svgOffsetXSlider" min="-30" max="30" step="0.05" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+            <input type="range" id="svgOffsetXSlider" min="-60" max="60" step="0.05" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
             <button type="button" class="calib-step-btn" data-axis="x" data-delta="0.05">+0.05</button>
             <button type="button" class="calib-step-btn" data-axis="x" data-delta="0.2">+0.2</button>
             <button type="button" class="calib-step-btn" data-axis="x" data-delta="1">+1</button>
@@ -253,7 +253,7 @@
           </div>
         </div>
 
-        <!-- Controles Eje Y -->
+        <!-- Controles Eje Y (Desplazamiento) -->
         <div class="control-panel">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label class="form-label" style="margin-bottom: 0;">Mover Eje Y (Vertical)</label>
@@ -264,7 +264,7 @@
             <button type="button" class="calib-step-btn" data-axis="y" data-delta="-1">-1</button>
             <button type="button" class="calib-step-btn" data-axis="y" data-delta="-0.2">-0.2</button>
             <button type="button" class="calib-step-btn" data-axis="y" data-delta="-0.05">-0.05</button>
-            <input type="range" id="svgOffsetYSlider" min="-30" max="30" step="0.05" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+            <input type="range" id="svgOffsetYSlider" min="-60" max="60" step="0.05" value="0" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
             <button type="button" class="calib-step-btn" data-axis="y" data-delta="0.05">+0.05</button>
             <button type="button" class="calib-step-btn" data-axis="y" data-delta="0.2">+0.2</button>
             <button type="button" class="calib-step-btn" data-axis="y" data-delta="1">+1</button>
@@ -272,20 +272,48 @@
           </div>
         </div>
 
-        <!-- Controles Factor de Escala -->
+        <!-- Controles de Proporciones y Escala Independiente X / Y -->
         <div class="control-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0;">Factor de Escala (%)</label>
-            <span id="svgScaleVal" class="val-display-pill">100.00%</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 class="panel-title" style="margin-bottom: 0;">Proporciones y Escala</h3>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; cursor: pointer;">
+              <input type="checkbox" id="lockAspectCheckbox" checked style="accent-color: var(--accent-cyan);">
+              <span>Bloquear proporción (1:1)</span>
+            </label>
           </div>
-          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
-            <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-1">-1%</button>
-            <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-0.2">-0.2%</button>
-            <button type="button" class="calib-step-btn" data-axis="scale" data-delta="-0.05">-0.05%</button>
-            <input type="range" id="svgScaleSlider" min="94" max="106" step="0.05" value="100" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
-            <button type="button" class="calib-step-btn" data-axis="scale" data-delta="0.05">+0.05%</button>
-            <button type="button" class="calib-step-btn" data-axis="scale" data-delta="0.2">+0.2%</button>
-            <button type="button" class="calib-step-btn" data-axis="scale" data-delta="1">+1%</button>
+
+          <!-- Escala X (Ancho / Longitud) -->
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">Escala Horizontal (Ancho X)</label>
+              <span id="svgScaleXVal" class="val-display-pill">100.00%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <button type="button" class="calib-step-btn" data-axis="scaleX" data-delta="-2">-2%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleX" data-delta="-0.5">-0.5%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleX" data-delta="-0.1">-0.1%</button>
+              <input type="range" id="svgScaleXSlider" min="80" max="120" step="0.05" value="100" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+              <button type="button" class="calib-step-btn" data-axis="scaleX" data-delta="0.1">+0.1%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleX" data-delta="0.5">+0.5%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleX" data-delta="2">+2%</button>
+            </div>
+          </div>
+
+          <!-- Escala Y (Alto / Latitud) -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">Escala Vertical (Alto Y)</label>
+              <span id="svgScaleYVal" class="val-display-pill">100.00%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <button type="button" class="calib-step-btn" data-axis="scaleY" data-delta="-2">-2%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleY" data-delta="-0.5">-0.5%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleY" data-delta="-0.1">-0.1%</button>
+              <input type="range" id="svgScaleYSlider" min="80" max="120" step="0.05" value="100" style="flex: 1; accent-color: var(--accent-cyan); cursor: pointer;">
+              <button type="button" class="calib-step-btn" data-axis="scaleY" data-delta="0.1">+0.1%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleY" data-delta="0.5">+0.5%</button>
+              <button type="button" class="calib-step-btn" data-axis="scaleY" data-delta="2">+2%</button>
+            </div>
           </div>
         </div>
 
@@ -369,7 +397,9 @@
     // Calibration State Variables
     let svgCalibOffsetX = 0.0;
     let svgCalibOffsetY = 0.0;
-    let svgCalibScalePct = 100.0;
+    let svgCalibScaleXPct = 100.0;
+    let svgCalibScaleYPct = 100.0;
+    let lockAspect = true;
     let isBlinking = false;
     let blinkInterval = null;
 
@@ -389,10 +419,14 @@
 
     const svgOffsetXSlider = document.getElementById('svgOffsetXSlider');
     const svgOffsetYSlider = document.getElementById('svgOffsetYSlider');
-    const svgScaleSlider = document.getElementById('svgScaleSlider');
+    const svgScaleXSlider = document.getElementById('svgScaleXSlider');
+    const svgScaleYSlider = document.getElementById('svgScaleYSlider');
+    const lockAspectCheckbox = document.getElementById('lockAspectCheckbox');
+
     const svgOffsetXVal = document.getElementById('svgOffsetXVal');
     const svgOffsetYVal = document.getElementById('svgOffsetYVal');
-    const svgScaleVal = document.getElementById('svgScaleVal');
+    const svgScaleXVal = document.getElementById('svgScaleXVal');
+    const svgScaleYVal = document.getElementById('svgScaleYVal');
 
     const svgCalibSummary = document.getElementById('svgCalibSummary');
     const svgTransformCode = document.getElementById('svgTransformCode');
@@ -439,11 +473,17 @@
 
       const curX = +(baseX + svgCalibOffsetX).toFixed(2);
       const curY = +(baseY + svgCalibOffsetY).toFixed(2);
-      const curScale = +(baseScale * (svgCalibScalePct / 100.0)).toFixed(4);
+      const curScaleX = +(baseScale * (svgCalibScaleXPct / 100.0)).toFixed(4);
+      const curScaleY = +(baseScale * (svgCalibScaleYPct / 100.0)).toFixed(4);
 
-      const transformStr = (curX === 0 && curY === 0 && curScale === 1.0)
-        ? ''
-        : `translate(${curX}, ${curY}) scale(${curScale})`;
+      let transformStr = '';
+      if (curX !== 0 || curY !== 0 || curScaleX !== 1.0 || curScaleY !== 1.0) {
+        if (curScaleX === curScaleY) {
+          transformStr = `translate(${curX}, ${curY}) scale(${curScaleX})`;
+        } else {
+          transformStr = `translate(${curX}, ${curY}) scale(${curScaleX}, ${curScaleY})`;
+        }
+      }
 
       if (provincesLayer) {
         provincesLayer.setAttribute('transform', transformStr);
@@ -452,7 +492,8 @@
       // Update UI displays
       if (svgOffsetXVal) svgOffsetXVal.textContent = `${svgCalibOffsetX >= 0 ? '+' : ''}${svgCalibOffsetX.toFixed(2)} px`;
       if (svgOffsetYVal) svgOffsetYVal.textContent = `${svgCalibOffsetY >= 0 ? '+' : ''}${svgCalibOffsetY.toFixed(2)} px`;
-      if (svgScaleVal) svgScaleVal.textContent = `${svgCalibScalePct.toFixed(2)}%`;
+      if (svgScaleXVal) svgScaleXVal.textContent = `${svgCalibScaleXPct.toFixed(2)}%`;
+      if (svgScaleYVal) svgScaleYVal.textContent = `${svgCalibScaleYPct.toFixed(2)}%`;
 
       if (svgOffsetXSlider && Math.abs(parseFloat(svgOffsetXSlider.value) - svgCalibOffsetX) > 0.01) {
         svgOffsetXSlider.value = svgCalibOffsetX.toString();
@@ -460,16 +501,29 @@
       if (svgOffsetYSlider && Math.abs(parseFloat(svgOffsetYSlider.value) - svgCalibOffsetY) > 0.01) {
         svgOffsetYSlider.value = svgCalibOffsetY.toString();
       }
-      if (svgScaleSlider && Math.abs(parseFloat(svgScaleSlider.value) - svgCalibScalePct) > 0.01) {
-        svgScaleSlider.value = svgCalibScalePct.toString();
+      if (svgScaleXSlider && Math.abs(parseFloat(svgScaleXSlider.value) - svgCalibScaleXPct) > 0.01) {
+        svgScaleXSlider.value = svgCalibScaleXPct.toString();
+      }
+      if (svgScaleYSlider && Math.abs(parseFloat(svgScaleYSlider.value) - svgCalibScaleYPct) > 0.01) {
+        svgScaleYSlider.value = svgCalibScaleYPct.toString();
       }
 
       if (svgCalibSummary) {
-        svgCalibSummary.textContent = `X: ${svgCalibOffsetX >= 0 ? '+' : ''}${svgCalibOffsetX.toFixed(2)}px | Y: ${svgCalibOffsetY >= 0 ? '+' : ''}${svgCalibOffsetY.toFixed(2)}px | Escala: ${svgCalibScalePct.toFixed(2)}%`;
+        svgCalibSummary.innerHTML = `X: ${svgCalibOffsetX >= 0 ? '+' : ''}${svgCalibOffsetX.toFixed(2)}px | Y: ${svgCalibOffsetY >= 0 ? '+' : ''}${svgCalibOffsetY.toFixed(2)}px<br>Escala X: ${svgCalibScaleXPct.toFixed(2)}% | Escala Y: ${svgCalibScaleYPct.toFixed(2)}%`;
       }
       if (svgTransformCode) {
-        svgTransformCode.textContent = `transform="translate(${curX}, ${curY}) scale(${curScale})"`;
+        svgTransformCode.textContent = transformStr ? `transform="${transformStr}"` : `transform="none"`;
       }
+    }
+
+    if (lockAspectCheckbox) {
+      lockAspectCheckbox.addEventListener('change', (e) => {
+        lockAspect = e.target.checked;
+        if (lockAspect) {
+          svgCalibScaleYPct = svgCalibScaleXPct;
+          updateTransform();
+        }
+      });
     }
 
     // 3. Aspect Ratio Switching (1:1 vs 9:16)
@@ -559,22 +613,26 @@
       let handled = false;
 
       if (e.key === 'ArrowLeft') {
-        svgCalibOffsetX = Math.max(-30, +(svgCalibOffsetX - step).toFixed(2));
+        svgCalibOffsetX = Math.max(-60, +(svgCalibOffsetX - step).toFixed(2));
         handled = true;
       } else if (e.key === 'ArrowRight') {
-        svgCalibOffsetX = Math.min(30, +(svgCalibOffsetX + step).toFixed(2));
+        svgCalibOffsetX = Math.min(60, +(svgCalibOffsetX + step).toFixed(2));
         handled = true;
       } else if (e.key === 'ArrowUp') {
-        svgCalibOffsetY = Math.max(-30, +(svgCalibOffsetY - step).toFixed(2));
+        svgCalibOffsetY = Math.max(-60, +(svgCalibOffsetY - step).toFixed(2));
         handled = true;
       } else if (e.key === 'ArrowDown') {
-        svgCalibOffsetY = Math.min(30, +(svgCalibOffsetY + step).toFixed(2));
+        svgCalibOffsetY = Math.min(60, +(svgCalibOffsetY + step).toFixed(2));
         handled = true;
       } else if (e.key === '+' || e.key === '=') {
-        svgCalibScalePct = Math.min(115, +(svgCalibScalePct + (e.shiftKey ? 0.05 : 0.2)).toFixed(2));
+        const d = (e.shiftKey ? 0.05 : 0.2);
+        svgCalibScaleXPct = Math.min(130, +(svgCalibScaleXPct + d).toFixed(2));
+        if (lockAspect) svgCalibScaleYPct = svgCalibScaleXPct;
         handled = true;
       } else if (e.key === '-' || e.key === '_') {
-        svgCalibScalePct = Math.max(90, +(svgCalibScalePct - (e.shiftKey ? 0.05 : 0.2)).toFixed(2));
+        const d = (e.shiftKey ? 0.05 : 0.2);
+        svgCalibScaleXPct = Math.max(70, +(svgCalibScaleXPct - d).toFixed(2));
+        if (lockAspect) svgCalibScaleYPct = svgCalibScaleXPct;
         handled = true;
       }
 
@@ -604,11 +662,19 @@
         const axis = btn.getAttribute('data-axis');
         const delta = parseFloat(btn.getAttribute('data-delta') || '0');
         if (axis === 'x') {
-          svgCalibOffsetX = Math.max(-30, Math.min(30, +(svgCalibOffsetX + delta).toFixed(2)));
+          svgCalibOffsetX = Math.max(-60, Math.min(60, +(svgCalibOffsetX + delta).toFixed(2)));
         } else if (axis === 'y') {
-          svgCalibOffsetY = Math.max(-30, Math.min(30, +(svgCalibOffsetY + delta).toFixed(2)));
-        } else if (axis === 'scale') {
-          svgCalibScalePct = Math.max(90, Math.min(115, +(svgCalibScalePct + delta).toFixed(2)));
+          svgCalibOffsetY = Math.max(-60, Math.min(60, +(svgCalibOffsetY + delta).toFixed(2)));
+        } else if (axis === 'scaleX') {
+          svgCalibScaleXPct = Math.max(70, Math.min(130, +(svgCalibScaleXPct + delta).toFixed(2)));
+          if (lockAspect) {
+            svgCalibScaleYPct = svgCalibScaleXPct;
+          }
+        } else if (axis === 'scaleY') {
+          svgCalibScaleYPct = Math.max(70, Math.min(130, +(svgCalibScaleYPct + delta).toFixed(2)));
+          if (lockAspect) {
+            svgCalibScaleXPct = svgCalibScaleYPct;
+          }
         }
         updateTransform();
       });
@@ -622,15 +688,26 @@
       svgCalibOffsetY = parseFloat(e.target.value) || 0;
       updateTransform();
     });
-    svgScaleSlider.addEventListener('input', (e) => {
-      svgCalibScalePct = parseFloat(e.target.value) || 100;
+    svgScaleXSlider.addEventListener('input', (e) => {
+      svgCalibScaleXPct = parseFloat(e.target.value) || 100;
+      if (lockAspect) {
+        svgCalibScaleYPct = svgCalibScaleXPct;
+      }
+      updateTransform();
+    });
+    svgScaleYSlider.addEventListener('input', (e) => {
+      svgCalibScaleYPct = parseFloat(e.target.value) || 100;
+      if (lockAspect) {
+        svgCalibScaleXPct = svgCalibScaleYPct;
+      }
       updateTransform();
     });
 
     resetSvgCalibBtn.addEventListener('click', () => {
       svgCalibOffsetX = 0.0;
       svgCalibOffsetY = 0.0;
-      svgCalibScalePct = 100.0;
+      svgCalibScaleXPct = 100.0;
+      svgCalibScaleYPct = 100.0;
       updateTransform();
     });
 
