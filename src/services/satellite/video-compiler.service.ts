@@ -305,7 +305,7 @@ export class VideoCompilerService {
 
     // Real INAMHI / GeoServer WFS Catchment Polygons Layer
     let wfsBasinsSvg = '';
-    if (options.showWfsBasins === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador')) {
+    if (options.showWfsBasins !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador')) {
       const basinPaths = this.getBasinSvgPaths();
       if (basinPaths) {
         const colors: Record<string, string> = { coca: '#38bdf8', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b' };
@@ -326,9 +326,9 @@ export class VideoCompilerService {
           jubones: { x: 180, y: 528, w: 295 }
         };
 
-        const selectedKeys = Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0
+        const selectedKeys = Array.isArray(options.selectedWfsBasinKeys)
           ? new Set(options.selectedWfsBasinKeys.map(k => k === 'cocaCodoSinclair' ? 'coca' : (k === 'minasSanFrancisco' ? 'jubones' : k)))
-          : null;
+          : new Set(['coca', 'paute']);
         let pathsSvg = '';
         for (const [k, d] of Object.entries(basinPaths)) {
           if (selectedKeys && !selectedKeys.has(k)) continue;
@@ -365,7 +365,7 @@ export class VideoCompilerService {
 
     // Render Basin Storm Detection Boundary Boxes when displaying Ecuador Continental
     let detectionBoxesSvg = '';
-    const showDetectionBoxes = options.showDetectionBoxes !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    const showDetectionBoxes = options.showDetectionBoxes === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     if (showDetectionBoxes) {
       const monitoredBasins = options.customMonitoredBasins || [
         { key: 'cocaCodoSinclair', label: 'Cuenca hídrica Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#38bdf8' },
