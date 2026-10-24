@@ -828,8 +828,8 @@ export class VideoCompilerService {
       ? `
       <!-- Header Top Bar (9:16) -->
       <rect x="0" y="0" width="1080" height="290" fill="url(#topBarGrad)"/>
-      <text x="40" y="${options.customDateSubtitle ? (showPublicationBadge ? 218 : 226) : (showPublicationBadge ? 226 : 240)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
-      ${options.customDateSubtitle ? `<text x="40" y="${showPublicationBadge ? 246 : 258}" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
+      <text x="50" y="${options.customDateSubtitle ? (showPublicationBadge ? 218 : 226) : (showPublicationBadge ? 226 : 240)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
+      ${options.customDateSubtitle ? `<text x="50" y="${showPublicationBadge ? 246 : 258}" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
       ${pubStatusSvg}
       `
       : `
