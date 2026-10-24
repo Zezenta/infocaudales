@@ -166,7 +166,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 16px 20px 14px 20px;
+      padding: 15px 14px 13px 14px;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
       transition: height 0.2s ease;
     }
@@ -181,7 +181,7 @@
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 1.5px solid #1e293b;
-      padding-bottom: 10px;
+      padding-bottom: 9px;
     }
 
     .cover-header-left {
@@ -192,19 +192,19 @@
     }
 
     .cover-pre-title {
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: 700;
-      color: #64748b;
+      color: #00b0ff;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       line-height: 1.0;
       margin-bottom: 4px;
     }
 
     .cover-main-title {
       font-size: 26px;
-      font-weight: bold;
-      color: #f3f4f6;
+      font-weight: 800;
+      color: #f8fafc;
       margin: 0;
       line-height: 1.05;
       letter-spacing: -0.01em;
@@ -222,12 +222,12 @@
     }
 
     .cover-date-text {
-      font-size: 11.5px;
+      font-size: 12px;
       font-weight: 600;
       color: #94a3b8;
       font-family: 'Space Grotesk', sans-serif;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
     .cover-time-row {
@@ -246,7 +246,7 @@
     }
 
     .cover-time-text {
-      font-size: 21px;
+      font-size: 22px;
       font-weight: 800;
       font-family: 'Space Grotesk', sans-serif;
       color: #00b0ff;
@@ -259,9 +259,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
-      color: #4b5563;
+      color: #64748b;
       margin: 0;
       line-height: 1.0;
     }
@@ -277,41 +277,41 @@
     .stats-summary-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 8px;
-      margin-bottom: 4px;
+      gap: 10px;
+      margin-top: 6px;
+      margin-bottom: 2px;
     }
 
     .stats-summary-box {
       border: 1.5px solid #1e293b;
       background-color: #0c111c;
-      padding: 7px 12px;
-      border-radius: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
 
     .stats-box-label {
-      font-size: 11px;
-      font-weight: bold;
-      color: #64748b;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #94a3b8;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       line-height: 1.0;
     }
 
     .stats-box-value {
-      font-size: 20px;
-      font-weight: bold;
+      font-size: 24px;
+      font-weight: 800;
       line-height: 1.1;
       font-family: 'Space Grotesk', sans-serif;
       margin-top: 1px;
     }
 
     .stats-box-sub {
-      font-size: 11px;
-      font-weight: normal;
+      font-size: 11.5px;
+      font-weight: 500;
       color: #64748b;
       font-family: 'DejaVu Sans Mono', monospace;
       line-height: 1.0;
@@ -321,112 +321,121 @@
     .plants-matrix-container {
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      margin: 3px 0;
+      gap: 0;
+      margin: 4px 0;
     }
 
-    .matrix-table-header {
-      display: grid;
-      grid-template-columns: 144px 48px 86px 146px 112px;
-      padding: 0 12px 3px 12px;
-      font-size: 10px;
-      font-weight: bold;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    #plants-rows-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
     }
 
-    .matrix-col-right {
-      text-align: right;
-    }
-
-    .matrix-col-center {
-      text-align: center;
-    }
-
-    .matrix-col-caudal {
-      padding-right: 8px;
-    }
-
-    /* PLANT ROW CARD */
+    /* PLANT 2-LINE ROW CARD */
     .plant-matrix-row {
-      display: grid;
-      grid-template-columns: 144px 48px 86px 146px 112px;
-      align-items: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5.5px;
       background-color: #0c111c;
       border: 1.5px solid #1e293b;
-      border-radius: 6px;
-      padding: 6.5px 12px;
+      border-radius: 8px;
+      padding: 8.5px 12px 8px 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+      cursor: pointer;
     }
 
-    /* Col 1: Drawing Thumbnail + Name */
-    .plant-info-cell {
+    .plant-matrix-row:hover {
+      border-color: #334155;
+    }
+
+    .plant-matrix-row.active-plant-row {
+      border-color: #0284c7;
+      background-color: #0e172a;
+    }
+
+    /* LINE 1: Plant Name, Cap Badge & Generation */
+    .plant-row-line1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .plant-title-group {
       display: flex;
       align-items: center;
       gap: 8px;
+      overflow: hidden;
     }
 
-    .plant-thumb-img {
-      width: 34px;
-      height: 26px;
-      object-fit: contain;
-      background-color: #080c14;
-      border: 1px solid #1e293b;
-      border-radius: 3px;
-      padding: 1px;
+    .plant-status-dot {
+      width: 8.5px;
+      height: 8.5px;
+      border-radius: 50%;
       flex-shrink: 0;
     }
 
-    .plant-names {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      line-height: 1.1;
+    .status-online {
+      background-color: #00e676;
+      box-shadow: 0 0 7px rgba(0, 230, 118, 0.45);
+    }
+
+    .status-offline {
+      background-color: #f43f5e;
+      box-shadow: 0 0 7px rgba(244, 63, 94, 0.45);
     }
 
     .plant-name-text {
-      font-size: 13px;
-      font-weight: bold;
-      color: #f3f4f6;
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      letter-spacing: -0.01em;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .plant-cap-text {
-      font-size: 9.5px;
-      font-weight: 600;
-      color: #64748b;
+    .plant-cap-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #94a3b8;
       font-family: 'DejaVu Sans Mono', monospace;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(71, 85, 105, 0.4);
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
     }
 
-    /* Col 2: Turbines (x/x) */
-    .turbines-cell {
+    .plant-gen-group {
       display: flex;
-      justify-content: center;
       align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
     }
 
-    .turbines-val {
-      font-size: 13.5px;
-      font-weight: bold;
-      font-family: 'DejaVu Sans Mono', monospace;
-      color: #f3f4f6;
-    }
-
-    /* Col 3: Generation + Battery */
-    .gen-cell {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 2px;
-      padding-right: 4px;
+    .gen-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.05em;
     }
 
     .gen-val-text {
-      font-size: 13px;
-      font-weight: bold;
-      color: #f3f4f6;
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-family: 'DejaVu Sans Mono', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .gen-pct-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
       font-family: 'DejaVu Sans Mono', monospace;
     }
 
@@ -436,8 +445,8 @@
     }
 
     .battery-icon-body {
-      width: 44px;
-      height: 9px;
+      width: 36px;
+      height: 10px;
       border: 1.5px solid #475569;
       background-color: #080c14;
       padding: 1px;
@@ -447,8 +456,8 @@
 
     .battery-icon-fill {
       height: 100%;
-      background-color: #00e676;
       border-radius: 1px;
+      transition: width 0.3s ease;
     }
 
     .battery-icon-cap {
@@ -459,42 +468,61 @@
       border-radius: 0 1px 1px 0;
     }
 
-    /* Col 4: Cota (msnm) */
-    .cota-cell {
-      display: flex;
-      justify-content: flex-end;
+    /* LINE 2: Operational Telemetry Bar */
+    .plant-row-line2 {
+      display: grid;
+      grid-template-columns: 116px 1px 238px 1px 1fr;
       align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(51, 65, 85, 0.45);
+      border-radius: 6px;
+      padding: 4.5px 10px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
-    .cota-val-text {
-      font-size: 12.5px;
-      font-weight: bold;
+    .telemetry-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .telemetry-chip-flow {
+      padding-left: 8px;
+    }
+
+    .telemetry-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+
+    .telemetry-val {
+      font-size: 13.5px;
+      font-weight: 700;
       font-family: 'DejaVu Sans Mono', monospace;
-      text-align: right;
+      color: #f1f5f9;
+      white-space: nowrap;
     }
 
     .cota-base-ref {
       color: #64748b !important;
       font-weight: 500;
-      font-size: 12.5px;
+      font-size: 11.5px;
       font-family: 'DejaVu Sans Mono', monospace;
       margin-left: 4px;
     }
 
-    /* Col 5: Caudal (m³/s) */
-    .flow-cell {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding-right: 8px;
+    .telemetry-divider {
+      width: 1px;
+      height: 13px;
+      background-color: #334155;
+      justify-self: center;
     }
 
-    .flow-val-text {
-      font-size: 12.5px;
-      font-weight: bold;
-      font-family: 'DejaVu Sans Mono', monospace;
-      text-align: right;
-    }
 
     /* Dynamic text colors matching hydro-card */
     .val-good {
@@ -907,19 +935,11 @@
           </div>
         </div>
 
-        <!-- THE 6 PLANTS TABLE -->
+        <!-- THE 6 PLANTS LIST (2-LINE CARDS) -->
         <div class="plants-matrix-container">
-          <div class="matrix-table-header">
-            <div>Central</div>
-            <div class="matrix-col-center">Turbinas</div>
-            <div class="matrix-col-right">Generación</div>
-            <div class="matrix-col-right"><svg width="11" height="11" viewBox="0 0 24 24" fill="#38bdf8" style="vertical-align: -1px; margin-right: 3px;"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Cota (msnm)</div>
-            <div class="matrix-col-right matrix-col-caudal"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><path d="M2 12c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 5.5-2.5 8 0"/><path d="M2 17c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 5.5-2.5 8 0"/></svg>Caudal</div>
-          </div>
-
-          <!-- Dynamic Plant Rows Container -->
-          <div id="plants-rows-list" style="display: flex; flex-direction: column; gap: 3.5px;">
-            <!-- Rows injected by JavaScript -->
+          <!-- Dynamic Plant Cards Container -->
+          <div id="plants-rows-list">
+            <!-- Cards injected by JavaScript -->
           </div>
         </div>
 
@@ -1239,9 +1259,9 @@
     function getCotaDisplay(plant) {
       if (!plant.hasReservoir) {
         if (plant.id === 'cocaCodoSinclair') {
-          return { html: '<span class="cota-val-text val-dimmed">De paso</span>' };
+          return { html: '<span class="telemetry-val val-dimmed">De paso</span>' };
         }
-        return { html: '<span class="cota-val-text val-dimmed">En cascada</span>' };
+        return { html: '<span class="telemetry-val val-dimmed">En cascada</span>' };
       }
 
       let baseCota = 2115;
@@ -1288,7 +1308,7 @@
       const trendHtml = getTrendArrowHtml(plant.cotaTrend || 'up');
       const valStr = plant.currentCota.toFixed(1);
       return {
-        html: `<span class="cota-val-text ${colorClass}">${valStr}${trendHtml}</span><span class="cota-base-ref">/ ${baseCota}</span>`
+        html: `<span class="telemetry-val ${colorClass}">${valStr} msnm${trendHtml}</span><span class="cota-base-ref">/ ${baseCota}</span>`
       };
     }
 
@@ -1351,41 +1371,52 @@
         }
 
         const row = document.createElement('div');
-        row.className = 'plant-matrix-row';
+        row.className = `plant-matrix-row ${key === activePlantKey ? 'active-plant-row' : ''}`;
+        row.dataset.plant = key;
+        row.title = `Clic para editar parámetros de ${p.name}`;
+        row.addEventListener('click', () => {
+          activePlantKey = key;
+          const tabBtn = document.querySelector(`.plant-tab-btn[data-plant="${key}"]`);
+          if (tabBtn) tabBtn.click();
+        });
+
         row.innerHTML = `
-          <!-- Col 1: Drawing Thumbnail + Name -->
-          <div class="plant-info-cell">
-            <img src="${p.drawing}" class="plant-thumb-img" alt="${p.shortName}">
-            <div class="plant-names">
-              <span class="plant-name-text">${p.shortName}</span>
-              <span class="plant-cap-text">MAX: ${p.maxMW} MW</span>
+          <!-- LINE 1: Central Identity & Power Generation -->
+          <div class="plant-row-line1">
+            <div class="plant-title-group">
+              <span class="plant-status-dot ${p.currentStatus === 'online' ? 'status-online' : 'status-offline'}"></span>
+              <span class="plant-name-text">${p.name}</span>
+              <span class="plant-cap-badge">MÁX ${p.maxMW} MW</span>
             </div>
-          </div>
-
-          <!-- Col 2: Turbinas (x/x) -->
-          <div class="turbines-cell">
-            <span class="turbines-val ${turbColorClass}">${turbText}</span>
-          </div>
-
-          <!-- Col 3: Generación (MW + Battery) -->
-          <div class="gen-cell">
-            <span class="gen-val-text">${p.currentStatus === 'online' ? p.currentMW.toFixed(0) : '0'} MW</span>
-            <div class="battery-icon-wrap">
-              <div class="battery-icon-body">
-                <div class="battery-icon-fill" style="width: ${p.currentStatus === 'online' ? pctGen : 0}%; background-color: ${batteryColor};"></div>
+            <div class="plant-gen-group">
+              <span class="gen-label">GEN:</span>
+              <span class="gen-val-text ${p.currentStatus === 'online' ? 'val-good' : 'val-danger'}">${p.currentStatus === 'online' ? Math.round(p.currentMW).toLocaleString() : '0'} MW</span>
+              <div class="battery-icon-wrap">
+                <div class="battery-icon-body">
+                  <div class="battery-icon-fill" style="width: ${p.currentStatus === 'online' ? pctGen : 0}%; background-color: ${batteryColor};"></div>
+                </div>
+                <div class="battery-icon-cap"></div>
               </div>
-              <div class="battery-icon-cap"></div>
+              <span class="gen-pct-text">(${p.currentStatus === 'online' ? pctGen : 0}%)</span>
             </div>
           </div>
 
-          <!-- Col 4: Cota (XX/XX) -->
-          <div class="cota-cell">
-            ${cotaInfo.html}
-          </div>
-
-          <!-- Col 5: Caudal -->
-          <div class="flow-cell">
-            <span class="flow-val-text ${flowInfo.colorClass}">${flowInfo.text}${flowInfo.trendHtml}</span>
+          <!-- LINE 2: Turbines, Cota & Caudal Telemetry -->
+          <div class="plant-row-line2">
+            <div class="telemetry-chip">
+              <span class="telemetry-label">TURBINAS:</span>
+              <span class="telemetry-val ${turbColorClass}">${turbText}</span>
+            </div>
+            <div class="telemetry-divider"></div>
+            <div class="telemetry-chip">
+              <span class="telemetry-label">COTA:</span>
+              ${cotaInfo.html}
+            </div>
+            <div class="telemetry-divider"></div>
+            <div class="telemetry-chip telemetry-chip-flow">
+              <span class="telemetry-label">CAUDAL:</span>
+              <span class="telemetry-val ${flowInfo.colorClass}">${flowInfo.text}${flowInfo.trendHtml}</span>
+            </div>
           </div>
         `;
 
