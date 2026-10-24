@@ -1074,7 +1074,7 @@ const server = http.createServer(async (req, res) => {
             if (!m) m = { ccs: 0, paute: 0, costa: 0, sierra: 0, amazonia: 0 };
             return {
               basins: [
-                { label: 'Coca Codo Sinclair', value: `${m.ccs.toFixed(1)}%`, color: '#38bdf8', highlight: m.ccs >= 10.0 },
+                { label: 'Coca Codo Sinclair', value: `${m.ccs.toFixed(1)}%`, color: '#ec4899', highlight: m.ccs >= 10.0 },
                 { label: 'Paute', value: `${m.paute.toFixed(1)}%`, color: '#a855f7', highlight: m.paute >= 15.0 }
               ],
               regions: [

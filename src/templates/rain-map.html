@@ -353,7 +353,7 @@
 
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f1f5f9; cursor: pointer;">
                   <input type="checkbox" class="wfs-basin-toggle" id="wfsBasin_cocaCodoSinclair" data-key="cocaCodoSinclair" checked>
-                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; display: inline-block; flex-shrink: 0;"></span>
+                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #ec4899; display: inline-block; flex-shrink: 0;"></span>
                   <span>Coca Codo Sinclair (Quijos / Salado)</span>
                 </label>
 
@@ -765,7 +765,7 @@
 
     // Calibrated Monitored Basins matching BASIN_GEOMETRIES & VideoCompilerService
     const MONITORED_BASINS = [
-      { key: 'cocaCodoSinclair', label: 'Cuenca hídrica Coca Codo Sinclair', bbox: [-78.30, -0.75, -77.60, 0.20], defaultColor: '#38bdf8' },
+      { key: 'cocaCodoSinclair', label: 'Cuenca hídrica Coca Codo Sinclair', bbox: [-78.30, -0.75, -77.60, 0.20], defaultColor: '#ec4899' },
       { key: 'paute', label: 'Cuenca hídrica Complejo Paute', bbox: [-79.38, -3.30, -78.40, -2.25], defaultColor: '#a855f7' }
     ];
 
@@ -859,7 +859,7 @@
             textY = 24.5;
           }
 
-          const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+          const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ec4899' : '#38bdf8';
 
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
@@ -980,7 +980,7 @@
       const amazoniaPct = m ? m.amazonia : 0;
 
       const basinsList = [
-        { label: 'Coca Codo Sinclair', value: m ? `${ccsPct.toFixed(1)}%` : '--', color: '#38bdf8', highlight: ccsPct >= 10.0 },
+        { label: 'Coca Codo Sinclair', value: m ? `${ccsPct.toFixed(1)}%` : '--', color: '#ec4899', highlight: ccsPct >= 10.0 },
         { label: 'Complejo Paute (Mazar / Molino / Sopladora)', value: m ? `${pautePct.toFixed(1)}%` : '--', color: '#a855f7', highlight: pautePct >= 15.0 }
       ];
 
@@ -1044,7 +1044,7 @@
       } else {
         // 1:1 compact layout strictly identical to master
         const basinsList11 = [
-          { label: 'Coca Codo Sinclair', value: m ? `${ccsPct.toFixed(1)}%` : '--', color: '#38bdf8', highlight: ccsPct >= 10.0 },
+          { label: 'Coca Codo Sinclair', value: m ? `${ccsPct.toFixed(1)}%` : '--', color: '#ec4899', highlight: ccsPct >= 10.0 },
           { label: 'Paute', value: m ? `${pautePct.toFixed(1)}%` : '--', color: '#a855f7', highlight: pautePct >= 15.0 }
         ];
 
@@ -1841,11 +1841,11 @@
         
         // Colors corresponding to each monitored hydroelectric basin
         const colors = {
-          cocaCodoSinclair: '#38bdf8',
+          cocaCodoSinclair: '#ec4899',
           paute: '#a855f7',
           agoyan: '#22c55e',
           minasSanFrancisco: '#f59e0b',
-          coca: '#38bdf8',
+          coca: '#ec4899',
           jubones: '#f59e0b'
         };
 

@@ -1867,7 +1867,7 @@ export class RainMonitorService {
             {
               label: 'Coca Codo Sinclair',
               value: `${m.ccs.toFixed(1)}%`,
-              color: '#38bdf8',
+              color: '#ec4899',
               highlight: active.has('cocaCodoSinclair')
             },
             {

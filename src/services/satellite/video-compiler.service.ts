@@ -308,7 +308,7 @@ export class VideoCompilerService {
     if (options.showWfsBasins !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador')) {
       const basinPaths = this.getBasinSvgPaths();
       if (basinPaths) {
-        const colors: Record<string, string> = { coca: '#38bdf8', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b' };
+        const colors: Record<string, string> = { coca: '#ec4899', cocaCodoSinclair: '#ec4899', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b', minasSanFrancisco: '#f59e0b' };
         const labels: Record<string, string> = {
           cocaCodoSinclair: 'Cuenca hídrica Coca Codo Sinclair',
           coca: 'Cuenca hídrica Coca Codo Sinclair',
@@ -376,7 +376,7 @@ export class VideoCompilerService {
     const showDetectionBoxes = options.showDetectionBoxes === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     if (showDetectionBoxes) {
       const monitoredBasins = options.customMonitoredBasins || [
-        { key: 'cocaCodoSinclair', label: 'Cuenca hídrica Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#38bdf8' },
+        { key: 'cocaCodoSinclair', label: 'Cuenca hídrica Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#ec4899' },
         { key: 'paute', label: 'Cuenca hídrica Complejo Paute', bbox: BASIN_GEOMETRIES.paute.bbox, defaultColor: '#a855f7' }
       ];
 
@@ -435,7 +435,7 @@ export class VideoCompilerService {
           dotSvg = `<circle cx="${dotCx}" cy="${dotCy}" r="${beaconHaloR}" fill="#ff4444" fill-opacity="${beaconHaloOpacity}" />
                    <circle cx="${dotCx}" cy="${dotCy}" r="${is916 ? 4 : 3.2}" fill="#ffffff" />`;
         } else {
-          color = b.key === 'cocaCodoSinclair' ? '#38bdf8' : '#a855f7';
+          color = b.key === 'cocaCodoSinclair' ? '#ec4899' : '#a855f7';
           strokeWidth = is916 ? 2.5 : 2.0;
           strokeDash = '7,4';
           shadowStrokeWidth = is916 ? 6.0 : 4.5;
@@ -537,7 +537,7 @@ export class VideoCompilerService {
           textY = is916 ? 26 : 24.5;
         }
 
-        const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+        const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ec4899' : '#38bdf8';
         const safePinLabel = escapeXml(pin.label);
 
         pinsSvg += `
