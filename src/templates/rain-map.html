@@ -74,8 +74,8 @@
 
           <!-- Top Header Bar -->
           <rect id="topHeaderRect" x="0" y="0" width="1080" height="260" fill="url(#topBarGrad)"/>
-          <text id="overlayTitle" x="50" y="196" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">Vista Satelital GOES-16 • Ecuador Continental</text>
-          <text id="overlayDateSubtitle" x="50" y="228" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18" style="display: none;"></text>
+          <text id="overlayTitle" x="40" y="196" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">Vista Satelital GOES-16 • Ecuador Continental</text>
+          <text id="overlayDateSubtitle" x="40" y="228" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18" style="display: none;"></text>
           
           <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
           <g id="watermarkGroup" transform="translate(670, 180)">
@@ -1224,11 +1224,11 @@
         overlayDateSubtitle.textContent = dateText;
         overlayDateSubtitle.style.display = 'block';
         if (is916) {
-          overlayDateSubtitle.setAttribute('x', '50');
+          overlayDateSubtitle.setAttribute('x', '40');
           overlayDateSubtitle.setAttribute('y', '258');
           overlayDateSubtitle.setAttribute('font-size', '18');
           topRect.setAttribute('height', '290');
-          title.setAttribute('x', '50');
+          title.setAttribute('x', '40');
           title.setAttribute('y', '226');
           title.setAttribute('font-size', '28');
         } else {
@@ -1244,7 +1244,7 @@
         overlayDateSubtitle.style.display = 'none';
         if (is916) {
           topRect.setAttribute('height', '290');
-          title.setAttribute('x', '50');
+          title.setAttribute('x', '40');
           title.setAttribute('y', '240');
           title.setAttribute('font-size', '28');
         } else {

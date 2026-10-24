@@ -243,8 +243,21 @@ describe('VideoCompilerService', () => {
       });
       expect(resultNoRepeat.durationSeconds).toBe(1);
 
+      // Verify 9:16 compilation compiles with dead margin safely
+      const result916 = await compiler.compileFramesToVideo(frames, {
+        outputDir: outDir,
+        outputName: 'test_anim_916',
+        aspectRatio: '9:16',
+        framerate: 2,
+        createMp4: true,
+        createGif: false,
+        minDurationSeconds: 1
+      });
+      expect(result916.mp4Path).toBeDefined();
+      expect(fs.existsSync(result916.mp4Path!)).toBe(true);
+
       // Clean up test output
       fs.rmSync(outDir, { recursive: true, force: true });
-    }, 25000);
+    }, 35000);
   });
 });

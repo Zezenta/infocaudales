@@ -97,6 +97,7 @@ export interface CompileOptions extends OverlayCustomizationOptions {
   createGif?: boolean;
   gifScale?: number;
   minDurationSeconds?: number;
+  deadMargin?: boolean | number;
 }
 
 export interface CompiledAnimationResult {
@@ -828,8 +829,8 @@ export class VideoCompilerService {
       ? `
       <!-- Header Top Bar (9:16) -->
       <rect x="0" y="0" width="1080" height="290" fill="url(#topBarGrad)"/>
-      <text x="50" y="${options.customDateSubtitle ? (showPublicationBadge ? 218 : 226) : (showPublicationBadge ? 226 : 240)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
-      ${options.customDateSubtitle ? `<text x="50" y="${showPublicationBadge ? 246 : 258}" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
+      <text x="40" y="${options.customDateSubtitle ? (showPublicationBadge ? 218 : 226) : (showPublicationBadge ? 226 : 240)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
+      ${options.customDateSubtitle ? `<text x="40" y="${showPublicationBadge ? 246 : 258}" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
       ${pubStatusSvg}
       `
       : `
@@ -963,11 +964,12 @@ export class VideoCompilerService {
     };
 
     const framerate = Math.max(1, Math.min(30, options.framerate || 8));
-    let width = Math.max(128, Math.min(2048, options.width || 800));
-    let height = Math.max(128, Math.min(2048, options.height || 800));
+    let width = Math.max(128, Math.min(2048, options.width || (options.aspectRatio === '9:16' ? 1080 : 800)));
+    let height = Math.max(128, Math.min(2048, options.height || (options.aspectRatio === '9:16' ? 1920 : 800)));
     // Ensure even dimensions for libx264 compatibility
     width = Math.floor(width / 2) * 2;
     height = Math.floor(height / 2) * 2;
+    const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
     const createMp4 = options.createMp4 !== false;
     const createGif = options.createGif !== false;
     const gifScale = Math.max(64, Math.min(1920, options.gifScale || 600));
@@ -1074,7 +1076,6 @@ export class VideoCompilerService {
             });
             fs.writeFileSync(svgPath, svgContent);
 
-            const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
             const filterComplex = is916
               ? `color=c=#020617:s=1080x1920[bg];[0:v]scale=1080:1080[map];[bg][map]overlay=0:290[base];[base][1:v]overlay=0:0`
               : `[0:v]scale=${width}:${height}[base];[base][1:v]overlay=0:0`;
@@ -1117,9 +1118,22 @@ export class VideoCompilerService {
         if (loopCount > 0) {
           mp4Args.push('-stream_loop', loopCount.toString());
         }
+
+        const applyDeadMargin = options.deadMargin !== undefined
+          ? (typeof options.deadMargin === 'number' ? options.deadMargin > 0 : !!options.deadMargin)
+          : is916;
+
+        let videoFilter = `scale=${width}:${height},setsar=1`;
+        if (applyDeadMargin && is916) {
+          const margin = typeof options.deadMargin === 'number' ? options.deadMargin : 22;
+          const scaledW = Math.round((width - 2 * margin) / 2) * 2;
+          const scaledH = Math.round((height * (scaledW / width)) / 2) * 2;
+          videoFilter = `scale=${scaledW}:${scaledH}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=#020617,setsar=1`;
+        }
+
         mp4Args.push(
           '-i', inputPattern,
-          '-vf', `scale=${width}:${height}`,
+          '-vf', videoFilter,
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
           '-g', Math.max(framerate, 8).toString(),

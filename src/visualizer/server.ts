@@ -1061,6 +1061,7 @@ const server = http.createServer(async (req, res) => {
           width: payload.aspectRatio === '1:1' ? 800 : 1080,
           height: payload.aspectRatio === '1:1' ? 800 : 1920,
           minDurationSeconds: payload.minDurationSeconds !== undefined ? payload.minDurationSeconds : 10,
+          deadMargin: payload.deadMargin !== undefined ? payload.deadMargin : undefined,
           summaryCardsResolver: showSummaryCards ? (frame: any, idx: number) => {
             let m: any = null;
             try {
