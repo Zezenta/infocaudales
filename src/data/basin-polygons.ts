@@ -27,7 +27,7 @@ const rasterMaskCache = new Map<string, BasinRasterMask>();
  */
 export function resolveBasinKey(plantKey: string): string {
   const normalized = plantKey.trim().toLowerCase();
-  if (normalized === 'coca' || normalized === 'cocacodosinclair') {
+  if (normalized === 'coca' || normalized === 'cocacodosinclair' || normalized === 'ccs') {
     return 'cocaCodoSinclair';
   }
   if (normalized === 'paute' || normalized === 'mazar' || normalized === 'molino' || normalized === 'sopladora') {

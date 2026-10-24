@@ -614,10 +614,21 @@ const server = http.createServer(async (req, res) => {
 
   // Hydroelectric Basin Polygons Vector API (From INAMHI/GEOGLOWS GeoServer WFS)
   if (req.method === 'GET' && (req.url === '/api/basin-polygons' || req.url?.startsWith('/api/basin-polygons?'))) {
-    const jsonPath = path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json');
-    if (fs.existsSync(jsonPath)) {
+    const candidates = [
+      path.join(__dirname, '..', 'data', 'basin-svg-paths.json'),
+      path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json'),
+      path.join(process.cwd(), 'dist', 'src', 'data', 'basin-svg-paths.json')
+    ];
+    let foundPath: string | null = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        foundPath = c;
+        break;
+      }
+    }
+    if (foundPath) {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
-      fs.createReadStream(jsonPath).pipe(res);
+      fs.createReadStream(foundPath).pipe(res);
       return;
     }
     res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -660,137 +671,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GeoServer Provincial Delineation Differential Reference PNG API
-  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-provinces-diff') || req.url === '/assets/overlays/geoserver_provinces_differential.png')) {
-    const candidates = [
-      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provinces_differential.png'),
-      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provinces_differential.png')
-    ];
-    let diffPath: string | null = null;
-    for (const c of candidates) {
-      if (fs.existsSync(c)) {
-        diffPath = c;
-        break;
-      }
-    }
-    if (!diffPath) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Differential PNG not found');
-      return;
-    }
-    fs.readFile(diffPath, (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error reading differential PNG');
-        return;
-      }
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(data);
-    });
-    return;
-  }
 
-  // GeoServer Provincial Delineation Clean White PNG API
-  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-provinces-clean') || req.url === '/assets/overlays/geoserver_provincias_clean_white.png')) {
-    const candidates = [
-      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provincias_clean_white.png'),
-      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provincias_clean_white.png')
-    ];
-    let cleanPath: string | null = null;
-    for (const c of candidates) {
-      if (fs.existsSync(c)) {
-        cleanPath = c;
-        break;
-      }
-    }
-    if (!cleanPath) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Clean white provincias PNG not found');
-      return;
-    }
-    fs.readFile(cleanPath, (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error reading clean white provincias PNG');
-        return;
-      }
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(data);
-    });
-    return;
-  }
-
-  // GeoServer Normal Satellite Frame with Provincial Delineation
-  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-normal-frame') || req.url === '/assets/overlays/geoserver_provinces_normal_frame.png')) {
-    const candidates = [
-      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provinces_normal_frame.png'),
-      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provinces_normal_frame.png')
-    ];
-    let framePath: string | null = null;
-    for (const c of candidates) {
-      if (fs.existsSync(c)) {
-        framePath = c;
-        break;
-      }
-    }
-    if (!framePath) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Normal frame not found');
-      return;
-    }
-    fs.readFile(framePath, (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error reading normal frame');
-        return;
-      }
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(data);
-    });
-    return;
-  }
-
-  // GeoServer Provincial Direct Transparent WMS PNG API
-  if (req.method === 'GET' && (req.url?.startsWith('/api/geoserver-provinces-direct') || req.url === '/assets/overlays/geoserver_provincias_direct.png')) {
-    const candidates = [
-      path.join(__dirname, '..', 'assets', 'overlays', 'geoserver_provincias_direct.png'),
-      path.join(process.cwd(), 'src', 'assets', 'overlays', 'geoserver_provincias_direct.png')
-    ];
-    let directPath: string | null = null;
-    for (const c of candidates) {
-      if (fs.existsSync(c)) {
-        directPath = c;
-        break;
-      }
-    }
-    if (!directPath) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Direct provincias PNG not found');
-      return;
-    }
-    fs.readFile(directPath, (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error reading direct provincias PNG');
-        return;
-      }
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(data);
-    });
-    return;
-  }
 
   // Satellite Single Frame Proxy API (handles CORS, local archive & layers)
   if (req.method === 'GET' && req.url && req.url.startsWith('/api/satellite-frame')) {
@@ -1225,23 +1106,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Serve Temporary SVG Calibration HTML
-  if (req.url === '/calibration' || req.url === '/svg-calib' || req.url === '/svg-calibration.html') {
-    const calibHtmlPath = path.join(TEMPLATE_DIR, 'svg-calibration.html');
-    fs.readFile(calibHtmlPath, 'utf8', (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error loading SVG calibration HTML');
-        return;
-      }
-      res.writeHead(200, {
-        'Content-Type': 'text/html',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      });
-      res.end(data);
-    });
-    return;
-  }
+
 
   // Serve the CSS files
   if (req.url === '/hydro-card.css') {

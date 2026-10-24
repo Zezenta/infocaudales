@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin, resolveBasinKey } from '../../data/basin-geometries.js';
 import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 import { systemLogger } from '../../utils/logger.js';
 import { db } from '../../utils/db.js';
@@ -92,7 +92,7 @@ export interface CompileOptions extends OverlayCustomizationOptions {
   framerate?: number;
   width?: number;
   height?: number;
-  aspectRatio?: '1:1' | '4:5' | '9:16';
+  aspectRatio?: '1:1' | '9:16';
   createMp4?: boolean;
   createGif?: boolean;
   gifScale?: number;
@@ -238,7 +238,7 @@ export class VideoCompilerService {
     geometry: BasinGeometry;
     width: number;
     height: number;
-    aspectRatio?: '1:1' | '4:5' | '9:16';
+    aspectRatio?: '1:1' | '9:16';
   }): string {
     const { frame, geometry, width, height } = options;
     const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
@@ -326,42 +326,94 @@ export class VideoCompilerService {
           jubones: { x: 180, y: 528, w: 295 }
         };
 
-        const normalizeKey = (key: string): string => {
-          if (key === 'coca' || key === 'ccs') return 'cocaCodoSinclair';
-          if (key === 'jubones') return 'minasSanFrancisco';
-          return key;
-        };
+        const selectedKeys = new Set<string>();
+        if (Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0) {
+          for (const k of options.selectedWfsBasinKeys) selectedKeys.add(resolveBasinKey(k));
+        } else {
+          selectedKeys.add('cocaCodoSinclair');
+          selectedKeys.add('paute');
+        }
+        if (options.highlightBasinKey) {
+          selectedKeys.add(resolveBasinKey(options.highlightBasinKey));
+        }
+        if (options.activeBasinKeys) {
+          const actives = options.activeBasinKeys instanceof Set ? Array.from(options.activeBasinKeys) : options.activeBasinKeys;
+          for (const k of actives) selectedKeys.add(resolveBasinKey(k));
+        }
 
-        const selectedKeys = Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0
-          ? new Set(options.selectedWfsBasinKeys.map(normalizeKey))
-          : new Set(['cocaCodoSinclair', 'paute']);
+        const frameIndex = frame.index !== undefined ? frame.index : 0;
 
         let pathsSvg = '';
         for (const [k, d] of Object.entries(basinPaths)) {
-          const normKey = normalizeKey(k);
+          const normKey = resolveBasinKey(k);
           if (selectedKeys && !selectedKeys.has(normKey) && !selectedKeys.has(k)) continue;
-          const col = colors[k] || '#38bdf8';
-          const label = labels[k] || k;
-          const pos = tagPositions[k];
+
+          const isHighlighted = options.highlightBasinKey ? resolveBasinKey(options.highlightBasinKey) === normKey : false;
+          const isActiveStorm = options.activeBasinKeys !== undefined
+            ? (options.activeBasinKeys instanceof Set
+                ? options.activeBasinKeys.has(k) || options.activeBasinKeys.has(normKey)
+                : options.activeBasinKeys.includes(k) || options.activeBasinKeys.includes(normKey))
+            : isHighlighted;
+
+          let col = colors[k] || colors[normKey] || '#38bdf8';
+          let fillOpacity = 0.18;
+          let strokeWidth = is916 ? 2.6 : 2.2;
+          let shadowStrokeWidth = is916 ? 5.5 : 4.5;
+          let tagBg = '#0b1120';
+          let tagBorder = col;
+          let dotSvg = '';
+
+          const pos = tagPositions[k] || tagPositions[normKey];
+          const baseLabel = labels[k] || labels[normKey] || k;
+          let labelText = baseLabel;
+          let badgeWidth = pos ? pos.w : 220;
+
+          if (isActiveStorm) {
+            const pulseNorm = (Math.sin((frameIndex * 2 * Math.PI) / 8) + 1) / 2;
+            col = '#ef4444';
+            fillOpacity = parseFloat((0.20 + 0.15 * pulseNorm).toFixed(2));
+            strokeWidth = parseFloat(((is916 ? 4.5 : 3.5) + 2.0 * pulseNorm).toFixed(1));
+            shadowStrokeWidth = parseFloat(((is916 ? 8.0 : 6.0) + 3.0 * pulseNorm).toFixed(1));
+            tagBg = '#991b1b';
+            tagBorder = pulseNorm > 0.4 ? '#ff4444' : '#ef4444';
+            labelText = `ACTIVIDAD LLUVIOSA • ${baseLabel}`;
+            const extraW = this.estimateTextWidth(labelText, 11) + 32;
+            badgeWidth = Math.max(badgeWidth, extraW);
+
+            if (pos) {
+              const dotCx = pos.x + 11;
+              const dotCy = pos.y + 11;
+              const beaconHaloR = ((is916 ? 6.5 : 5.2) + 2.3 * pulseNorm).toFixed(1);
+              const beaconHaloOpacity = (0.40 + 0.35 * pulseNorm).toFixed(2);
+              dotSvg = `<circle cx="${dotCx}" cy="${dotCy}" r="${beaconHaloR}" fill="#ff4444" fill-opacity="${beaconHaloOpacity}" /><circle cx="${dotCx}" cy="${dotCy}" r="3.5" fill="#ffffff" />`;
+            }
+          } else if (pos) {
+            dotSvg = `<circle cx="${pos.x + 10}" cy="${pos.y + 11}" r="3.5" fill="${col}" />`;
+          }
+
           let labelBadgeSvg = '';
           if (pos) {
             labelBadgeSvg = `
               <g class="wfs-basin-label" id="wfs_label_${k}">
-                <rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="22" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${col}" stroke-width="1.3" />
-                <circle cx="${pos.x + 10}" cy="${pos.y + 11}" r="3.5" fill="${col}" />
-                <text x="${pos.x + 20}" y="${pos.y + 15}" fill="#f8fafc" font-family="'Space Grotesk', -apple-system, sans-serif" font-weight="700" font-size="11" letter-spacing="0.02em">${label}</text>
+                <rect x="${pos.x}" y="${pos.y}" width="${badgeWidth}" height="22" rx="5" fill="${tagBg}" fill-opacity="0.94" stroke="${tagBorder}" stroke-width="1.3" />
+                ${dotSvg}
+                <text x="${pos.x + 20}" y="${pos.y + 15}" fill="#f8fafc" font-family="'Space Grotesk', -apple-system, sans-serif" font-weight="700" font-size="11" letter-spacing="0.02em">${escapeXml(labelText)}</text>
               </g>
             `;
           }
 
           pathsSvg += `
-            <path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="${d}" fill="none" stroke="#000000" stroke-width="4.5" stroke-opacity="0.75" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="${col}" fill-opacity="${fillOpacity}" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="none" stroke="#000000" stroke-width="${shadowStrokeWidth}" stroke-opacity="0.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="none" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>
             ${labelBadgeSvg}
           `;
         }
-        const transformAttr = is916 ? ' transform="translate(0, 290) scale(1.35)"' : '';
+        const baseScale = is916 ? 1.35 : (width / 800);
+        const transformAttr = is916
+          ? ' transform="translate(0, 290) scale(1.35)"'
+          : (width !== 800 ? ` transform="scale(${baseScale})"` : '');
+
         wfsBasinsSvg = `
         <!-- Real Catchment Polygons Layer (GeoServer WFS) -->
         <g id="wfsBasinPolygonsLayer"${transformAttr}>
