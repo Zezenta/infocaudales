@@ -326,12 +326,20 @@ export class VideoCompilerService {
           jubones: { x: 180, y: 528, w: 295 }
         };
 
-        const selectedKeys = Array.isArray(options.selectedWfsBasinKeys)
-          ? new Set(options.selectedWfsBasinKeys.map(k => k === 'cocaCodoSinclair' ? 'coca' : (k === 'minasSanFrancisco' ? 'jubones' : k)))
-          : new Set(['coca', 'paute']);
+        const normalizeKey = (key: string): string => {
+          if (key === 'coca' || key === 'ccs') return 'cocaCodoSinclair';
+          if (key === 'jubones') return 'minasSanFrancisco';
+          return key;
+        };
+
+        const selectedKeys = Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0
+          ? new Set(options.selectedWfsBasinKeys.map(normalizeKey))
+          : new Set(['cocaCodoSinclair', 'paute']);
+
         let pathsSvg = '';
         for (const [k, d] of Object.entries(basinPaths)) {
-          if (selectedKeys && !selectedKeys.has(k)) continue;
+          const normKey = normalizeKey(k);
+          if (selectedKeys && !selectedKeys.has(normKey) && !selectedKeys.has(k)) continue;
           const col = colors[k] || '#38bdf8';
           const label = labels[k] || k;
           const pos = tagPositions[k];
