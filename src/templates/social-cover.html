@@ -962,7 +962,7 @@
       <!-- Action Buttons below preview -->
       <div style="display: flex; gap: 12px; margin-top: 6px;">
         <button class="btn-action-primary" id="btn-export-png">
-          Descargar Portada PNG (1200x1200px)
+          Descargar Portada PNG (1200x1500px • 4:5)
         </button>
         <button class="btn-secondary" id="btn-reset-defaults">Restablecer Valores</button>
       </div>
@@ -1305,10 +1305,10 @@
         }
       }
 
-      const trendHtml = getTrendArrowHtml(plant.cotaTrend || 'up');
-      const valStr = plant.currentCota.toFixed(1);
+      const trendHtml = (plant.currentCota && plant.currentCota > 0) ? getTrendArrowHtml(plant.cotaTrend || 'up') : '';
+      const valStr = (plant.currentCota && plant.currentCota > 0) ? `${plant.currentCota.toFixed(1)} msnm` : 'S/D';
       return {
-        html: `<span class="telemetry-val ${colorClass}">${valStr} msnm${trendHtml}</span><span class="cota-base-ref">/ ${baseCota}</span>`
+        html: `<span class="telemetry-val ${colorClass}">${valStr}${trendHtml}</span><span class="cota-base-ref">/ ${baseCota}</span>`
       };
     }
 
