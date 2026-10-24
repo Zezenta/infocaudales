@@ -338,10 +338,10 @@ export interface SocialPlantReportItem {
  */
 export function sortPlantsForSocial<T extends { plantKey: string; telemetry: TelemetryData }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
-    if (a.plantKey === 'mazar') return -1;
-    if (b.plantKey === 'mazar') return 1;
     if (a.plantKey === 'cocaCodoSinclair') return -1;
     if (b.plantKey === 'cocaCodoSinclair') return 1;
+    if (a.plantKey === 'mazar') return -1;
+    if (b.plantKey === 'mazar') return 1;
     const genA = a.telemetry.gen || 0;
     const genB = b.telemetry.gen || 0;
     return genB - genA;

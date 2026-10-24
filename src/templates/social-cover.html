@@ -350,11 +350,6 @@
       border-color: #334155;
     }
 
-    .plant-matrix-row.active-plant-row {
-      border-color: #0284c7;
-      background-color: #0e172a;
-    }
-
     /* LINE 1: Plant Name, Cap Badge & Generation */
     .plant-row-line1 {
       display: flex;
@@ -1343,8 +1338,18 @@
       let totalCapacity = 0;
       let activeCount = 0;
 
-      // Ordered list of the 6 plants
-      const plantKeys = ['cocaCodoSinclair', 'molino', 'sopladora', 'mazar', 'minasSanFrancisco', 'agoyan'];
+      // Ordered list of the 6 plants:
+      // 1: Coca Codo Sinclair (CCS)
+      // 2: Paute Mazar
+      // 3+: Remaining plants sorted by current generation descending
+      const fixedTop = ['cocaCodoSinclair', 'mazar'];
+      const remainingKeys = Object.keys(PLANTS_CONFIG).filter(k => !fixedTop.includes(k));
+      remainingKeys.sort((a, b) => {
+        const genA = PLANTS_CONFIG[a]?.currentStatus === 'offline' ? 0 : (PLANTS_CONFIG[a]?.currentMW || 0);
+        const genB = PLANTS_CONFIG[b]?.currentStatus === 'offline' ? 0 : (PLANTS_CONFIG[b]?.currentMW || 0);
+        return genB - genA;
+      });
+      const plantKeys = [...fixedTop, ...remainingKeys];
 
       plantKeys.forEach(key => {
         const p = PLANTS_CONFIG[key];
@@ -1371,7 +1376,7 @@
         }
 
         const row = document.createElement('div');
-        row.className = `plant-matrix-row ${key === activePlantKey ? 'active-plant-row' : ''}`;
+        row.className = 'plant-matrix-row';
         row.dataset.plant = key;
         row.title = `Clic para editar parámetros de ${p.name}`;
         row.addEventListener('click', () => {

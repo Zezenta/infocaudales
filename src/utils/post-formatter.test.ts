@@ -182,7 +182,7 @@ describe('post-formatter', () => {
   });
 
   describe('sortPlantsForSocial', () => {
-    it('sorts Mazar first, Coca Codo Sinclair second, and remaining by generation descending', () => {
+    it('sorts Coca Codo Sinclair first, Mazar second, and remaining by generation descending', () => {
       const items = [
         { plantKey: 'molino', telemetry: { gen: 500 } as any },
         { plantKey: 'agoyan', telemetry: { gen: 80 } as any },
@@ -193,8 +193,8 @@ describe('post-formatter', () => {
 
       const sorted = sortPlantsForSocial(items);
       expect(sorted.map(s => s.plantKey)).toEqual([
-        'mazar',
         'cocaCodoSinclair',
+        'mazar',
         'molino',
         'sopladora',
         'agoyan'
