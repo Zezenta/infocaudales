@@ -1571,22 +1571,7 @@
         updateCardDateTime(parts.dateStr, parts.timeStr);
       });
 
-      // Aspect Ratio is fixed to 4:5 Portrait for Instagram
-      const toggleAspectBtn = document.getElementById('btn-toggle-aspect');
-      if (toggleAspectBtn) {
-        toggleAspectBtn.addEventListener('click', () => {
-          isPortrait45 = !isPortrait45;
-          const card = document.getElementById('cover-card');
-          const aspectLabel = document.getElementById('aspect-label');
-          if (isPortrait45) {
-            card.classList.add('aspect-4-5');
-            if (aspectLabel) aspectLabel.innerText = '1080 x 1350 px (4:5)';
-          } else {
-            card.classList.remove('aspect-4-5');
-            if (aspectLabel) aspectLabel.innerText = '1080 x 1080 px (1:1)';
-          }
-        });
-      }
+
 
       // Prevent mouse text selection and double-click highlights across UI
       window.addEventListener('selectstart', (e) => {

@@ -371,7 +371,7 @@
 
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f1f5f9; cursor: pointer;">
                   <input type="checkbox" class="wfs-basin-toggle" id="wfsBasin_minasSanFrancisco" data-key="minasSanFrancisco">
-                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block; flex-shrink: 0;"></span>
+                  <span style="width: 10px; height: 10px; border-radius: 50%; background: #f97316; display: inline-block; flex-shrink: 0;"></span>
                   <span>Jubones / Minas San Francisco</span>
                 </label>
               </div>
@@ -1844,9 +1844,9 @@
           cocaCodoSinclair: '#facc15',
           paute: '#a855f7',
           agoyan: '#22c55e',
-          minasSanFrancisco: '#f59e0b',
+          minasSanFrancisco: '#f97316',
           coca: '#facc15',
-          jubones: '#f59e0b'
+          jubones: '#f97316'
         };
 
         const labels = {
@@ -1924,13 +1924,7 @@
         if (cb && cb.checked) checkedCount++;
         const g = document.getElementById(`wfs_basin_${k}`);
         if (g) g.style.display = isChecked ? 'block' : 'none';
-        if (k === 'cocaCodoSinclair') {
-          const gAlias = document.getElementById('wfs_basin_coca');
-          if (gAlias) gAlias.style.display = isChecked ? 'block' : 'none';
-        } else if (k === 'minasSanFrancisco') {
-          const gAlias = document.getElementById('wfs_basin_jubones');
-          if (gAlias) gAlias.style.display = isChecked ? 'block' : 'none';
-        }
+
       });
 
       if (wfsCountBadge) {

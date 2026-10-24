@@ -176,7 +176,8 @@ export class VideoCompilerService {
     }
     const candidates = [
       path.join(__dirname, '..', '..', 'data', 'basin-svg-paths.json'),
-      path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json')
+      path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json'),
+      path.join(process.cwd(), 'dist', 'src', 'data', 'basin-svg-paths.json')
     ];
     for (const c of candidates) {
       if (fs.existsSync(c)) {
@@ -308,7 +309,7 @@ export class VideoCompilerService {
     if (options.showWfsBasins !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador')) {
       const basinPaths = this.getBasinSvgPaths();
       if (basinPaths) {
-        const colors: Record<string, string> = { coca: '#facc15', cocaCodoSinclair: '#facc15', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f59e0b', minasSanFrancisco: '#f59e0b' };
+        const colors: Record<string, string> = { coca: '#facc15', cocaCodoSinclair: '#facc15', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f97316', minasSanFrancisco: '#f97316' };
         const labels: Record<string, string> = {
           cocaCodoSinclair: 'Cuenca hídrica Coca Codo Sinclair',
           coca: 'Cuenca hídrica Coca Codo Sinclair',

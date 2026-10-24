@@ -994,7 +994,7 @@ if (process.env.FORCE_DAILY_TIMELAPSE === 'true') {
 // TEMPORARY: Forzar publicación de prueba en Facebook e Instagram
 // (Eliminar este bloque cuando se hayan verificado las publicaciones)
 // ============================================================================
-const FORCE_TEST_FB_IG = false;
+const FORCE_TEST_FB_IG = process.env.FORCE_TEST_FB_IG === 'true';
 
 if (FORCE_TEST_FB_IG) {
   console.log('\n[FORCE FB/IG TEST] 🚀 Activada condicional de prueba para Facebook e Instagram...');

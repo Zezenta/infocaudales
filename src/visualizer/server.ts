@@ -935,6 +935,24 @@ const server = http.createServer(async (req, res) => {
           svgScale: typeof payload.svgScale === 'number' ? payload.svgScale : 1.0,
           activeBasinKeys: payload.activeBasinKeys,
           highlightBasinKey: payload.activeBasinKeys?.[0],
+          activeBasinResolver: (frame: any, idx: number) => {
+            if (Array.isArray(payload.activeBasinKeys) && payload.activeBasinKeys.length > 0) {
+              return new Set(payload.activeBasinKeys);
+            }
+            let m: any = null;
+            try {
+              m = db.prepare('SELECT ccs, paute FROM satellite_frame_metrics WHERE timestamp_iso = ?').get(frame.timestampIso);
+            } catch (e) {}
+            if (!m && frame.buffer) {
+              m = rainMonitorService.computeEcuadorFrameMetrics(frame.buffer);
+            }
+            const active = new Set<string>();
+            if (m) {
+              if (m.ccs >= 10.0) active.add('cocaCodoSinclair');
+              if (m.paute >= 15.0) active.add('paute');
+            }
+            return active;
+          },
           showThermalScale,
           showWfsBasins: payload.showWfsBasins !== false,
           selectedWfsBasinKeys: Array.isArray(payload.selectedWfsBasinKeys) ? payload.selectedWfsBasinKeys : ['cocaCodoSinclair', 'paute'],
