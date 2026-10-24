@@ -230,8 +230,12 @@ export class SatelliteTelemetryService {
       ? options.layers.join(',')
       : options.layers || defaultGeoLayers;
 
-    if (options.unbaked === true && layers.includes(',ecuador:provincias')) {
-      layers = layers.replace(',ecuador:provincias', '');
+    if (options.unbaked === true && layers.includes('ecuador:provincias')) {
+      layers = layers
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l !== 'ecuador:provincias')
+        .join(',');
     }
 
     const params: Record<string, string> = {

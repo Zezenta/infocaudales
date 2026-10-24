@@ -859,7 +859,16 @@
             textY = 24.5;
           }
 
-          const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#facc15' : '#38bdf8';
+          let color = '#38bdf8';
+          if (pin.label.includes('CCS') || pin.label.includes('Coca')) {
+            color = '#facc15';
+          } else if (pin.label.includes('Paute') || pin.label.includes('Mazar') || pin.label.includes('Molino') || pin.label.includes('Sopladora')) {
+            color = '#a855f7';
+          } else if (pin.label.includes('Agoyán') || pin.label.includes('Agoyan')) {
+            color = '#22c55e';
+          } else if (pin.label.includes('Minas') || pin.label.includes('San Francisco') || pin.label.includes('Jubones')) {
+            color = '#f97316';
+          }
 
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('transform', `translate(${x}, ${y})`);
@@ -1400,6 +1409,7 @@
       renderDetectionBoxes();
       renderSummaryCards();
       updateProvinceVisibility();
+      updateWfsBasinsStormAlerts();
     }
 
     const ALL_BASIN_KEYS = ['ecuador', 'cocaCodoSinclair', 'paute', 'agoyan', 'minasSanFrancisco'];
@@ -1556,6 +1566,7 @@
       updateTimestampDisplay();
       renderDetectionBoxes();
       renderSummaryCards();
+      updateWfsBasinsStormAlerts();
     }
 
     // Fetch Timestamps & Geometries
@@ -1906,6 +1917,7 @@
         wfsBasinPolygonsLayer.innerHTML = svgHtml;
         wfsBasinsLoaded = true;
         updateWfsBasinsVisibility();
+        updateWfsBasinsStormAlerts();
       } catch (err) {
         console.error('Error loading WFS basin polygons:', err);
       }
@@ -1924,7 +1936,6 @@
         if (cb && cb.checked) checkedCount++;
         const g = document.getElementById(`wfs_basin_${k}`);
         if (g) g.style.display = isChecked ? 'block' : 'none';
-
       });
 
       if (wfsCountBadge) {
@@ -1933,6 +1944,107 @@
 
       if (isMasterChecked && !wfsBasinsLoaded) {
         loadWfsBasinPolygons();
+      }
+    }
+
+    function updateWfsBasinsStormAlerts() {
+      if (!wfsBasinsLoaded || !wfsBasinPolygonsLayer) return;
+
+      const simCcs = simCcsStormCheckbox && simCcsStormCheckbox.checked;
+      const simPaute = simPauteStormCheckbox && simPauteStormCheckbox.checked;
+
+      const currentIso = (timestamps && timestamps[currentFrameIdx]) || '';
+      const m = currentMetricsMap[currentIso] || null;
+      let isCcsActive = simCcs || Boolean(m && m.ccs >= 10.0);
+      let isPauteActive = simPaute || Boolean(m && m.paute >= 15.0);
+
+      if (currentIso >= '2026-10-07T23:30:00.000Z' && currentIso <= '2026-10-08T05:30:00.000Z') {
+        isPauteActive = true;
+      }
+      if (currentIso >= '2026-10-07T17:30:00.000Z' && currentIso <= '2026-10-07T22:30:00.000Z') {
+        isCcsActive = true;
+      }
+
+      const activeBasins = {
+        cocaCodoSinclair: isCcsActive,
+        paute: isPauteActive
+      };
+
+      const defaultColors = {
+        cocaCodoSinclair: '#facc15',
+        paute: '#a855f7',
+        agoyan: '#22c55e',
+        minasSanFrancisco: '#f97316'
+      };
+
+      const defaultLabels = {
+        cocaCodoSinclair: 'Cuenca hídrica Coca Codo Sinclair',
+        paute: 'Cuenca hídrica Complejo Paute',
+        agoyan: 'Cuenca hídrica Pastaza / Agoyán',
+        minasSanFrancisco: 'Cuenca hídrica Jubones / Minas San Francisco'
+      };
+
+      const defaultWidths = {
+        cocaCodoSinclair: 248,
+        paute: 225,
+        agoyan: 220,
+        minasSanFrancisco: 295
+      };
+
+      const is916 = (aspectRatioSelect ? aspectRatioSelect.value : '9:16') === '9:16';
+
+      for (const [key, isStorm] of Object.entries(activeBasins)) {
+        const g = document.getElementById(`wfs_basin_${key}`);
+        if (!g) continue;
+        const paths = g.querySelectorAll('path');
+        const labelGroup = g.querySelector('.wfs-basin-label');
+        if (!paths || paths.length < 3 || !labelGroup) continue;
+
+        const pathFill = paths[0];
+        const pathShadow = paths[1];
+        const pathStroke = paths[2];
+        const rect = labelGroup.querySelector('rect');
+        const circle = labelGroup.querySelector('circle');
+        const text = labelGroup.querySelector('text');
+
+        if (isStorm) {
+          pathFill.setAttribute('fill', '#ef4444');
+          pathFill.setAttribute('fill-opacity', '0.28');
+          pathFill.setAttribute('stroke', '#ef4444');
+          pathFill.setAttribute('stroke-width', is916 ? '4.5' : '3.5');
+
+          pathShadow.setAttribute('stroke-width', is916 ? '8.0' : '6.0');
+
+          pathStroke.setAttribute('stroke', '#ef4444');
+          pathStroke.setAttribute('stroke-width', is916 ? '4.5' : '3.5');
+
+          if (rect) {
+            rect.setAttribute('fill', '#991b1b');
+            rect.setAttribute('stroke', '#ff4444');
+            rect.setAttribute('width', Math.max(defaultWidths[key] || 220, 270));
+          }
+          if (circle) circle.setAttribute('fill', '#ffffff');
+          if (text) text.textContent = `ACTIVIDAD LLUVIOSA • ${defaultLabels[key] || key}`;
+        } else {
+          const col = defaultColors[key] || '#38bdf8';
+          pathFill.setAttribute('fill', col);
+          pathFill.setAttribute('fill-opacity', '0.18');
+          pathFill.setAttribute('stroke', col);
+          pathFill.setAttribute('stroke-width', is916 ? '2.6' : '2.2');
+
+          pathShadow.setAttribute('stroke-width', is916 ? '5.5' : '4.5');
+
+          pathStroke.setAttribute('stroke', col);
+          pathStroke.setAttribute('stroke-width', is916 ? '2.6' : '2.2');
+
+          if (rect) {
+            rect.setAttribute('fill', '#0b1120');
+            rect.setAttribute('stroke', col);
+            rect.setAttribute('width', defaultWidths[key] || 220);
+          }
+          if (circle) circle.setAttribute('fill', col);
+          if (text) text.textContent = defaultLabels[key] || key;
+        }
       }
     }
 

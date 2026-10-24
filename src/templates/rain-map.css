@@ -210,6 +210,10 @@ input[type="text"], input[type="number"], textarea, .selectable-text {
 }
 
 .player-controls.fit-screen {
+  width: min(800px, 78vh);
+}
+
+.player-controls.aspect-9-16.fit-screen {
   width: calc(min(940px, 76vh) * 9 / 16);
 }
 

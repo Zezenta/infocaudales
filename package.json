@@ -9,7 +9,7 @@
     "build": "rm -rf dist && tsc && mkdir -p dist/src/data && cp src/data/*.json dist/src/data/",
     "start": "npm run build && node dist/src/index.js",
     "test": "vitest run --fileParallelism=false --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/x.service.test.ts'",
-    "test:watch": "vitest --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/x.service.test.ts'",
+    "test:watch": "vitest --fileParallelism=false --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/x.service.test.ts'",
     "archive:sat": "tsx src/scripts/satellite-archiver-daemon.ts"
   },
   "repository": {

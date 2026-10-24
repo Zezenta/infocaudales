@@ -590,7 +590,16 @@ export class VideoCompilerService {
           textY = is916 ? 26 : 24.5;
         }
 
-        const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#facc15' : '#38bdf8';
+        let color = '#38bdf8';
+        if (pin.label.includes('CCS') || pin.label.includes('Coca')) {
+          color = '#facc15';
+        } else if (pin.label.includes('Paute') || pin.label.includes('Mazar') || pin.label.includes('Molino') || pin.label.includes('Sopladora')) {
+          color = '#a855f7';
+        } else if (pin.label.includes('Agoyán') || pin.label.includes('Agoyan')) {
+          color = '#22c55e';
+        } else if (pin.label.includes('Minas') || pin.label.includes('San Francisco') || pin.label.includes('Jubones')) {
+          color = '#f97316';
+        }
         const safePinLabel = escapeXml(pin.label);
 
         pinsSvg += `
@@ -729,7 +738,7 @@ export class VideoCompilerService {
     const basinsList = dynamicCards?.basins || (options.summaryCardItems ? options.summaryCardItems.map(b => ({
       label: b.label,
       value: `${b.peakPct.toFixed(1)}%`,
-      color: b.color || '#38bdf8',
+      color: b.color || (b.label.toLowerCase().includes('coca') ? '#facc15' : (b.label.toLowerCase().includes('paute') ? '#a855f7' : '#38bdf8')),
       highlight: b.hasRain
     })) : undefined);
 
@@ -1209,11 +1218,12 @@ export class VideoCompilerService {
       // 3. Compile GIF Animation
       if (createGif) {
         systemLogger.info(`[VideoCompilerService] Encoding GIF animation to ${gifPath}...`);
+        const gifScaleArg = is916 ? `scale=${gifScale}:-2:flags=lanczos` : `scale=${gifScale}:${gifScale}`;
         await execFileAsync('ffmpeg', [
           '-y',
           '-framerate', framerate.toString(),
           '-i', inputPattern,
-          '-filter_complex', `[0:v] scale=${gifScale}:${gifScale},split [a][b];[a] palettegen [p];[b][p] paletteuse`,
+          '-filter_complex', `[0:v] ${gifScaleArg},split [a][b];[a] palettegen [p];[b][p] paletteuse`,
           gifPath
         ]);
         sizeBytesGif = fs.statSync(gifPath).size;
@@ -1294,8 +1304,12 @@ export class VideoCompilerService {
           ? 'goes:goes_abi_l2_cmipf_13'
           : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
       }
-    } else if (isCleanGeoserver && typeof layers === 'string' && layers.includes(',ecuador:provincias')) {
-      layers = layers.replace(',ecuador:provincias', '');
+    } else if (isCleanGeoserver && typeof layers === 'string' && layers.includes('ecuador:provincias')) {
+      layers = layers
+        .split(',')
+        .map(s => s.trim())
+        .filter(l => l !== 'ecuador:provincias')
+        .join(',');
     }
 
     systemLogger.info(`[VideoCompilerService] Starting basin animation generation for ${plantKey} (${hoursBack}h back, ${frameCount} frames)...`);

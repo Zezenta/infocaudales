@@ -1873,7 +1873,7 @@ export class RainMonitorService {
             {
               label: 'Complejo Paute',
               value: `${m.paute.toFixed(1)}%`,
-              color: '#c084fc',
+              color: '#a855f7',
               highlight: active.has('paute')
             }
           ],
