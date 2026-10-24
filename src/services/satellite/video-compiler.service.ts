@@ -321,7 +321,7 @@ export class VideoCompilerService {
         const tagPositions: Record<string, { x: number; y: number; w: number }> = {
           cocaCodoSinclair: { x: 360, y: 152, w: 248 },
           coca: { x: 360, y: 152, w: 248 },
-          paute: { x: 260, y: 442, w: 225 },
+          paute: { x: 290, y: 442, w: 225 },
           agoyan: { x: 275, y: 244, w: 220 },
           minasSanFrancisco: { x: 180, y: 528, w: 295 },
           jubones: { x: 180, y: 528, w: 295 }
