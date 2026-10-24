@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin } from '../../data/basin-geometries.js';
+import { BASIN_GEOMETRIES, BasinGeometry, ALL_HYDRO_PLANTS_PINS, PlantPin, DEFAULT_REFERENCE_CITIES, CityPin, resolveBasinKey } from '../../data/basin-geometries.js';
 import { SatelliteFrame, SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 import { systemLogger } from '../../utils/logger.js';
 import { db } from '../../utils/db.js';
@@ -54,14 +54,23 @@ export interface OverlayCustomizationOptions {
   showCityPins?: boolean;
   cityPins?: CityPin[];
   showProvinces?: boolean;
+  useVectorProvinces?: boolean;
+  unbakedProvinces?: boolean;
   provincesColor?: string;
   provincesWidth?: number;
   provincesOpacity?: number;
+  svgOffsetX?: number;
+  svgOffsetY?: number;
+  svgScale?: number;
+  svgScaleX?: number;
+  svgScaleY?: number;
   summaryCardItems?: BasinSummaryCardItem[];
   summaryCardsResolver?: (frame: SatelliteFrame, index: number) => DynamicSummaryCards;
   layer?: string;
   layers?: string | string[];
   watermarkBrand?: 'x' | 'instagram';
+  showWfsBasins?: boolean;
+  selectedWfsBasinKeys?: string[];
 }
 
 export interface DynamicSummaryCards {
@@ -83,10 +92,12 @@ export interface CompileOptions extends OverlayCustomizationOptions {
   framerate?: number;
   width?: number;
   height?: number;
+  aspectRatio?: '1:1' | '9:16';
   createMp4?: boolean;
   createGif?: boolean;
   gifScale?: number;
   minDurationSeconds?: number;
+  deadMargin?: boolean | number;
 }
 
 export interface CompiledAnimationResult {
@@ -154,6 +165,34 @@ export class VideoCompilerService {
     return null;
   }
 
+  private basinSvgPathsCache: Record<string, string> | null = null;
+
+  /**
+   * Helper to retrieve clean vector SVG paths of real INAMHI/GEOGLOWS catchment basins.
+   */
+  public getBasinSvgPaths(): Record<string, string> | null {
+    if (this.basinSvgPathsCache) {
+      return this.basinSvgPathsCache;
+    }
+    const candidates = [
+      path.join(__dirname, '..', '..', 'data', 'basin-svg-paths.json'),
+      path.join(process.cwd(), 'src', 'data', 'basin-svg-paths.json'),
+      path.join(process.cwd(), 'dist', 'src', 'data', 'basin-svg-paths.json')
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        try {
+          const raw = fs.readFileSync(c, 'utf8');
+          this.basinSvgPathsCache = JSON.parse(raw);
+          return this.basinSvgPathsCache;
+        } catch (e) {
+          console.warn('[VideoCompilerService] Failed to read basin svg paths:', e);
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Translates geographic (lat, lon) coordinates inside a bounding box to pixel coordinates (x, y).
    */
@@ -162,7 +201,8 @@ export class VideoCompilerService {
     lon: number,
     bbox: [number, number, number, number],
     width: number,
-    height: number
+    height: number,
+    offsetY: number = 0
   ): { x: number; y: number } {
     const [minLon, minLat, maxLon, maxLat] = bbox;
     const lonSpan = maxLon - minLon;
@@ -170,7 +210,7 @@ export class VideoCompilerService {
 
     const x = Math.round(((lon - minLon) / lonSpan) * width);
     // Y coordinate is inverted (maxLat is top/0, minLat is bottom/height)
-    const y = Math.round(((maxLat - lat) / latSpan) * height);
+    const y = Math.round(((maxLat - lat) / latSpan) * height) + offsetY;
 
     return { x, y };
   }
@@ -199,8 +239,14 @@ export class VideoCompilerService {
     geometry: BasinGeometry;
     width: number;
     height: number;
+    aspectRatio?: '1:1' | '9:16';
   }): string {
     const { frame, geometry, width, height } = options;
+    const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
+    const mapW = is916 ? 1080 : width;
+    const mapH = is916 ? 1080 : height;
+    const offY = is916 ? 290 : 0;
+
     const title = escapeXml(options.customTitle || 'Vista Satelital En Vivo');
 
     const subtitleBadge = escapeXml(options.customBadge || (geometry.key === 'ecuador'
@@ -208,24 +254,171 @@ export class VideoCompilerService {
       : (geometry.subtitle || 'GOES-16 • Banda 13 IR')));
 
     // Provincial Delineation Vector Overlay (Ecuador Continental)
-    // GeoServer already burns ecuador:provincias into the raster tile.
-    // The SVG vector overlay is rendered if explicitly forced OR if the frame source is nasa_gibs.
     const isNasaGibs = frame.source === 'nasa_gibs';
-    const showProvinces = (options.showProvinces === true || isNasaGibs) &&
-      frame.source !== 'geoserver' &&
-      (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
-    const provincesColor = options.provincesColor || '#38bdf8';
-    const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.2;
-    const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.85;
+    const isEcuador = geometry.key === 'ecuador' || frame.plantKey === 'ecuador';
+    const showProvinces = isEcuador && (
+      options.showProvinces === true ||
+      (options.showProvinces !== false && isNasaGibs) ||
+      (options.showProvinces !== false && options.useVectorProvinces !== false)
+    );
+    const provincesColor = options.provincesColor || '#ffffff';
+    const provincesWidth = typeof options.provincesWidth === 'number' ? options.provincesWidth : 1.8;
+    const provincesOpacity = typeof options.provincesOpacity === 'number' ? options.provincesOpacity : 0.7;
 
     let provincesOverlaySvg = '';
     if (showProvinces) {
       const paths = this.getProvincesVectorSvg();
       if (paths) {
+        // Calibrated defaults matching GeoServer delineation:
+        // Instagram 9:16 (1080x1920) default: translate(22.25, 272.4) scale(1.292, 1.3892)
+        // Twitter/X 1:1 (800x800) default: translate(16.48, -13.04) scale(0.957, 1.029)
+        const default916 = { x: 22.25, y: 272.4, scaleX: 1.292, scaleY: 1.3892 };
+        const default11 = { x: +(22.25 * (800 / 1080)).toFixed(2), y: +((272.4 - 290) * (800 / 1080)).toFixed(2), scaleX: +(1.292 / 1.35).toFixed(4), scaleY: +(1.3892 / 1.35).toFixed(4) };
+
+        const def = is916 ? default916 : default11;
+        const offsetX = typeof options.svgOffsetX === 'number' ? options.svgOffsetX : def.x;
+        const offsetY = typeof options.svgOffsetY === 'number' ? options.svgOffsetY : def.y;
+        const scaleMult = typeof options.svgScale === 'number' ? options.svgScale : 1.0;
+        const scaleX = typeof options.svgScaleX === 'number' ? options.svgScaleX : (def.scaleX * scaleMult);
+        const scaleY = typeof options.svgScaleY === 'number' ? options.svgScaleY : (def.scaleY * scaleMult);
+
+        const finalX = +(offsetX).toFixed(2);
+        const finalY = +(offsetY).toFixed(2);
+        const finalScaleX = +(scaleX).toFixed(4);
+        const finalScaleY = +(scaleY).toFixed(4);
+
+        let transformAttr = '';
+        if (finalX !== 0 || finalY !== 0 || finalScaleX !== 1.0 || finalScaleY !== 1.0) {
+          if (finalScaleX === finalScaleY) {
+            transformAttr = ` transform="translate(${finalX}, ${finalY}) scale(${finalScaleX})"`;
+          } else {
+            transformAttr = ` transform="translate(${finalX}, ${finalY}) scale(${finalScaleX}, ${finalScaleY})"`;
+          }
+        }
         provincesOverlaySvg = `
         <!-- Provincial Delineation Vector Layer -->
-        <g id="provincesLayer" fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
+        <g id="provincesLayer"${transformAttr} fill="none" stroke="${escapeXml(provincesColor)}" stroke-width="${provincesWidth}" opacity="${provincesOpacity}" stroke-linecap="round" stroke-linejoin="round">
           ${paths}
+        </g>
+        `;
+      }
+    }
+
+    // Real INAMHI / GeoServer WFS Catchment Polygons Layer
+    let wfsBasinsSvg = '';
+    if (options.showWfsBasins !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador')) {
+      const basinPaths = this.getBasinSvgPaths();
+      if (basinPaths) {
+        const colors: Record<string, string> = { coca: '#facc15', cocaCodoSinclair: '#facc15', paute: '#a855f7', agoyan: '#22c55e', jubones: '#f97316', minasSanFrancisco: '#f97316' };
+        const labels: Record<string, string> = {
+          cocaCodoSinclair: 'Cuenca hídrica Coca Codo Sinclair',
+          coca: 'Cuenca hídrica Coca Codo Sinclair',
+          paute: 'Cuenca hídrica Complejo Paute',
+          agoyan: 'Cuenca hídrica Pastaza / Agoyán',
+          minasSanFrancisco: 'Cuenca hídrica Jubones / Minas San Francisco',
+          jubones: 'Cuenca hídrica Jubones / Minas San Francisco'
+        };
+        const tagPositions: Record<string, { x: number; y: number; w: number }> = {
+          cocaCodoSinclair: { x: 360, y: 152, w: 248 },
+          coca: { x: 360, y: 152, w: 248 },
+          paute: { x: 290, y: 442, w: 225 },
+          agoyan: { x: 275, y: 244, w: 220 },
+          minasSanFrancisco: { x: 180, y: 528, w: 295 },
+          jubones: { x: 180, y: 528, w: 295 }
+        };
+
+        const selectedKeys = new Set<string>();
+        if (Array.isArray(options.selectedWfsBasinKeys) && options.selectedWfsBasinKeys.length > 0) {
+          for (const k of options.selectedWfsBasinKeys) selectedKeys.add(resolveBasinKey(k));
+        } else {
+          selectedKeys.add('cocaCodoSinclair');
+          selectedKeys.add('paute');
+        }
+        if (options.highlightBasinKey) {
+          selectedKeys.add(resolveBasinKey(options.highlightBasinKey));
+        }
+        if (options.activeBasinKeys) {
+          const actives = options.activeBasinKeys instanceof Set ? Array.from(options.activeBasinKeys) : options.activeBasinKeys;
+          for (const k of actives) selectedKeys.add(resolveBasinKey(k));
+        }
+
+        const frameIndex = frame.index !== undefined ? frame.index : 0;
+
+        let pathsSvg = '';
+        for (const [k, d] of Object.entries(basinPaths)) {
+          const normKey = resolveBasinKey(k);
+          if (selectedKeys && !selectedKeys.has(normKey) && !selectedKeys.has(k)) continue;
+
+          const isHighlighted = options.highlightBasinKey ? resolveBasinKey(options.highlightBasinKey) === normKey : false;
+          const isActiveStorm = options.activeBasinKeys !== undefined
+            ? (options.activeBasinKeys instanceof Set
+                ? options.activeBasinKeys.has(k) || options.activeBasinKeys.has(normKey)
+                : options.activeBasinKeys.includes(k) || options.activeBasinKeys.includes(normKey))
+            : isHighlighted;
+
+          let col = colors[k] || colors[normKey] || '#38bdf8';
+          let fillOpacity = 0.18;
+          let strokeWidth = is916 ? 2.6 : 2.2;
+          let shadowStrokeWidth = is916 ? 5.5 : 4.5;
+          let tagBg = '#0b1120';
+          let tagBorder = col;
+          let dotSvg = '';
+
+          const pos = tagPositions[k] || tagPositions[normKey];
+          const baseLabel = labels[k] || labels[normKey] || k;
+          let labelText = baseLabel;
+          let badgeWidth = pos ? pos.w : 220;
+
+          if (isActiveStorm) {
+            const pulseNorm = (Math.sin((frameIndex * 2 * Math.PI) / 8) + 1) / 2;
+            col = '#ef4444';
+            fillOpacity = parseFloat((0.20 + 0.15 * pulseNorm).toFixed(2));
+            strokeWidth = parseFloat(((is916 ? 4.5 : 3.5) + 2.0 * pulseNorm).toFixed(1));
+            shadowStrokeWidth = parseFloat(((is916 ? 8.0 : 6.0) + 3.0 * pulseNorm).toFixed(1));
+            tagBg = '#991b1b';
+            tagBorder = pulseNorm > 0.4 ? '#ff4444' : '#ef4444';
+            labelText = `ACTIVIDAD LLUVIOSA • ${baseLabel}`;
+            const extraW = this.estimateTextWidth(labelText, 11) + 32;
+            badgeWidth = Math.max(badgeWidth, extraW);
+
+            if (pos) {
+              const dotCx = pos.x + 11;
+              const dotCy = pos.y + 11;
+              const beaconHaloR = ((is916 ? 6.5 : 5.2) + 2.3 * pulseNorm).toFixed(1);
+              const beaconHaloOpacity = (0.40 + 0.35 * pulseNorm).toFixed(2);
+              dotSvg = `<circle cx="${dotCx}" cy="${dotCy}" r="${beaconHaloR}" fill="#ff4444" fill-opacity="${beaconHaloOpacity}" /><circle cx="${dotCx}" cy="${dotCy}" r="3.5" fill="#ffffff" />`;
+            }
+          } else if (pos) {
+            dotSvg = `<circle cx="${pos.x + 10}" cy="${pos.y + 11}" r="3.5" fill="${col}" />`;
+          }
+
+          let labelBadgeSvg = '';
+          if (pos) {
+            labelBadgeSvg = `
+              <g class="wfs-basin-label" id="wfs_label_${k}">
+                <rect x="${pos.x}" y="${pos.y}" width="${badgeWidth}" height="22" rx="5" fill="${tagBg}" fill-opacity="0.94" stroke="${tagBorder}" stroke-width="1.3" />
+                ${dotSvg}
+                <text x="${pos.x + 20}" y="${pos.y + 15}" fill="#f8fafc" font-family="'Space Grotesk', -apple-system, sans-serif" font-weight="700" font-size="11" letter-spacing="0.02em">${escapeXml(labelText)}</text>
+              </g>
+            `;
+          }
+
+          pathsSvg += `
+            <path d="${d}" fill="${col}" fill-opacity="${fillOpacity}" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="none" stroke="#000000" stroke-width="${shadowStrokeWidth}" stroke-opacity="0.75" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="${d}" fill="none" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>
+            ${labelBadgeSvg}
+          `;
+        }
+        const baseScale = is916 ? 1.35 : (width / 800);
+        const transformAttr = is916
+          ? ' transform="translate(0, 290) scale(1.35)"'
+          : (width !== 800 ? ` transform="scale(${baseScale})"` : '');
+
+        wfsBasinsSvg = `
+        <!-- Real Catchment Polygons Layer (GeoServer WFS) -->
+        <g id="wfsBasinPolygonsLayer"${transformAttr}>
+          ${pathsSvg}
         </g>
         `;
       }
@@ -233,11 +426,11 @@ export class VideoCompilerService {
 
     // Render Basin Storm Detection Boundary Boxes when displaying Ecuador Continental
     let detectionBoxesSvg = '';
-    const showDetectionBoxes = options.showDetectionBoxes !== false && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
+    const showDetectionBoxes = options.showDetectionBoxes === true && (geometry.key === 'ecuador' || frame.plantKey === 'ecuador');
     if (showDetectionBoxes) {
       const monitoredBasins = options.customMonitoredBasins || [
-        { key: 'cocaCodoSinclair', label: 'cuenca hídrica Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#38bdf8' },
-        { key: 'paute', label: 'Complejo Hidroeléctrico Paute', bbox: BASIN_GEOMETRIES.paute.bbox, defaultColor: '#a855f7' }
+        { key: 'cocaCodoSinclair', label: 'Cuenca hídrica Coca Codo Sinclair', bbox: BASIN_GEOMETRIES.cocaCodoSinclair.bbox, defaultColor: '#facc15' },
+        { key: 'paute', label: 'Cuenca hídrica Complejo Paute', bbox: BASIN_GEOMETRIES.paute.bbox, defaultColor: '#a855f7' }
       ];
 
       for (const b of monitoredBasins) {
@@ -260,53 +453,55 @@ export class VideoCompilerService {
         let tagBorderWidth: number;
         let dotSvg: string;
 
-        const tl = this.projectGeoToPixel(b.bbox[3], b.bbox[0], frame.bbox, width, height);
-        const br = this.projectGeoToPixel(b.bbox[1], b.bbox[2], frame.bbox, width, height);
+        const tl = this.projectGeoToPixel(b.bbox[3], b.bbox[0], frame.bbox, mapW, mapH, offY);
+        const br = this.projectGeoToPixel(b.bbox[1], b.bbox[2], frame.bbox, mapW, mapH, offY);
         const boxX = Math.min(tl.x, br.x);
         const boxY = Math.min(tl.y, br.y);
         const boxW = Math.abs(br.x - tl.x);
         const boxH = Math.abs(br.y - tl.y);
 
         const tagText = isActiveStorm ? `ACTIVIDAD LLUVIOSA • ${b.label}` : b.label;
-        const tagW = this.estimateTextWidth(tagText, 11) + 26;
-        const tagH = 22;
-        const tagY = (boxY - tagH - 4 < 70) ? boxY + 6 : boxY - tagH - 4;
-        const textY = tagY + 15;
+        const tagFontSize = is916 ? 13 : 11;
+        const tagW = this.estimateTextWidth(tagText, tagFontSize) + (is916 ? 32 : 26);
+        const tagH = is916 ? 26 : 22;
+        const tagY = (boxY - tagH - 4 < (is916 ? offY + 70 : 70)) ? boxY + 6 : boxY - tagH - 4;
+        const textY = tagY + (is916 ? 17.5 : 15);
 
         if (isActiveStorm) {
-          // Calm, authoritative breathing beacon pulse (1.0 second per cycle at 8 fps)
-          // Smooth sine modulation avoids jerky toggling or feeling like a malfunctioning sensor
-          const pulseNorm = (Math.sin((frameIndex * 2 * Math.PI) / 8) + 1) / 2; // 0.0 to 1.0 smoothly
+          const pulseNorm = (Math.sin((frameIndex * 2 * Math.PI) / 8) + 1) / 2;
 
           color = '#ef4444';
-          strokeWidth = parseFloat((4.0 + 2.2 * pulseNorm).toFixed(1));
-          strokeDash = '10,5'; // Stable dash pattern to prevent jumping/jittering borders
-          shadowStrokeWidth = parseFloat((7.0 + 4.0 * pulseNorm).toFixed(1));
-          fillOpacity = parseFloat((0.16 + 0.12 * pulseNorm).toFixed(2)); // Always visibly tinted (never looks turned off)
-          cornerLen = Math.round(18 + 5 * pulseNorm);
-          cornerStroke = parseFloat((5.0 + 2.5 * pulseNorm).toFixed(1));
+          strokeWidth = parseFloat(((is916 ? 5.0 : 4.0) + 2.2 * pulseNorm).toFixed(1));
+          strokeDash = '10,5';
+          shadowStrokeWidth = parseFloat(((is916 ? 9.0 : 7.0) + 4.0 * pulseNorm).toFixed(1));
+          fillOpacity = parseFloat((0.16 + 0.12 * pulseNorm).toFixed(2));
+          cornerLen = Math.round((is916 ? 24 : 18) + 5 * pulseNorm);
+          cornerStroke = parseFloat(((is916 ? 6.0 : 5.0) + 2.5 * pulseNorm).toFixed(1));
           tagBg = '#991b1b';
           tagBorder = pulseNorm > 0.4 ? '#ff4444' : '#ef4444';
           tagBorderWidth = 2.0;
 
-          const beaconHaloR = (5.2 + 2.3 * pulseNorm).toFixed(1);
+          const dotCx = boxX + (is916 ? 14 : 11);
+          const dotCy = tagY + (is916 ? 13 : 11);
+          const beaconHaloR = ((is916 ? 6.5 : 5.2) + 2.3 * pulseNorm).toFixed(1);
           const beaconHaloOpacity = (0.40 + 0.35 * pulseNorm).toFixed(2);
-          dotSvg = `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="${beaconHaloR}" fill="#ff4444" fill-opacity="${beaconHaloOpacity}" />
-                   <circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.2" fill="#ffffff" />`;
+          dotSvg = `<circle cx="${dotCx}" cy="${dotCy}" r="${beaconHaloR}" fill="#ff4444" fill-opacity="${beaconHaloOpacity}" />
+                   <circle cx="${dotCx}" cy="${dotCy}" r="${is916 ? 4 : 3.2}" fill="#ffffff" />`;
         } else {
-          // Normal monitoring state
-          color = b.key === 'cocaCodoSinclair' ? '#38bdf8' : '#a855f7';
-          strokeWidth = 2.0;
+          color = b.key === 'cocaCodoSinclair' ? '#facc15' : '#a855f7';
+          strokeWidth = is916 ? 2.5 : 2.0;
           strokeDash = '7,4';
-          shadowStrokeWidth = 4.5;
+          shadowStrokeWidth = is916 ? 6.0 : 4.5;
           fillOpacity = 0.08;
-          cornerLen = 12;
-          cornerStroke = 3.0;
+          cornerLen = is916 ? 16 : 12;
+          cornerStroke = is916 ? 4.0 : 3.0;
           tagBg = '#0b1120';
           tagBorder = color;
           tagBorderWidth = 1.5;
 
-          dotSvg = `<circle cx="${boxX + 11}" cy="${tagY + 11}" r="3.5" fill="${color}" />`;
+          const dotCx = boxX + (is916 ? 14 : 11);
+          const dotCy = tagY + (is916 ? 13 : 11);
+          dotSvg = `<circle cx="${dotCx}" cy="${dotCy}" r="${is916 ? 4.5 : 3.5}" fill="${color}" />`;
         }
 
         detectionBoxesSvg += `
@@ -319,7 +514,7 @@ export class VideoCompilerService {
           <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
                 fill="none" stroke="#000000" stroke-width="${shadowStrokeWidth}" stroke-opacity="0.90" />
 
-          <!-- High-visibility dashed boundary (substantially thickened during storm) -->
+          <!-- High-visibility dashed boundary -->
           <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="6"
                 fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" />
 
@@ -334,7 +529,7 @@ export class VideoCompilerService {
           <rect x="${boxX}" y="${tagY}" width="${tagW}" height="${tagH}" rx="5"
                 fill="${tagBg}" fill-opacity="0.96" stroke="${tagBorder}" stroke-width="${tagBorderWidth}" />
           ${dotSvg}
-          <text x="${boxX + 20}" y="${textY}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">${escapeXml(tagText)}</text>
+          <text x="${boxX + (is916 ? 26 : 20)}" y="${textY}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="${tagFontSize}">${escapeXml(tagText)}</text>
         </g>
         `;
       }
@@ -361,47 +556,58 @@ export class VideoCompilerService {
 
     let pinsSvg = '';
     for (const pin of pinsToRender) {
-      const { x, y } = this.projectGeoToPixel(pin.lat, pin.lon, frame.bbox, width, height);
-      if (x >= -10 && x <= width + 10 && y >= -10 && y <= height + 10) {
+      const { x, y } = this.projectGeoToPixel(pin.lat, pin.lon, frame.bbox, mapW, mapH, offY);
+      if (x >= -10 && x <= mapW + 10 && y >= offY - 10 && y <= offY + mapH + 10) {
         const padX = 8;
-        const textWidth = this.estimateTextWidth(pin.label, 12);
+        const pinFontSize = is916 ? 13 : 12;
+        const textWidth = this.estimateTextWidth(pin.label, pinFontSize);
         const boxWidth = textWidth + (padX * 2);
+        const boxHeight = is916 ? 26 : 24;
         let boxX = 9;
-        let boxY = -12;
+        let boxY = is916 ? -13 : -12;
         let textX = 9 + padX;
-        let textY = 4.5;
+        let textY = is916 ? 5 : 4.5;
 
         if (pin.placement === 'top-left') {
           boxX = -boxWidth - 9;
-          boxY = -24;
+          boxY = is916 ? -26 : -24;
           textX = -boxWidth - 9 + padX;
-          textY = -7.5;
+          textY = is916 ? -8.5 : -7.5;
         } else if (pin.placement === 'bottom-left') {
           boxX = -boxWidth - 9;
           boxY = 8;
           textX = -boxWidth - 9 + padX;
-          textY = 24.5;
+          textY = is916 ? 26 : 24.5;
         } else if (pin.placement === 'top-right') {
           boxX = 9;
-          boxY = -28;
+          boxY = is916 ? -30 : -28;
           textX = 9 + padX;
-          textY = -11.5;
+          textY = is916 ? -12.5 : -11.5;
         } else if (pin.placement === 'bottom-right') {
           boxX = 9;
           boxY = 8;
           textX = 9 + padX;
-          textY = 24.5;
+          textY = is916 ? 26 : 24.5;
         }
 
-        const color = pin.label.includes('CCS') || pin.label.includes('Coca') ? '#ef4444' : '#38bdf8';
+        let color = '#38bdf8';
+        if (pin.label.includes('CCS') || pin.label.includes('Coca')) {
+          color = '#facc15';
+        } else if (pin.label.includes('Paute') || pin.label.includes('Mazar') || pin.label.includes('Molino') || pin.label.includes('Sopladora')) {
+          color = '#a855f7';
+        } else if (pin.label.includes('Agoyán') || pin.label.includes('Agoyan')) {
+          color = '#22c55e';
+        } else if (pin.label.includes('Minas') || pin.label.includes('San Francisco') || pin.label.includes('Jubones')) {
+          color = '#f97316';
+        }
         const safePinLabel = escapeXml(pin.label);
 
         pinsSvg += `
         <g transform="translate(${x}, ${y})">
           <circle cx="0" cy="0" r="10" fill="${color}" fill-opacity="0.25" />
           <circle cx="0" cy="0" r="5.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="24" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${color}" stroke-width="1.2" />
-          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="12">${safePinLabel}</text>
+          <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="#0b1120" fill-opacity="0.94" stroke="${color}" stroke-width="1.2" />
+          <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="${pinFontSize}">${safePinLabel}</text>
         </g>
         `;
       }
@@ -414,32 +620,33 @@ export class VideoCompilerService {
       const citiesToRender = options.cityPins || DEFAULT_REFERENCE_CITIES;
       for (const city of citiesToRender) {
         if (city.lon >= frame.bbox[0] && city.lat >= frame.bbox[1] && city.lon <= frame.bbox[2] && city.lat <= frame.bbox[3]) {
-          const { x, y } = this.projectGeoToPixel(city.lat, city.lon, frame.bbox, width, height);
-          if (x >= -10 && x <= width + 10 && y >= -10 && y <= height + 10) {
+          const { x, y } = this.projectGeoToPixel(city.lat, city.lon, frame.bbox, mapW, mapH, offY);
+          if (x >= -10 && x <= mapW + 10 && y >= offY - 10 && y <= offY + mapH + 10) {
             const padX = 6;
-            const textWidth = this.estimateTextWidth(city.label, 9.5);
+            const cityFontSize = is916 ? 10.5 : 9.5;
+            const textWidth = this.estimateTextWidth(city.label, cityFontSize);
             const boxWidth = textWidth + (padX * 2);
-            const boxHeight = 17;
+            const boxHeight = is916 ? 20 : 17;
             let boxX = 6;
-            let boxY = -8.5;
+            let boxY = is916 ? -10 : -8.5;
             let textX = 6 + padX;
-            let textY = 4;
+            let textY = is916 ? 4.5 : 4;
 
             if (city.placement === 'left') {
               boxX = -boxWidth - 6;
-              boxY = -8.5;
+              boxY = is916 ? -10 : -8.5;
               textX = -boxWidth - 6 + padX;
-              textY = 4;
+              textY = is916 ? 4.5 : 4;
             } else if (city.placement === 'top-left') {
               boxX = -boxWidth - 6;
-              boxY = -18;
+              boxY = is916 ? -22 : -18;
               textX = -boxWidth - 6 + padX;
-              textY = -5.5;
+              textY = is916 ? -7.5 : -5.5;
             } else if (city.placement === 'top-right' || city.placement === 'top') {
               boxX = 6;
-              boxY = -18;
+              boxY = is916 ? -22 : -18;
               textX = 6 + padX;
-              textY = -5.5;
+              textY = is916 ? -7.5 : -5.5;
             } else if (city.placement === 'bottom-left' || city.placement === 'bottom') {
               boxX = -boxWidth - 6;
               boxY = 6;
@@ -461,7 +668,7 @@ export class VideoCompilerService {
               <!-- Compact clean city pill badge -->
               <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="3.5"
                     fill="#030712" fill-opacity="0.88" stroke="rgba(255, 255, 255, 0.28)" stroke-width="0.8" />
-              <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'DejaVu Sans', sans-serif" font-weight="600" font-size="9.5">${safeCityLabel}</text>
+              <text x="${textX}" y="${textY}" fill="#f8fafc" font-family="'Space Grotesk', 'DejaVu Sans', sans-serif" font-weight="600" font-size="${cityFontSize}">${safeCityLabel}</text>
             </g>
             `;
           }
@@ -470,25 +677,27 @@ export class VideoCompilerService {
     }
 
     const badgeText = subtitleBadge;
-    const badgeTextWidth = this.estimateTextWidth(badgeText, 11.5);
-    const badgeTotalWidth = badgeTextWidth + 32;
-    const badgeX = width - badgeTotalWidth - 20;
+    const badgeFontSize = is916 ? 14 : 11.5;
+    const badgeTextWidth = this.estimateTextWidth(badgeText, badgeFontSize);
+    const badgeTotalWidth = badgeTextWidth + (is916 ? 38 : 32);
+    const badgeX = is916 ? (860 - badgeTotalWidth) : (width - badgeTotalWidth - 20);
 
-    const showThermalScale = options.showThermalScale !== false;
+    const showThermalScale = !is916 && options.showThermalScale !== false;
+    const thermalScaleTransform = `translate(20, ${height - 116})`;
     const thermalScaleSvg = showThermalScale
       ? `
-      <!-- Floating Thermal Scale Bar Overlay -->
-      <g transform="translate(20, ${height - 116})">
-        <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
-        <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
-        <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
-        <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
-        <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
-        <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
-        <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
-        <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
-      </g>
-      `
+        <!-- Floating Thermal Scale Bar Overlay (1:1 - exactly matching master) -->
+        <g transform="${thermalScaleTransform}">
+          <rect x="0" y="0" width="230" height="42" rx="7" fill="#0b1120" fill-opacity="0.92" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+          <text x="10" y="14" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9.5" letter-spacing="0.04em">ESCALA TÉRMICA IR (°C)</text>
+          <rect x="10" y="19" width="210" height="7" rx="3.5" fill="url(#thermalScaleGrad)" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>
+          <text x="10" y="37" fill="#94a3b8" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">+10°</text>
+          <text x="88" y="37" fill="#00FFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-30°</text>
+          <text x="132" y="37" fill="#2EFF00" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-50°</text>
+          <text x="172" y="37" fill="#FF0000" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-70°</text>
+          <text x="196" y="37" fill="#FFFFFF" font-family="'DejaVu Sans Mono', monospace" font-size="8.5" font-weight="600">-90°C</text>
+        </g>
+        `
       : '';
 
     const safeTimestamp = escapeXml(`${frame.dateEcuador}  ${frame.timeEcuador} ECT`);
@@ -497,26 +706,30 @@ export class VideoCompilerService {
     let pubStatusSvg = '';
     if (showPublicationBadge) {
       const isAnyActive = (options.activeBasinKeys && (options.activeBasinKeys instanceof Set ? options.activeBasinKeys.size > 0 : options.activeBasinKeys.length > 0)) || Boolean(options.highlightBasinKey);
+      const pubTransform = is916 ? 'translate(40, 234)' : 'translate(20, 44)';
+      const pubW = is916 ? 340 : 300;
+      const pubH = is916 ? 28 : 24;
       if (isAnyActive) {
         pubStatusSvg = `
-        <g transform="translate(20, 44)">
-          <rect x="0" y="0" width="300" height="24" rx="5" fill="#7f1d1d" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.2" />
-          <circle cx="12" cy="12" r="5" fill="#ef4444" />
-          <circle cx="12" cy="12" r="2.5" fill="#ffffff" />
-          <text x="24" y="16.5" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN</text>
+        <g transform="${pubTransform}">
+          <rect x="0" y="0" width="${pubW}" height="${pubH}" rx="6" fill="#7f1d1d" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.2" />
+          <circle cx="14" cy="${pubH / 2}" r="5" fill="#ef4444" />
+          <circle cx="14" cy="${pubH / 2}" r="2.5" fill="#ffffff" />
+          <text x="28" y="${pubH / 2 + 4.5}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">ALERTA DISPARADA • SEGMENTO DE PUBLICACIÓN</text>
         </g>
         `;
       } else {
+        const pubNormalW = is916 ? 240 : 210;
         pubStatusSvg = `
-        <g transform="translate(20, 44)">
-          <rect x="0" y="0" width="210" height="24" rx="5" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
-          <circle cx="12" cy="12" r="4.5" fill="#10b981" />
-          <text x="24" y="16.5" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11">CONDICIÓN NORMAL • SIN ALERTA</text>
+        <g transform="${pubTransform}">
+          <rect x="0" y="0" width="${pubNormalW}" height="${pubH}" rx="6" fill="#064e3b" fill-opacity="0.92" stroke="#10b981" stroke-width="1" />
+          <circle cx="14" cy="${pubH / 2}" r="4.5" fill="#10b981" />
+          <text x="28" y="${pubH / 2 + 4.5}" fill="#a7f3d0" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">CONDICIÓN NORMAL • SIN ALERTA</text>
         </g>
         `;
       }
     }
-    // Render Lower-Right Summary Cards (Cuencas and Regiones)
+    // Render Lower Summary Cards (Cuencas and Regiones)
     let summaryCardSvg = '';
     const dynamicCards = options.summaryCardsResolver
       ? options.summaryCardsResolver(frame, frame.index || 0)
@@ -525,95 +738,147 @@ export class VideoCompilerService {
     const basinsList = dynamicCards?.basins || (options.summaryCardItems ? options.summaryCardItems.map(b => ({
       label: b.label,
       value: `${b.peakPct.toFixed(1)}%`,
-      color: b.color || '#38bdf8',
+      color: b.color || (b.label.toLowerCase().includes('coca') ? '#facc15' : (b.label.toLowerCase().includes('paute') ? '#a855f7' : '#38bdf8')),
       highlight: b.hasRain
     })) : undefined);
 
     const regionsList = dynamicCards?.regions;
 
-    const cardW = 228;
-    const cardX = width - cardW - 20;
+    if (is916) {
+      // 9:16 typography-focused layout: no container boxes, extra-large text safe from Reels buttons
+      const col1X = 50;
+      const col2X = 465;
 
-    let card2H = 0;
-    let card2Y = 0;
-    let card1H = 0;
-    let card1Y = 0;
+      let card1Rows = '';
+      if (basinsList && basinsList.length > 0) {
+        for (let idx = 0; idx < basinsList.length; idx++) {
+          const item = basinsList[idx];
+          const rowY = 1475 + idx * 70;
+          const color = item.color || '#38bdf8';
+          const valColor = item.highlight ? '#f87171' : color;
+          const shortLabel = item.label.includes('Paute') ? 'Complejo Paute' : item.label;
+          card1Rows += `
+          <circle cx="${col1X + 8}" cy="${rowY - 8}" r="5" fill="${color}" />
+          <text x="${col1X + 22}" y="${rowY}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="24">${escapeXml(shortLabel)}</text>
+          <text x="425" y="${rowY + 1}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="34" text-anchor="end">${escapeXml(item.value)}</text>
+          `;
+        }
+      }
 
-    if (regionsList && regionsList.length > 0) {
-      card2H = 22 + regionsList.length * 24 + 6;
-      card2Y = height - 60 - 12 - card2H;
-    }
+      let card2Rows = '';
+      if (regionsList && regionsList.length > 0) {
+        for (let idx = 0; idx < regionsList.length; idx++) {
+          const item = regionsList[idx];
+          const rowY = 1461 + idx * 50;
+          const color = item.color || '#38bdf8';
+          const valColor = item.highlight ? '#f87171' : color;
+          let regLabel = item.label;
+          if (regLabel.includes('Costa') || regLabel.includes('Litoral')) regLabel = 'Costa';
+          else if (regLabel.includes('Sierra') || regLabel.includes('Interandina')) regLabel = 'Sierra';
+          else if (regLabel.includes('Oriente') || regLabel.includes('Amazónica')) regLabel = 'Oriente';
 
-    if (basinsList && basinsList.length > 0) {
-      card1H = 22 + basinsList.length * 24 + 6;
-      card1Y = card2Y > 0 ? (card2Y - 8 - card1H) : (height - 60 - 12 - card1H);
-    }
+          card2Rows += `
+          <circle cx="${col2X + 8}" cy="${rowY - 7}" r="4.5" fill="${color}" />
+          <text x="${col2X + 22}" y="${rowY}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="23">${escapeXml(regLabel)}</text>
+          <text x="860" y="${rowY + 1}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="30" text-anchor="end">${escapeXml(item.value)}</text>
+          `;
+        }
+      }
 
-    // Build Card 1: Cuencas Hidroeléctricas
-    let card1Svg = '';
-    if (basinsList && basinsList.length > 0) {
-      let rowsSvg = '';
-      for (let idx = 0; idx < basinsList.length; idx++) {
-        const item = basinsList[idx];
-        const rowY = 34 + idx * 24;
-        const color = item.color || '#38bdf8';
-        const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+      summaryCardSvg = `
+      <!-- 9:16 Clean Large Typography Summary Layout (No Boxes) -->
+      <g id="summaryCardsGroup">
+        <!-- Subtle divider between columns -->
+        <line x1="445" y1="1390" x2="445" y2="1568" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1.5" stroke-linecap="round" />
 
-        rowsSvg += `
-        <circle cx="12" cy="${rowY}" r="3.2" fill="${color}" />
-        <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(item.label)}</text>
-        <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${escapeXml(item.value)}</text>
+        <!-- Column 1: Cuencas Monitoreadas -->
+        <circle cx="${col1X + 8}" cy="1404" r="5" fill="#38bdf8" />
+        <text x="${col1X + 22}" y="1409" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" letter-spacing="0.08em">CUENCAS MONITOREADAS</text>
+        ${card1Rows}
+
+        <!-- Column 2: Cobertura por Región -->
+        <circle cx="${col2X + 8}" cy="1404" r="5" fill="#f59e0b" />
+        <text x="${col2X + 22}" y="1409" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" letter-spacing="0.08em">COBERTURA POR REGIÓN</text>
+        ${card2Rows}
+      </g>
+      `;
+    } else {
+      // 1:1 layout: compact cards on lower-right
+      const cardW = 228;
+      const cardX = width - cardW - 20;
+
+      let card2H = 0;
+      let card2Y = 0;
+      let card1H = 0;
+      let card1Y = 0;
+
+      if (regionsList && regionsList.length > 0) {
+        card2H = 22 + regionsList.length * 24 + 6;
+        card2Y = height - 60 - 12 - card2H;
+      }
+
+      if (basinsList && basinsList.length > 0) {
+        card1H = 22 + basinsList.length * 24 + 6;
+        card1Y = card2Y > 0 ? (card2Y - 8 - card1H) : (height - 60 - 12 - card1H);
+      }
+
+      let card1Svg = '';
+      if (basinsList && basinsList.length > 0) {
+        let rowsSvg = '';
+        for (let idx = 0; idx < basinsList.length; idx++) {
+          const item = basinsList[idx];
+          const rowY = 34 + idx * 24;
+          const color = item.color || '#38bdf8';
+          const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+          rowsSvg += `
+          <circle cx="12" cy="${rowY}" r="3.2" fill="${color}" />
+          <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(item.label)}</text>
+          <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${escapeXml(item.value)}</text>
+          `;
+        }
+        card1Svg = `
+        <g transform="translate(${cardX}, ${card1Y})">
+          <rect x="0" y="0" width="${cardW}" height="${card1H}" rx="7"
+                fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
+          <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
+          <circle cx="12" cy="11" r="3.2" fill="#38bdf8" />
+          <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">CUENCAS HIDROELÉCTRICAS</text>
+          <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+          ${rowsSvg}
+        </g>
         `;
       }
 
-      card1Svg = `
-      <g transform="translate(${cardX}, ${card1Y})">
-        <rect x="0" y="0" width="${cardW}" height="${card1H}" rx="7"
-              fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
-        <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
-        <circle cx="12" cy="11" r="3.2" fill="#38bdf8" />
-        <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">CUENCAS HIDROELÉCTRICAS</text>
-        <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
-        ${rowsSvg}
-      </g>
-      `;
-    }
-
-    // Build Card 2: Cobertura por Región
-    let card2Svg = '';
-    if (regionsList && regionsList.length > 0) {
-      let rowsSvg = '';
-      for (let idx = 0; idx < regionsList.length; idx++) {
-        const item = regionsList[idx];
-        const rowY = 34 + idx * 24;
-        const color = item.color || '#38bdf8';
-        const valColor = item.highlight ? '#f87171' : '#cbd5e1';
-
-        rowsSvg += `
-        <circle cx="12" cy="${rowY}" r="3.2" fill="${color}" />
-        <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(item.label)}</text>
-        <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${escapeXml(item.value)}</text>
+      let card2Svg = '';
+      if (regionsList && regionsList.length > 0) {
+        let rowsSvg = '';
+        for (let idx = 0; idx < regionsList.length; idx++) {
+          const item = regionsList[idx];
+          const rowY = 34 + idx * 24;
+          const color = item.color || '#38bdf8';
+          const valColor = item.highlight ? '#f87171' : '#cbd5e1';
+          rowsSvg += `
+          <circle cx="12" cy="${rowY}" r="3.2" fill="${color}" />
+          <text x="21" y="${rowY + 3.5}" fill="#f1f5f9" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10.5">${escapeXml(item.label)}</text>
+          <text x="${cardW - 12}" y="${rowY + 3.5}" fill="${valColor}" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5" text-anchor="end">${escapeXml(item.value)}</text>
+          `;
+        }
+        card2Svg = `
+        <g transform="translate(${cardX}, ${card2Y})">
+          <rect x="0" y="0" width="${cardW}" height="${card2H}" rx="7"
+                fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
+          <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
+          <circle cx="12" cy="11" r="3.2" fill="#f59e0b" />
+          <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">POR REGIÓN</text>
+          <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+          ${rowsSvg}
+        </g>
         `;
       }
-
-      card2Svg = `
-      <g transform="translate(${cardX}, ${card2Y})">
-        <rect x="0" y="0" width="${cardW}" height="${card2H}" rx="7"
-              fill="#0b1120" fill-opacity="0.93" stroke="rgba(255, 255, 255, 0.14)" stroke-width="1" />
-        <rect x="0" y="0" width="${cardW}" height="22" rx="7" fill="#1e293b" fill-opacity="0.75" />
-        <circle cx="12" cy="11" r="3.2" fill="#f59e0b" />
-        <text x="21" y="14.5" fill="#94a3b8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="9" letter-spacing="0.05em">POR REGIÓN</text>
-        <line x1="0" y1="22" x2="${cardW}" y2="22" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
-        ${rowsSvg}
-      </g>
-      `;
+      summaryCardSvg = `${card1Svg}\n${card2Svg}`;
     }
 
-    summaryCardSvg = `${card1Svg}\n${card2Svg}`;
-
-    const defaultBrand = (process.env.DEFAULT_VIDEO_BRAND as any) || 'instagram';
-    const chosenBrand = options.watermarkBrand || defaultBrand;
-    const isInstagram = chosenBrand === 'instagram';
+    const isInstagram = is916;
     const watermarkIconSvg = isInstagram
       ? `<rect width="24" height="24" rx="6.5" fill="url(#ig-grad-satellite)"/>
         <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="#ffffff" stroke-width="1.8" fill="none"/>
@@ -625,6 +890,54 @@ export class VideoCompilerService {
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
           </svg>
         </g>`;
+
+    const watermarkTransform = is916 ? 'translate(860, 210)' : `translate(${width - 180}, 18)`;
+    const watermarkFontSize = is916 ? 18 : 16;
+
+    // Header layout
+    const headerSvg = is916
+      ? `
+      <!-- Header Top Bar (9:16) -->
+      <rect x="0" y="0" width="1080" height="290" fill="url(#topBarGrad)"/>
+      <text x="40" y="${options.customDateSubtitle ? (showPublicationBadge ? 218 : 226) : (showPublicationBadge ? 226 : 240)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="28">${title}</text>
+      ${options.customDateSubtitle ? `<text x="40" y="${showPublicationBadge ? 246 : 258}" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="18">${escapeXml(options.customDateSubtitle)}</text>` : ''}
+      ${pubStatusSvg}
+      `
+      : `
+      <!-- Header Top Bar (1:1) -->
+      <rect x="0" y="0" width="${width}" height="${options.customDateSubtitle ? 78 : (showPublicationBadge ? 92 : 68)}" fill="url(#topBarGrad)"/>
+      <text x="20" y="${options.customDateSubtitle ? 31 : (showPublicationBadge ? 34 : 38)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="${options.customDateSubtitle ? 18 : 20}">${title}</text>
+      ${options.customDateSubtitle ? `<text x="20" y="52" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="12.5">${escapeXml(options.customDateSubtitle)}</text>` : ''}
+      ${pubStatusSvg}
+      `;
+
+    // Footer layout
+    const footerSvg = is916
+      ? `
+      <!-- Footer Bottom (9:16) - Cleanly floating without artificial gradient bar -->
+      <circle cx="58" cy="1638" r="8.5" fill="#22c55e" />
+      <text x="80" y="1646" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="26">${safeTimestamp}</text>
+      
+      <!-- Subtitle Pill Badge on Bottom Right -->
+      <g transform="translate(${badgeX}, 1620)">
+        <rect x="0" y="0" width="${badgeTotalWidth}" height="38" rx="8" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
+        <circle cx="14" cy="19" r="4" fill="#38bdf8" />
+        <text x="26" y="24" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="14.5">${badgeText}</text>
+      </g>
+      `
+      : `
+      <!-- Footer Bottom Bar (1:1 - exactly matching master) -->
+      <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
+      <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
+      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="17">${safeTimestamp}</text>
+      
+      <!-- Subtitle Pill Badge on Bottom Right -->
+      <g transform="translate(${badgeX}, ${height - 46})">
+        <rect x="0" y="0" width="${badgeTotalWidth}" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
+        <circle cx="12" cy="14" r="3.5" fill="#38bdf8" />
+        <text x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">${badgeText}</text>
+      </g>
+      `;
 
     return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -667,21 +980,20 @@ export class VideoCompilerService {
         </linearGradient>
       </defs>
 
-      <!-- Header Top Bar -->
-      <rect x="0" y="0" width="${width}" height="${options.customDateSubtitle ? 78 : (showPublicationBadge ? 92 : 68)}" fill="url(#topBarGrad)"/>
-      <text x="20" y="${options.customDateSubtitle ? 31 : (showPublicationBadge ? 34 : 38)}" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="${options.customDateSubtitle ? 18 : 20}">${title}</text>
-      ${options.customDateSubtitle ? `<text x="20" y="52" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="500" font-size="12.5">${escapeXml(options.customDateSubtitle)}</text>` : ''}
-      ${pubStatusSvg}
+      ${headerSvg}
       
       <!-- Top Right Watermark strictly identical to Telemetry & Forecast Cards -->
-      <g transform="translate(${width - 180}, 18)">
+      <g transform="${watermarkTransform}">
         ${watermarkIconSvg}
         <!-- Handle Text in high contrast Space Grotesk -->
-        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="16">@Hidro_Info_Bot</text>
+        <text x="32" y="17" fill="#cbd5e1" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="${watermarkFontSize}">@Hidro_Info_Bot</text>
       </g>
 
       <!-- Provincial Delineation Layer -->
       ${provincesOverlaySvg}
+
+      <!-- Real Catchment Polygons Layer (GeoServer WFS) -->
+      ${wfsBasinsSvg}
 
       <!-- Basin Storm Detection Boundary Boxes -->
       ${detectionBoxesSvg}
@@ -692,22 +1004,12 @@ export class VideoCompilerService {
       <!-- Reference City Pin Markers -->
       ${citiesSvg}
 
-      <!-- Lower-Right 24h Summary Card -->
+      <!-- Summary Cards (Cuencas & Regiones) -->
       ${summaryCardSvg}
 
       ${thermalScaleSvg}
 
-      <!-- Footer Bottom Bar -->
-      <rect x="0" y="${height - 60}" width="${width}" height="60" fill="url(#bottomBarGrad)"/>
-      <circle cx="30" cy="${height - 30}" r="7" fill="#22c55e" />
-      <text x="46" y="${height - 24}" fill="#f8fafc" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="17">${safeTimestamp}</text>
-      
-      <!-- Subtitle Pill Badge on Bottom Right -->
-      <g transform="translate(${badgeX}, ${height - 46})">
-        <rect x="0" y="0" width="${badgeTotalWidth}" height="28" rx="6" fill="#0b1120" fill-opacity="0.92" stroke="rgba(56, 189, 248, 0.35)" stroke-width="1" />
-        <circle cx="12" cy="14" r="3.5" fill="#38bdf8" />
-        <text x="22" y="18" fill="#38bdf8" font-family="'Space Grotesk', sans-serif" font-weight="bold" font-size="11.5">${badgeText}</text>
-      </g>
+      ${footerSvg}
     </svg>
     `.trim();
   }
@@ -732,11 +1034,12 @@ export class VideoCompilerService {
     };
 
     const framerate = Math.max(1, Math.min(30, options.framerate || 8));
-    let width = Math.max(128, Math.min(2048, options.width || 800));
-    let height = Math.max(128, Math.min(2048, options.height || 800));
+    let width = Math.max(128, Math.min(2048, options.width || (options.aspectRatio === '9:16' ? 1080 : 800)));
+    let height = Math.max(128, Math.min(2048, options.height || (options.aspectRatio === '9:16' ? 1920 : 800)));
     // Ensure even dimensions for libx264 compatibility
     width = Math.floor(width / 2) * 2;
     height = Math.floor(height / 2) * 2;
+    const is916 = (width === 1080 && height === 1920) || options.aspectRatio === '9:16';
     const createMp4 = options.createMp4 !== false;
     const createGif = options.createGif !== false;
     const gifScale = Math.max(64, Math.min(1920, options.gifScale || 600));
@@ -843,11 +1146,15 @@ export class VideoCompilerService {
             });
             fs.writeFileSync(svgPath, svgContent);
 
+            const filterComplex = is916
+              ? `color=c=#020617:s=1080x1920[bg];[0:v]scale=1080:1080[map];[bg][map]overlay=0:290[base];[base][1:v]overlay=0:0`
+              : `[0:v]scale=${width}:${height}[base];[base][1:v]overlay=0:0`;
+
             await execFileAsync('ffmpeg', [
               '-y',
               '-i', rawPath,
               '-i', svgPath,
-              '-filter_complex', `[0:v]scale=${width}:${height}[base];[base][1:v]overlay=0:0`,
+              '-filter_complex', filterComplex,
               '-frames:v', '1',
               '-update', '1',
               outPath
@@ -881,9 +1188,22 @@ export class VideoCompilerService {
         if (loopCount > 0) {
           mp4Args.push('-stream_loop', loopCount.toString());
         }
+
+        const applyDeadMargin = options.deadMargin !== undefined
+          ? (typeof options.deadMargin === 'number' ? options.deadMargin > 0 : !!options.deadMargin)
+          : is916;
+
+        let videoFilter = `scale=${width}:${height},setsar=1`;
+        if (applyDeadMargin && is916) {
+          const margin = typeof options.deadMargin === 'number' ? options.deadMargin : 22;
+          const scaledW = Math.round((width - 2 * margin) / 2) * 2;
+          const scaledH = Math.round((height * (scaledW / width)) / 2) * 2;
+          videoFilter = `scale=${scaledW}:${scaledH}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=#020617,setsar=1`;
+        }
+
         mp4Args.push(
           '-i', inputPattern,
-          '-vf', `scale=${width}:${height}`,
+          '-vf', videoFilter,
           '-c:v', 'libx264',
           '-pix_fmt', 'yuv420p',
           '-g', Math.max(framerate, 8).toString(),
@@ -898,11 +1218,12 @@ export class VideoCompilerService {
       // 3. Compile GIF Animation
       if (createGif) {
         systemLogger.info(`[VideoCompilerService] Encoding GIF animation to ${gifPath}...`);
+        const gifScaleArg = is916 ? `scale=${gifScale}:-2:flags=lanczos` : `scale=${gifScale}:${gifScale}`;
         await execFileAsync('ffmpeg', [
           '-y',
           '-framerate', framerate.toString(),
           '-i', inputPattern,
-          '-filter_complex', `[0:v] scale=${gifScale}:${gifScale},split [a][b];[a] palettegen [p];[b][p] paletteuse`,
+          '-filter_complex', `[0:v] ${gifScaleArg},split [a][b];[a] palettegen [p];[b][p] paletteuse`,
           gifPath
         ]);
         sizeBytesGif = fs.statSync(gifPath).size;
@@ -952,6 +1273,9 @@ export class VideoCompilerService {
     const hoursBack = options.hoursBack || 3;
     const frameCount = options.frameCount || Math.round(hoursBack * 6); // 6 frames per hour (10-min cadence)
 
+    const is916 = (options.width === 1080 && options.height === 1920) || options.aspectRatio === '9:16';
+    const isCleanGeoserver = (options.useVectorProvinces === true || options.unbakedProvinces === true || options.useVectorProvinces !== false);
+
     // Resolve source & layers from layer parameter if provided
     let source = options.source;
     let layers = options.layers;
@@ -966,14 +1290,26 @@ export class VideoCompilerService {
         layers = 'GOES-East_ABI_Band13_Clean_Infrared';
       } else if (options.layer === 'persiann_24h') {
         source = 'geoserver';
-        layers = 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
+        layers = isCleanGeoserver
+          ? 'satellite_based_precipitation:persiann_pdir_24h'
+          : 'satellite_based_precipitation:persiann_pdir_24h,ecuador:provincias';
       } else if (options.layer === 'wrf_daily') {
         source = 'geoserver';
-        layers = 'wrf:wrf_precipitation_daily,ecuador:provincias';
+        layers = isCleanGeoserver
+          ? 'wrf:wrf_precipitation_daily'
+          : 'wrf:wrf_precipitation_daily,ecuador:provincias';
       } else {
         source = 'geoserver';
-        layers = 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+        layers = isCleanGeoserver
+          ? 'goes:goes_abi_l2_cmipf_13'
+          : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
       }
+    } else if (isCleanGeoserver && typeof layers === 'string' && layers.includes('ecuador:provincias')) {
+      layers = layers
+        .split(',')
+        .map(s => s.trim())
+        .filter(l => l !== 'ecuador:provincias')
+        .join(',');
     }
 
     systemLogger.info(`[VideoCompilerService] Starting basin animation generation for ${plantKey} (${hoursBack}h back, ${frameCount} frames)...`);
@@ -985,7 +1321,8 @@ export class VideoCompilerService {
       source,
       layers,
       width: options.width,
-      height: options.height
+      height: options.height,
+      unbaked: isCleanGeoserver
     });
 
     return this.compileFramesToVideo(frames, options);

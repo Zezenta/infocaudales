@@ -22,6 +22,7 @@ export interface FetchMapTileOptions {
   srs?: string;
   transparent?: boolean;
   dimInitd?: string;
+  unbaked?: boolean;
 }
 
 export interface SatelliteFrame {
@@ -44,6 +45,7 @@ export interface BasinFramesOptions {
   height?: number;
   layers?: string | string[];
   concurrency?: number;
+  unbaked?: boolean;
 }
 
 export class SatelliteTelemetryService {
@@ -221,9 +223,20 @@ export class SatelliteTelemetryService {
     }
 
     // Default: GeoServer
-    const layers = Array.isArray(options.layers)
+    const defaultGeoLayers = options.unbaked === true
+      ? 'goes:goes_abi_l2_cmipf_13'
+      : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+    let layers = Array.isArray(options.layers)
       ? options.layers.join(',')
-      : options.layers || 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+      : options.layers || defaultGeoLayers;
+
+    if (options.unbaked === true && layers.includes('ecuador:provincias')) {
+      layers = layers
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l !== 'ecuador:provincias')
+        .join(',');
+    }
 
     const params: Record<string, string> = {
       SERVICE: 'WMS',
@@ -382,7 +395,9 @@ export class SatelliteTelemetryService {
     const frameCount = options.frameCount || 18;
     const width = options.width || 800;
     const height = options.height || 800;
-    const layers = options.layers || (source === 'nasa_gibs' ? 'GOES-East_ABI_Band13_Clean_Infrared' : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias');
+    const unbaked = options.unbaked === true;
+    const defaultGeoserverLayers = unbaked ? 'goes:goes_abi_l2_cmipf_13' : 'goes:goes_abi_l2_cmipf_13,ecuador:provincias';
+    const layers = options.layers || (source === 'nasa_gibs' ? 'GOES-East_ABI_Band13_Clean_Infrared' : defaultGeoserverLayers);
     const bbox = this.resolveBbox({ bbox: options.bbox, plantKey });
     const concurrency = Math.max(1, options.concurrency || 4);
 
@@ -407,7 +422,8 @@ export class SatelliteTelemetryService {
               bbox,
               time: timeIso,
               width,
-              height
+              height,
+              unbaked
             });
 
             const { dateEcuador, timeEcuador } = this.formatEcuadorTimestamp(timeIso);

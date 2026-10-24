@@ -111,6 +111,58 @@ describe('VideoCompilerService', () => {
       expect(svg).toContain('Presa &amp; Vertedero');
       expect(svg).not.toContain('<Ecuador>');
     });
+
+    it('renders calibrated vector provinces overlay in 9:16 when useVectorProvinces is enabled', () => {
+      const ecuadorFrame: SatelliteFrame = {
+        index: 0,
+        timestampIso: '2026-10-21T12:00:00.000Z',
+        dateEcuador: '2026-10-21',
+        timeEcuador: '07:00',
+        buffer: Buffer.from(''),
+        bbox: BASIN_GEOMETRIES.ecuador.bbox,
+        plantKey: 'ecuador',
+        source: 'geoserver'
+      };
+
+      const svg = compiler.generateSvgOverlay({
+        frame: ecuadorFrame,
+        geometry: BASIN_GEOMETRIES.ecuador,
+        width: 1080,
+        height: 1920,
+        aspectRatio: '9:16',
+        useVectorProvinces: true,
+        showProvinces: true,
+        provincesColor: '#38bdf8'
+      });
+
+      expect(svg).toContain('id="provincesLayer"');
+      expect(svg).toContain('transform="translate(22.25, 272.4) scale(1.292, 1.3892)"');
+      expect(svg).toContain('stroke="#38bdf8"');
+    });
+
+    it('preserves master 1:1 square behavior without duplicate vector overlay when useVectorProvinces is false', () => {
+      const ecuadorFrame: SatelliteFrame = {
+        index: 0,
+        timestampIso: '2026-10-21T12:00:00.000Z',
+        dateEcuador: '2026-10-21',
+        timeEcuador: '07:00',
+        buffer: Buffer.from(''),
+        bbox: BASIN_GEOMETRIES.ecuador.bbox,
+        plantKey: 'ecuador',
+        source: 'geoserver'
+      };
+
+      const svg = compiler.generateSvgOverlay({
+        frame: ecuadorFrame,
+        geometry: BASIN_GEOMETRIES.ecuador,
+        width: 800,
+        height: 800,
+        aspectRatio: '1:1',
+        useVectorProvinces: false
+      });
+
+      expect(svg).not.toContain('id="provincesLayer"');
+    });
   });
 
   describe('compileFramesToVideo', () => {
@@ -191,8 +243,21 @@ describe('VideoCompilerService', () => {
       });
       expect(resultNoRepeat.durationSeconds).toBe(1);
 
+      // Verify 9:16 compilation compiles with dead margin safely
+      const result916 = await compiler.compileFramesToVideo(frames, {
+        outputDir: outDir,
+        outputName: 'test_anim_916',
+        aspectRatio: '9:16',
+        framerate: 2,
+        createMp4: true,
+        createGif: false,
+        minDurationSeconds: 1
+      });
+      expect(result916.mp4Path).toBeDefined();
+      expect(fs.existsSync(result916.mp4Path!)).toBe(true);
+
       // Clean up test output
       fs.rmSync(outDir, { recursive: true, force: true });
-    }, 25000);
+    }, 35000);
   });
 });

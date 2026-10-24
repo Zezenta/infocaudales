@@ -40,6 +40,17 @@
       align-items: center;
       gap: 20px;
       min-height: 100vh;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input[type="text"], input[type="number"], textarea, .selectable-text {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
     }
 
     /* Top Navigation Switcher */
@@ -826,6 +837,7 @@
     <a href="/forecast" class="nav-link">🔮 Pronósticos Hidrológicos</a>
     <a href="/rain" class="nav-link">🛰️ Satélite & Lluvia</a>
     <a href="/social" class="nav-link active">📱 Portada Redes (IG & FB)</a>
+
   </nav>
 
   <!-- Page Header -->
@@ -839,15 +851,13 @@
     <!-- LEFT COLUMN: The Visualizer Card -->
     <div class="cards-column">
       <div class="card-meta-bar">
-        <span>Vista previa renderizada (1:1 Cuadrado)</span>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <span class="aspect-badge" id="aspect-label">1080 x 1080 px</span>
-          <button class="btn-secondary" id="btn-toggle-aspect">Cambiar a 4:5</button>
+          <span class="aspect-badge" id="aspect-label">1080 x 1350 px (4:5)</span>
         </div>
       </div>
 
       <!-- THE COVER CARD CONTAINER (ID: cover-card) -->
-      <div class="cover-card-container" id="cover-card">
+      <div class="cover-card-container aspect-4-5" id="cover-card">
         
         <!-- HEADER (Exact hydro-card telemetry aesthetic) -->
         <div class="cover-header">
@@ -1185,7 +1195,7 @@
     };
 
     let activePlantKey = 'cocaCodoSinclair';
-    let isPortrait45 = false;
+    let isPortrait45 = true;
 
     // Helper for delta / trend arrow (con colita y margen seguro en viewBox)
     function getTrendArrowHtml(trend) {
@@ -1561,21 +1571,13 @@
         updateCardDateTime(parts.dateStr, parts.timeStr);
       });
 
-      // Aspect Ratio Toggle
-      document.getElementById('btn-toggle-aspect').addEventListener('click', () => {
-        isPortrait45 = !isPortrait45;
-        const card = document.getElementById('cover-card');
-        const aspectLabel = document.getElementById('aspect-label');
-        const toggleBtn = document.getElementById('btn-toggle-aspect');
 
-        if (isPortrait45) {
-          card.classList.add('aspect-4-5');
-          aspectLabel.innerText = '1080 x 1350 px (4:5)';
-          toggleBtn.innerText = 'Cambiar a 1:1';
-        } else {
-          card.classList.remove('aspect-4-5');
-          aspectLabel.innerText = '1080 x 1080 px (1:1)';
-          toggleBtn.innerText = 'Cambiar a 4:5';
+
+      // Prevent mouse text selection and double-click highlights across UI
+      window.addEventListener('selectstart', (e) => {
+        const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
         }
       });
 

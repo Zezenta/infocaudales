@@ -8,6 +8,13 @@ import {
   analyzeStormCloudCoverage,
   unfilterPngScanlines
 } from './rain-monitor.service.js';
+import {
+  BASIN_GEOMETRIES,
+  getBasinPolygon,
+  getBasinRasterMask,
+  isPointInPolygon,
+  resolveBasinKey
+} from '../../data/basin-geometries.js';
 import { SatelliteTelemetryService, SatelliteMapService } from '../telemetry/satellite-telemetry.service.js';
 import { VideoCompilerService } from './video-compiler.service.js';
 import { SatelliteArchiverService } from './satellite-archiver.service.js';
@@ -510,6 +517,115 @@ describe('RainMonitorService', () => {
 
       // Clean up
       fs.rmSync(legacyTestDir, { recursive: true, force: true });
+    });
+  });
+
+  describe('Hydrological Basin Polygon Detection & Raster Masking', () => {
+    it('loads real INAMHI WFS polygon boundaries and resolves plant aliases', () => {
+      const ccsPoly = getBasinPolygon('cocaCodoSinclair');
+      const pautePoly = getBasinPolygon('paute');
+      const agoyanPoly = getBasinPolygon('agoyan');
+      const msfPoly = getBasinPolygon('minasSanFrancisco');
+
+      expect(ccsPoly).not.toBeNull();
+      expect(ccsPoly!.length).toBeGreaterThan(50);
+      expect(pautePoly).not.toBeNull();
+      expect(pautePoly!.length).toBeGreaterThan(50);
+      expect(agoyanPoly).not.toBeNull();
+      expect(msfPoly).not.toBeNull();
+
+      // Aliases
+      expect(resolveBasinKey('coca')).toBe('cocaCodoSinclair');
+      expect(resolveBasinKey('mazar')).toBe('paute');
+      expect(resolveBasinKey('molino')).toBe('paute');
+      expect(resolveBasinKey('sopladora')).toBe('paute');
+      expect(resolveBasinKey('jubones')).toBe('minasSanFrancisco');
+
+      expect(getBasinPolygon('mazar')).toEqual(pautePoly);
+    });
+
+    it('correctly discriminates coordinates inside vs outside basin using point-in-polygon', () => {
+      const pautePoly = getBasinPolygon('paute')!;
+
+      // Mazar reservoir center [-78.63, -2.54] is strictly inside Paute basin
+      expect(isPointInPolygon(-78.63, -2.54, pautePoly)).toBe(true);
+
+      // Macas / Low Amazon [-78.11, -2.30] is outside Paute basin
+      expect(isPointInPolygon(-78.11, -2.30, pautePoly)).toBe(false);
+
+      // Pacific ocean [-81.0, -2.5] is outside
+      expect(isPointInPolygon(-81.0, -2.5, pautePoly)).toBe(false);
+    });
+
+    it('generates and caches 2D raster mask for sub-millisecond evaluation', () => {
+      const nationalBbox = BASIN_GEOMETRIES.ecuador.bbox;
+      const mask1 = getBasinRasterMask('cocaCodoSinclair', 800, 800, nationalBbox);
+      const mask2 = getBasinRasterMask('cocaCodoSinclair', 800, 800, nationalBbox);
+
+      expect(mask1).not.toBeNull();
+      expect(mask1!.totalPixels).toBeGreaterThan(3000);
+      expect(mask1!.totalPixels).toBeLessThan(800 * 800);
+      expect(mask1!.mask.length).toBe(mask1!.boxW * mask1!.boxH);
+
+      // Must return identical cached instance
+      expect(mask1).toBe(mask2);
+    });
+
+    it('filters out convective storm pixels falling in the bounding box margin outside the polygon', () => {
+      const rainMonitor = new RainMonitorService();
+      const nationalBbox = BASIN_GEOMETRIES.ecuador.bbox;
+      const pauteMask = getBasinRasterMask('paute', 800, 800, nationalBbox)!;
+
+      // 800x800 RGBA buffer (all grayscale warm surface)
+      const width = 800;
+      const height = 800;
+      const px = Buffer.alloc(width * height * 4, 80);
+      for (let i = 3; i < px.length; i += 4) px[i] = 255;
+
+      // Case 1: Place severe convective pixels strictly OUTSIDE the polygon (at BBox corner minX, minY)
+      // Top-left corner of BBox [minX, minY] is known to be in exterior margin (mask === 0)
+      const outsideIdx = (pauteMask.minY * width + pauteMask.minX) * 4;
+      px[outsideIdx] = 255;     // R
+      px[outsideIdx + 1] = 0;   // G
+      px[outsideIdx + 2] = 0;   // B (Severe convective red)
+
+      const covOutside = rainMonitor.measureBasinCoverageInEcuadorImage(
+        px,
+        width,
+        height,
+        nationalBbox,
+        BASIN_GEOMETRIES.paute.bbox,
+        'geoserver',
+        'paute'
+      );
+      // Exterior storm pixel in bounding box margin must NOT be counted!
+      expect(covOutside).toBe(0);
+
+      // Case 2: Place severe convective pixels strictly INSIDE the polygon (e.g. 50 pixels)
+      let insideCount = 0;
+      for (let y = pauteMask.minY; y <= pauteMask.maxY && insideCount < 50; y++) {
+        for (let x = pauteMask.minX; x <= pauteMask.maxX && insideCount < 50; x++) {
+          if (pauteMask.mask[(y - pauteMask.minY) * pauteMask.boxW + (x - pauteMask.minX)] === 1) {
+            const insideIdx = (y * width + x) * 4;
+            px[insideIdx] = 255;
+            px[insideIdx + 1] = 0;
+            px[insideIdx + 2] = 0;
+            insideCount++;
+          }
+        }
+      }
+
+      const covInside = rainMonitor.measureBasinCoverageInEcuadorImage(
+        px,
+        width,
+        height,
+        nationalBbox,
+        BASIN_GEOMETRIES.paute.bbox,
+        'geoserver',
+        'paute'
+      );
+      // Pixels inside polygon must be counted
+      expect(covInside).toBeGreaterThan(1.0);
     });
   });
 });
